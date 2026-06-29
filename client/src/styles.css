@@ -64,6 +64,14 @@ textarea {
   font: inherit;
 }
 
+button:focus-visible,
+input:focus-visible,
+select:focus-visible,
+textarea:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+
 .shell {
   max-width: 1680px;
   margin: 0 auto;
@@ -232,6 +240,12 @@ form textarea {
   transform: translateY(-1px);
 }
 
+.work-item.dragging,
+.booking-card.dragging {
+  opacity: 0.65;
+  transform: scale(0.99);
+}
+
 .composer-header {
   display: flex;
   align-items: start;
@@ -333,6 +347,12 @@ label {
 .work-item.selected {
   border-color: var(--accent);
   box-shadow: 0 0 0 2px var(--accent-soft);
+}
+
+.queue.drop-target,
+.resource-row.drop-target .booking-strip {
+  border-color: var(--accent);
+  background: var(--accent-soft);
 }
 
 .row {
@@ -444,6 +464,15 @@ label {
   box-shadow: 0 0 0 2px var(--accent-soft);
 }
 
+.resource-row:hover .booking-strip,
+.resource-row:hover .resource-card,
+.queue:hover,
+.inspector:hover,
+.board:hover,
+.composer:hover {
+  box-shadow: 0 20px 60px rgba(15, 23, 42, 0.12);
+}
+
 .section-heading {
   display: flex;
   align-items: end;
@@ -456,6 +485,24 @@ label {
   margin: 0;
   color: var(--muted);
   font-size: 14px;
+}
+
+.empty-state {
+  display: grid;
+  gap: 6px;
+  padding: 16px;
+  border: 1px dashed var(--border-strong);
+  border-radius: 16px;
+  background: var(--surface-soft);
+  color: var(--muted);
+}
+
+.empty-state strong {
+  color: var(--text);
+}
+
+.empty-state-inline {
+  min-width: 180px;
 }
 
 .help-text {
@@ -493,6 +540,19 @@ label {
   padding: 12px;
   background: var(--surface);
   cursor: pointer;
+}
+
+.resource-list-item.selected {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 2px var(--accent-soft);
+}
+
+.resource-list-item:focus-visible,
+.resource-card:focus-visible,
+.work-item:focus-visible,
+.booking-card:focus-visible,
+.suggestion:focus-visible {
+  box-shadow: 0 0 0 2px var(--accent-soft);
 }
 
 .resource-bookings {

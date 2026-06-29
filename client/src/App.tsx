@@ -20,6 +20,7 @@ export function App() {
   const [editingResourceId, setEditingResourceId] = useState<string | null>(null);
   const [selectedSkill, setSelectedSkill] = useState<string>('All');
   const [theme, setTheme] = useState<Theme>(() => (localStorage.getItem('theme') as Theme) || 'light');
+  const [dropTarget, setDropTarget] = useState<{ kind: 'queue' | 'resource'; id?: string } | null>(null);
   const [suggestions, setSuggestions] = useState<Suggestion[]>([]);
   const blankForm = useMemo(
     () => ({
@@ -119,13 +120,13 @@ export function App() {
   }, [data, selectedSkill]);
 
   const metrics = useMemo(() => {
-      const unscheduled = visibleWorkItems.filter((item) => item.status === 'unscheduled').length;
-      const booked = data ? data.workItems.length - unscheduled : 0;
-      return [
-        { label: 'Resources', value: data?.resources.length ?? 0, detail: 'Available people' },
-        { label: 'Booked work', value: booked, detail: 'Assigned tasks' },
-        { label: 'Unscheduled', value: unscheduled, detail: 'Needs coverage' },
-      ];
+    const unscheduled = visibleWorkItems.filter((item) => item.status === 'unscheduled').length;
+    const booked = data ? data.workItems.length - unscheduled : 0;
+    return [
+      { label: 'Resources', value: data?.resources.length ?? 0, detail: 'Available people' },
+      { label: 'Booked work', value: booked, detail: 'Assigned tasks' },
+      { label: 'Unscheduled', value: unscheduled, detail: 'Needs coverage' },
+    ];
   }, [data, visibleWorkItems]);
 
   const selectedWorkItem = selectedWorkItemId ? workItemLookup.get(selectedWorkItemId) ?? null : null;
@@ -252,6 +253,7 @@ export function App() {
 
     await patchWorkItem(booking.workItemId, { assigneeId: null });
     setDraggingBookingId(null);
+    setDropTarget(null);
   };
 
   const selectedItemBooking = selectedWorkItem?.bookingId
@@ -392,7 +394,23 @@ export function App() {
       </section>
 
       <section className="workspace">
-        <aside className="card queue" onDragOver={(event) => event.preventDefault()} onDrop={() => void handleQueueDrop()}>
+        <aside
+          className={dropTarget?.kind === 'queue' ? 'card queue drop-target' : 'card queue'}
+          onDragOver={(event) => event.preventDefault()}
+          onDragEnter={() => {
+            if (draggingWorkItemId || draggingBookingId) {
+              setDropTarget({ kind: 'queue' });
+            }
+          }}
+          onDragLeave={() => {
+            if (dropTarget?.kind === 'queue') {
+              setDropTarget(null);
+            }
+          }}
+          onDrop={() => {
+            void handleQueueDrop();
+          }}
+        >
           <div className="section-heading">
             <div>
               <p className="eyebrow">Queue</p>
@@ -400,32 +418,46 @@ export function App() {
             </div>
             <p className="section-copy">Drag work back here to unassign it.</p>
           </div>
-          {visibleWorkItems.filter((item) => item.status === 'unscheduled').map((item) => (
-            <article
-              key={item.id}
-              className={selectedWorkItemId === item.id ? 'work-item selected' : 'work-item'}
-              draggable
-              onDragStart={() => {
-                setDraggingBookingId(null);
-                setDraggingWorkItemId(item.id);
-              }}
-              onDragEnd={() => {
-                setDraggingWorkItemId(null);
-                setDraggingBookingId(null);
-              }}
-              onClick={() => {
-                setSelectedResourceId(null);
-                setSelectedWorkItemId(item.id);
-              }}
-            >
-              <div className="row">
-                <strong>{item.title}</strong>
-                <span className={`priority ${item.priority.toLowerCase()}`}>{item.priority}</span>
-              </div>
-              <p>{item.description}</p>
-              <small>{item.durationMinutes} min - {skillLabel(item.requiredSkills)}</small>
-            </article>
-          ))}
+          {visibleWorkItems.filter((item) => item.status === 'unscheduled').length ? (
+            visibleWorkItems.filter((item) => item.status === 'unscheduled').map((item) => (
+              <article
+                key={item.id}
+                className={[
+                  'work-item',
+                  selectedWorkItemId === item.id ? 'selected' : '',
+                  draggingWorkItemId === item.id ? 'dragging' : '',
+                ]
+                  .filter(Boolean)
+                  .join(' ')}
+                draggable
+                onDragStart={() => {
+                  setDraggingBookingId(null);
+                  setDraggingWorkItemId(item.id);
+                }}
+                onDragEnd={() => {
+                  setDraggingWorkItemId(null);
+                  setDraggingBookingId(null);
+                  setDropTarget(null);
+                }}
+                onClick={() => {
+                  setSelectedResourceId(null);
+                  setSelectedWorkItemId(item.id);
+                }}
+              >
+                <div className="row">
+                  <strong>{item.title}</strong>
+                  <span className={`priority ${item.priority.toLowerCase()}`}>{item.priority}</span>
+                </div>
+                <p>{item.description}</p>
+                <small>{item.durationMinutes} min - {skillLabel(item.requiredSkills)}</small>
+              </article>
+            ))
+          ) : (
+            <div className="empty-state">
+              <strong>Nothing is waiting.</strong>
+              <p>Every work item is scheduled. Drag something back here to unassign it.</p>
+            </div>
+          )}
         </aside>
 
         <section className="board">
@@ -443,8 +475,18 @@ export function App() {
               return (
                 <div
                   key={resource.id}
-                  className="resource-row"
+                  className={dropTarget?.kind === 'resource' && dropTarget.id === resource.id ? 'resource-row drop-target' : 'resource-row'}
                   onDragOver={(event) => event.preventDefault()}
+                  onDragEnter={() => {
+                    if (draggingWorkItemId || draggingBookingId) {
+                      setDropTarget({ kind: 'resource', id: resource.id });
+                    }
+                  }}
+                  onDragLeave={() => {
+                    if (dropTarget?.kind === 'resource' && dropTarget.id === resource.id) {
+                      setDropTarget(null);
+                    }
+                  }}
                   onDrop={() => {
                     if (draggingBookingId) {
                       const booking = data.bookings.find((entry) => entry.id === draggingBookingId);
@@ -457,6 +499,7 @@ export function App() {
                     if (draggingWorkItemId) {
                       void patchWorkItem(draggingWorkItemId, { assigneeId: resource.id });
                     }
+                    setDropTarget(null);
                   }}
                 >
                   <button
@@ -477,13 +520,24 @@ export function App() {
                     <small>{skillLabel(resource.skills)}</small>
                   </button>
                   <div className="booking-strip">
+                    {!bookings.length ? (
+                      <div className="empty-state empty-state-inline">
+                        <strong>Open slot</strong>
+                        <p>Drop work here to book {resource.name}.</p>
+                      </div>
+                    ) : null}
                     {bookings.map((booking) => {
                       const workItem = workItemLookup.get(booking.workItemId);
                       return (
                         <button
                           key={booking.id}
                           type="button"
-                          className="booking-card"
+                          className={[
+                            'booking-card',
+                            draggingBookingId === booking.id ? 'dragging' : '',
+                          ]
+                            .filter(Boolean)
+                            .join(' ')}
                           draggable
                           onDragStart={() => {
                             setDraggingWorkItemId(null);
@@ -492,6 +546,7 @@ export function App() {
                           onDragEnd={() => {
                             setDraggingWorkItemId(null);
                             setDraggingBookingId(null);
+                            setDropTarget(null);
                           }}
                           onClick={() => {
                             setSelectedResourceId(null);
@@ -596,11 +651,19 @@ export function App() {
                     <small>{suggestion.rationale.join(', ')}</small>
                   </button>
                 ))}
-                {!suggestions.length ? <p>No suggestions yet.</p> : null}
+                {!suggestions.length ? (
+                  <div className="empty-state empty-state-inline">
+                    <strong>No suggestions yet.</strong>
+                    <p>Select a work item with required skills to see matches.</p>
+                  </div>
+                ) : null}
               </div>
             </>
           ) : (
-            <p>Select a work item or resource to see details.</p>
+            <div className="empty-state">
+              <strong>Nothing selected.</strong>
+              <p>Choose a work item or resource to inspect details and actions.</p>
+            </div>
           )}
 
           <section className="resource-admin">
