@@ -623,7 +623,6 @@ export function App() {
                       <span className="resource-role">{resource.role}</span>
                     </div>
                   </div>
-                <small>{resource.role}</small>
                 </button>
               ))}
             </div>
@@ -740,15 +739,17 @@ export function App() {
           {selectedResource ? (
             <>
               <h3>{selectedResource.name}</h3>
-              <p>{selectedResource.role}</p>
-              <p><strong>Skills:</strong> {skillLabel(selectedResource.skills)}</p>
-              <p><strong>Working hours:</strong> {selectedResource.workingHours.start}:00 to {selectedResource.workingHours.end}:00</p>
-              <p><strong>Color:</strong> {selectedResource.color}</p>
+              <div className="detail-pills">
+                <span className="detail-pill">{selectedResource.role}</span>
+                <span className="detail-pill">
+                  {selectedResource.workingHours.start}:00 - {selectedResource.workingHours.end}:00
+                </span>
+                <span className="detail-pill">{skillLabel(selectedResource.skills)}</span>
+              </div>
               <button type="button" className="secondary" onClick={() => beginEditResource(selectedResource)}>
                 Edit resource
               </button>
               <div className="resource-bookings">
-                <h4>Assigned work</h4>
                 {data.bookings.filter((booking) => booking.resourceId === selectedResource.id).map((booking) => {
                   const workItem = workItemLookup.get(booking.workItemId);
                   return (
@@ -768,9 +769,11 @@ export function App() {
               <p className="eyebrow">{selectedWorkItem.priority} priority</p>
               <h3>{selectedWorkItem.title}</h3>
               <p>{selectedWorkItem.description}</p>
-              <p><strong>Skills:</strong> {skillLabel(selectedWorkItem.requiredSkills)}</p>
-              <p><strong>Duration:</strong> {selectedWorkItem.durationMinutes} minutes</p>
-              <p><strong>Status:</strong> {selectedWorkItem.status}</p>
+              <div className="detail-pills">
+                <span className="detail-pill">{selectedWorkItem.durationMinutes} min</span>
+                <span className="detail-pill">{selectedWorkItem.status}</span>
+                <span className="detail-pill">{skillLabel(selectedWorkItem.requiredSkills)}</span>
+              </div>
 
               {selectedWorkItem.status === 'unscheduled' ? (
                 <button type="button" className="secondary" onClick={() => beginEditWorkItem(selectedWorkItem)}>

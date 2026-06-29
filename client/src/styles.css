@@ -75,15 +75,15 @@ textarea:focus-visible {
 .shell {
   max-width: 1680px;
   margin: 0 auto;
-  padding: 28px 24px 40px;
+  padding: 26px 24px 36px;
   display: grid;
-  gap: 24px;
+  gap: 20px;
 }
 
 .overview {
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: 16px;
+  gap: 14px;
 }
 
 .metric-card {
@@ -213,8 +213,8 @@ form textarea {
 .card {
   background: var(--surface);
   border: 1px solid var(--border);
-  border-radius: 20px;
-  padding: 20px;
+  border-radius: 24px;
+  padding: 18px;
   box-shadow: var(--shadow);
 }
 
@@ -237,7 +237,7 @@ form textarea {
 .booking-card:hover,
 .resource-card:hover,
 .resource-list-item:hover {
-  transform: translateY(-1px);
+  transform: translateY(-2px);
 }
 
 .work-item.dragging,
@@ -251,11 +251,11 @@ form textarea {
   align-items: start;
   justify-content: space-between;
   gap: 16px;
-  margin-bottom: 12px;
+  margin-bottom: 10px;
 }
 
 .composer-header.compact {
-  margin-top: 12px;
+  margin-top: 10px;
 }
 
 .form-switcher {
@@ -337,7 +337,7 @@ label {
 .workspace {
   display: grid;
   grid-template-columns: 320px minmax(0, 1fr) 360px;
-  gap: 20px;
+  gap: 18px;
 }
 
 .rail {
@@ -364,8 +364,8 @@ label {
 .booking-card,
 .resource-card {
   border: 1px solid var(--border);
-  border-radius: 16px;
-  padding: 12px;
+  border-radius: 18px;
+  padding: 13px;
   background: var(--surface);
 }
 
@@ -405,8 +405,8 @@ label {
 .board {
   background: var(--surface);
   border: 1px solid var(--border);
-  border-radius: 20px;
-  padding: 20px;
+  border-radius: 24px;
+  padding: 18px;
 }
 
 .board-header {
@@ -414,7 +414,7 @@ label {
   align-items: end;
   justify-content: space-between;
   gap: 12px;
-  margin-bottom: 16px;
+  margin-bottom: 14px;
 }
 
 .resource-grid {
@@ -482,6 +482,25 @@ label {
   color: var(--muted);
 }
 
+.detail-pills {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin: 8px 0 14px;
+}
+
+.detail-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  padding: 6px 10px;
+  background: var(--surface-soft);
+  color: var(--text);
+  font-size: 12px;
+}
+
 .skill-ovals {
   display: flex;
   flex-wrap: wrap;
@@ -543,10 +562,10 @@ label {
 
 .section-heading {
   display: flex;
-  align-items: end;
+  align-items: baseline;
   justify-content: space-between;
   gap: 12px;
-  margin-bottom: 8px;
+  margin-bottom: 10px;
 }
 
 .resource-list-panel {
@@ -567,6 +586,8 @@ label {
   margin: 0;
   color: var(--muted);
   font-size: 14px;
+  max-width: 220px;
+  line-height: 1.45;
 }
 
 .empty-state {
@@ -574,8 +595,9 @@ label {
   gap: 6px;
   padding: 16px;
   border: 1px dashed var(--border-strong);
-  border-radius: 16px;
-  background: var(--surface-soft);
+  border-radius: 18px;
+  background:
+    linear-gradient(180deg, color-mix(in srgb, var(--surface-soft) 88%, transparent) 0%, var(--surface-soft) 100%);
   color: var(--muted);
 }
 
@@ -595,7 +617,7 @@ label {
 .resource-admin {
   display: grid;
   gap: 12px;
-  padding-top: 16px;
+  padding-top: 12px;
   border-top: 1px solid var(--border);
 }
 
@@ -610,7 +632,7 @@ label {
 
 .resource-list {
   display: grid;
-  gap: 8px;
+  gap: 10px;
 }
 
 .resource-list-item {
@@ -618,7 +640,7 @@ label {
   gap: 4px;
   text-align: left;
   border: 1px solid var(--border);
-  border-radius: 16px;
+  border-radius: 18px;
   padding: 12px;
   background: var(--surface);
   cursor: pointer;
