@@ -1,11 +1,50 @@
 :root {
   color-scheme: light;
   font-family: Inter, system-ui, sans-serif;
-  background:
+  --page-bg:
     radial-gradient(circle at top left, rgba(29, 78, 216, 0.10), transparent 32%),
     radial-gradient(circle at top right, rgba(124, 58, 237, 0.08), transparent 26%),
     #f5f7fb;
-  color: #1f2937;
+  --text: #1f2937;
+  --muted: #4b5563;
+  --surface: #ffffff;
+  --surface-soft: #f8fafc;
+  --surface-strong: #eef2ff;
+  --surface-overlay: rgba(255, 255, 255, 0.82);
+  --border: #e5e7eb;
+  --border-strong: #d1d5db;
+  --accent: #1d4ed8;
+  --accent-soft: rgba(29, 78, 216, 0.08);
+  --accent-text: #1e3a8a;
+  --shadow: 0 18px 45px rgba(15, 23, 42, 0.08);
+  --hero-bg:
+    linear-gradient(135deg, rgba(255, 255, 255, 0.96), rgba(239, 246, 255, 0.92)),
+    #fff;
+  color: var(--text);
+  background: var(--page-bg);
+}
+
+[data-theme='dark'] {
+  color-scheme: dark;
+  --page-bg:
+    radial-gradient(circle at top left, rgba(96, 165, 250, 0.14), transparent 30%),
+    radial-gradient(circle at top right, rgba(168, 85, 247, 0.12), transparent 24%),
+    #0b1120;
+  --text: #e5e7eb;
+  --muted: #9ca3af;
+  --surface: #111827;
+  --surface-soft: #0f172a;
+  --surface-strong: #172033;
+  --surface-overlay: rgba(15, 23, 42, 0.88);
+  --border: #243041;
+  --border-strong: #334155;
+  --accent: #60a5fa;
+  --accent-soft: rgba(96, 165, 250, 0.16);
+  --accent-text: #dbeafe;
+  --shadow: 0 20px 60px rgba(2, 6, 23, 0.45);
+  --hero-bg:
+    linear-gradient(135deg, rgba(15, 23, 42, 0.96), rgba(17, 24, 39, 0.92)),
+    #0f172a;
 }
 
 * {
@@ -14,6 +53,8 @@
 
 body {
   margin: 0;
+  background: var(--page-bg);
+  color: var(--text);
 }
 
 button,
@@ -36,9 +77,7 @@ textarea {
   align-items: end;
   justify-content: space-between;
   gap: 20px;
-  background:
-    linear-gradient(135deg, rgba(255, 255, 255, 0.96), rgba(239, 246, 255, 0.92)),
-    #fff;
+  background: var(--hero-bg);
   position: relative;
   overflow: hidden;
 }
@@ -72,6 +111,12 @@ textarea {
   line-height: 1.6;
 }
 
+.hero-actions {
+  display: grid;
+  gap: 12px;
+  justify-items: end;
+}
+
 .hero-filter {
   position: relative;
   z-index: 1;
@@ -90,9 +135,9 @@ textarea {
   display: inline-flex;
   align-items: center;
   gap: 8px;
-  border: 1px solid rgba(29, 78, 216, 0.12);
-  background: rgba(255, 255, 255, 0.82);
-  color: #1e3a8a;
+  border: 1px solid var(--border);
+  background: var(--surface-overlay);
+  color: var(--accent-text);
   border-radius: 999px;
   padding: 8px 12px;
   font-size: 13px;
@@ -103,7 +148,7 @@ textarea {
   text-transform: uppercase;
   letter-spacing: 0.08em;
   font-size: 12px;
-  color: #4b5563;
+  color: var(--muted);
   margin: 0 0 6px;
 }
 
@@ -115,7 +160,7 @@ p {
 }
 
 .subtitle {
-  color: #4b5563;
+  color: var(--muted);
 }
 
 .filter {
@@ -127,19 +172,20 @@ p {
 form input,
 form select,
 form textarea {
-  border: 1px solid #d1d5db;
+  border: 1px solid var(--border-strong);
   border-radius: 12px;
   padding: 10px 12px;
-  background: #fff;
+  background: var(--surface);
+  color: var(--text);
 }
 
 .composer,
 .card {
-  background: #fff;
-  border: 1px solid #e5e7eb;
+  background: var(--surface);
+  border: 1px solid var(--border);
   border-radius: 20px;
   padding: 20px;
-  box-shadow: 0 18px 45px rgba(15, 23, 42, 0.08);
+  box-shadow: var(--shadow);
 }
 
 .composer-header {
@@ -175,33 +221,34 @@ label {
 }
 
 .chip {
-  border: 1px solid #d1d5db;
-  background: #fff;
+  border: 1px solid var(--border-strong);
+  background: var(--surface);
+  color: var(--text);
   border-radius: 999px;
   padding: 8px 12px;
   cursor: pointer;
 }
 
 .chip.active {
-  background: #1d4ed8;
-  border-color: #1d4ed8;
+  background: var(--accent);
+  border-color: var(--accent);
   color: white;
 }
 
 .primary {
   border: none;
   border-radius: 999px;
-  background: #1d4ed8;
+  background: var(--accent);
   color: white;
   padding: 12px 18px;
   cursor: pointer;
 }
 
 .secondary {
-  border: 1px solid #d1d5db;
+  border: 1px solid var(--border-strong);
   border-radius: 999px;
-  background: #fff;
-  color: #1f2937;
+  background: var(--surface);
+  color: var(--text);
   padding: 10px 14px;
   cursor: pointer;
 }
@@ -229,10 +276,10 @@ label {
 .suggestion,
 .booking-card,
 .resource-card {
-  border: 1px solid #e5e7eb;
+  border: 1px solid var(--border);
   border-radius: 16px;
   padding: 12px;
-  background: #fff;
+  background: var(--surface);
 }
 
 .work-item {
@@ -240,8 +287,8 @@ label {
 }
 
 .work-item.selected {
-  border-color: #1d4ed8;
-  box-shadow: 0 0 0 2px rgba(29, 78, 216, 0.08);
+  border-color: var(--accent);
+  box-shadow: 0 0 0 2px var(--accent-soft);
 }
 
 .row {
@@ -263,8 +310,8 @@ label {
 .priority.low { background: #16a34a; }
 
 .board {
-  background: #fff;
-  border: 1px solid #e5e7eb;
+  background: var(--surface);
+  border: 1px solid var(--border);
   border-radius: 20px;
   padding: 20px;
 }
@@ -295,7 +342,7 @@ label {
   flex-wrap: wrap;
   gap: 8px;
   padding: 12px;
-  border: 1px dashed #cbd5e1;
+  border: 1px dashed var(--border-strong);
   border-radius: 16px;
 }
 
@@ -318,19 +365,19 @@ label {
 .resource-card {
   display: grid;
   gap: 4px;
-  background: #f8fafc;
+  background: var(--surface-soft);
   width: 100%;
   text-align: left;
   cursor: pointer;
 }
 
 .resource-card.selected {
-  border-color: #1d4ed8;
-  box-shadow: 0 0 0 2px rgba(29, 78, 216, 0.08);
+  border-color: var(--accent);
+  box-shadow: 0 0 0 2px var(--accent-soft);
 }
 
 .help-text {
-  color: #6b7280;
+  color: var(--muted);
   font-size: 14px;
 }
 
@@ -338,7 +385,7 @@ label {
   display: grid;
   gap: 12px;
   padding-top: 16px;
-  border-top: 1px solid #e5e7eb;
+  border-top: 1px solid var(--border);
 }
 
 .resource-form {
@@ -359,10 +406,10 @@ label {
   display: grid;
   gap: 4px;
   text-align: left;
-  border: 1px solid #e5e7eb;
+  border: 1px solid var(--border);
   border-radius: 16px;
   padding: 12px;
-  background: #fff;
+  background: var(--surface);
   cursor: pointer;
 }
 
@@ -375,9 +422,9 @@ label {
   display: grid;
   gap: 4px;
   padding: 10px 12px;
-  border: 1px solid #e5e7eb;
+  border: 1px solid var(--border);
   border-radius: 14px;
-  background: #f8fafc;
+  background: var(--surface-soft);
 }
 
 @media (max-width: 1200px) {
@@ -395,11 +442,6 @@ label {
 }
 
 @media (max-width: 720px) {
-  .header {
-    flex-direction: column;
-    align-items: start;
-  }
-
   .grid {
     grid-template-columns: 1fr;
   }

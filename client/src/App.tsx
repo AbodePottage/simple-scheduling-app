@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState, type FormEvent } from 'react';
 import type { BootstrapResponse, Booking, Resource, Suggestion, WorkItem, Priority } from './types';
 
 const priorityOrder: Record<Priority, number> = { High: 3, Medium: 2, Low: 1 };
+type Theme = 'light' | 'dark';
 
 function formatClock(iso: string) {
   return new Date(iso).toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' });
@@ -18,6 +19,7 @@ export function App() {
   const [editingWorkItemId, setEditingWorkItemId] = useState<string | null>(null);
   const [editingResourceId, setEditingResourceId] = useState<string | null>(null);
   const [selectedSkill, setSelectedSkill] = useState<string>('All');
+  const [theme, setTheme] = useState<Theme>(() => (localStorage.getItem('theme') as Theme) || 'light');
   const [suggestions, setSuggestions] = useState<Suggestion[]>([]);
   const blankForm = useMemo(
     () => ({
@@ -57,6 +59,12 @@ export function App() {
   useEffect(() => {
     void load();
   }, []);
+
+  useEffect(() => {
+    document.documentElement.dataset.theme = theme;
+    document.documentElement.style.colorScheme = theme;
+    localStorage.setItem('theme', theme);
+  }, [theme]);
 
   useEffect(() => {
     if (!selectedWorkItemId) {
@@ -258,16 +266,22 @@ export function App() {
           </div>
         </div>
 
-        <label className="filter hero-filter">
-          <span>Filter by skill</span>
-          <select value={selectedSkill} onChange={(event) => setSelectedSkill(event.target.value)}>
-            {skillOptions.map((skill) => (
-              <option key={skill} value={skill}>
-                {skill}
-              </option>
-            ))}
-          </select>
-        </label>
+        <div className="hero-actions">
+          <label className="filter hero-filter">
+            <span>Filter by skill</span>
+            <select value={selectedSkill} onChange={(event) => setSelectedSkill(event.target.value)}>
+              {skillOptions.map((skill) => (
+                <option key={skill} value={skill}>
+                  {skill}
+                </option>
+              ))}
+            </select>
+          </label>
+
+          <button type="button" className="secondary theme-toggle" onClick={() => setTheme(theme === 'light' ? 'dark' : 'light')}>
+            {theme === 'light' ? 'Dark mode' : 'Light mode'}
+          </button>
+        </div>
       </header>
 
       <section className="composer card">
