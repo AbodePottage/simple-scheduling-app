@@ -166,6 +166,113 @@ export function createWorkItem(input: {
   return workItem;
 }
 
+export function createResource(input: Resource) {
+  state.resources.unshift(input);
+  return input;
+}
+
+export function updateWorkItem(
+  workItemId: string,
+  input: {
+    title?: string;
+    description?: string;
+    priority?: WorkItem['priority'];
+    durationMinutes?: number;
+    targetDate?: string;
+    requiredSkills?: string[];
+    assigneeId?: string | null;
+  },
+) {
+  const workItem = state.workItems.find((entry) => entry.id === workItemId);
+
+  if (!workItem) {
+    throw new Error('Work item not found.');
+  }
+
+  const hasMetadataChange =
+    input.title !== undefined ||
+    input.description !== undefined ||
+    input.priority !== undefined ||
+    input.durationMinutes !== undefined ||
+    input.targetDate !== undefined ||
+    input.requiredSkills !== undefined;
+
+  if (workItem.bookingId && hasMetadataChange) {
+    throw new Error('Booked work items are locked.');
+  }
+
+  if (input.title !== undefined) {
+    workItem.title = input.title;
+  }
+
+  if (input.description !== undefined) {
+    workItem.description = input.description;
+  }
+
+  if (input.priority !== undefined) {
+    workItem.priority = input.priority;
+  }
+
+  if (input.durationMinutes !== undefined) {
+    workItem.durationMinutes = input.durationMinutes;
+  }
+
+  if (input.targetDate !== undefined) {
+    workItem.targetDate = input.targetDate;
+  }
+
+  if (input.requiredSkills !== undefined) {
+    workItem.requiredSkills = input.requiredSkills;
+  }
+
+  if (Object.prototype.hasOwnProperty.call(input, 'assigneeId')) {
+    if (input.assigneeId === null) {
+      if (workItem.bookingId) {
+        unassignWorkItem(workItemId);
+      }
+      return workItem;
+    }
+
+    if (input.assigneeId !== undefined) {
+      if (workItem.bookingId) {
+        reassignWorkItem(workItemId, input.assigneeId);
+      } else {
+        bookWorkItem(workItemId, input.assigneeId);
+      }
+    }
+  }
+
+  return workItem;
+}
+
+export function updateResource(
+  resourceId: string,
+  input: {
+    name: string;
+    role: string;
+    skills: string[];
+    color: string;
+    workingHours: {
+      start: number;
+      end: number;
+    };
+  },
+) {
+  const resource = state.resources.find((entry) => entry.id === resourceId);
+
+  if (!resource) {
+    throw new Error('Resource not found.');
+  }
+
+  resource.name = input.name;
+  resource.role = input.role;
+  resource.skills = input.skills;
+  resource.color = input.color;
+  resource.workingHours = input.workingHours;
+
+  return resource;
+}
+
 export function bookWorkItem(workItemId: string, resourceId: string) {
   const workItem = state.workItems.find((entry) => entry.id === workItemId);
   const resource = state.resources.find((entry) => entry.id === resourceId);
@@ -202,6 +309,64 @@ export function bookWorkItem(workItemId: string, resourceId: string) {
   workItem.status = 'scheduled';
 
   return booking;
+}
+
+export function reassignWorkItem(workItemId: string, resourceId: string) {
+  const workItem = state.workItems.find((entry) => entry.id === workItemId);
+  const resource = state.resources.find((entry) => entry.id === resourceId);
+
+  if (!workItem || !resource) {
+    throw new Error('Work item or resource not found.');
+  }
+
+  if (!workItem.bookingId) {
+    return bookWorkItem(workItemId, resourceId);
+  }
+
+  const booking = state.bookings.find((entry) => entry.id === workItem.bookingId);
+  if (!booking) {
+    throw new Error('Booking not found.');
+  }
+
+  if (booking.resourceId === resourceId) {
+    return booking;
+  }
+
+  if (!resourceMatchesSkills(resource, workItem)) {
+    throw new Error('Resource does not have the required skills.');
+  }
+
+  const slot = findSlot(resourceId, workItem.targetDate, workItem.durationMinutes);
+  if (!slot) {
+    throw new Error('No free slot found for that resource.');
+  }
+
+  booking.resourceId = resourceId;
+  booking.startTime = slot.startTime;
+  booking.endTime = slot.endTime;
+  workItem.assigneeId = resourceId;
+  workItem.status = 'scheduled';
+
+  return booking;
+}
+
+export function unassignWorkItem(workItemId: string) {
+  const workItem = state.workItems.find((entry) => entry.id === workItemId);
+
+  if (!workItem) {
+    throw new Error('Work item not found.');
+  }
+
+  if (!workItem.bookingId) {
+    throw new Error('Work item is not assigned.');
+  }
+
+  state.bookings = state.bookings.filter((booking) => booking.id !== workItem.bookingId);
+  workItem.bookingId = undefined;
+  workItem.assigneeId = undefined;
+  workItem.status = 'unscheduled';
+
+  return workItem;
 }
 
 export function setBookingStatus(bookingId: string, status: Booking['status']) {

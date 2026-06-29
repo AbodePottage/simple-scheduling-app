@@ -2,7 +2,16 @@ import cors from 'cors';
 import express from 'express';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { bookWorkItem, createWorkItem, getSuggestions, setBookingStatus, state } from './scheduling.js';
+import {
+  bookWorkItem,
+  createResource,
+  createWorkItem,
+  getSuggestions,
+  setBookingStatus,
+  state,
+  updateResource,
+  updateWorkItem,
+} from './scheduling.js';
 
 const app = express();
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
@@ -46,6 +55,78 @@ app.post('/api/work-items', (request, response) => {
   response.status(201).json(workItem);
 });
 
+app.post('/api/resources', (request, response) => {
+  const { name, role, skills, color, workingHours } = request.body ?? {};
+
+  if (!name || !role || !color || !workingHours) {
+    response.status(400).json({ error: 'Missing required fields.' });
+    return;
+  }
+
+  const resource = createResource({
+    id: `resource-${Math.random().toString(36).slice(2, 9)}`,
+    name: String(name),
+    role: String(role),
+    skills: Array.isArray(skills) ? skills.map(String) : [],
+    color: String(color),
+    workingHours: {
+      start: Number(workingHours.start),
+      end: Number(workingHours.end),
+    },
+  });
+
+  response.status(201).json(resource);
+});
+
+app.patch('/api/resources/:resourceId', (request, response) => {
+  const { name, role, skills, color, workingHours } = request.body ?? {};
+
+  if (!name || !role || !color || !workingHours) {
+    response.status(400).json({ error: 'Missing required fields.' });
+    return;
+  }
+
+  try {
+    const resource = updateResource(request.params.resourceId, {
+      name: String(name),
+      role: String(role),
+      skills: Array.isArray(skills) ? skills.map(String) : [],
+      color: String(color),
+      workingHours: {
+        start: Number(workingHours.start),
+        end: Number(workingHours.end),
+      },
+    });
+
+    response.json(resource);
+  } catch (error) {
+    response.status(404).json({ error: error instanceof Error ? error.message : 'Could not update resource.' });
+  }
+});
+
+app.patch('/api/work-items/:workItemId', (request, response) => {
+  try {
+    const workItem = updateWorkItem(request.params.workItemId, {
+      title: request.body?.title !== undefined ? String(request.body.title) : undefined,
+      description: request.body?.description !== undefined ? String(request.body.description ?? '') : undefined,
+      priority: request.body?.priority,
+      durationMinutes: request.body?.durationMinutes !== undefined ? Number(request.body.durationMinutes) : undefined,
+      targetDate: request.body?.targetDate !== undefined ? String(request.body.targetDate) : undefined,
+      requiredSkills: request.body?.requiredSkills !== undefined ? request.body.requiredSkills.map(String) : undefined,
+      assigneeId:
+        Object.prototype.hasOwnProperty.call(request.body ?? {}, 'assigneeId')
+          ? request.body.assigneeId === null
+            ? null
+            : String(request.body.assigneeId)
+          : undefined,
+    });
+
+    response.json(workItem);
+  } catch (error) {
+    response.status(409).json({ error: error instanceof Error ? error.message : 'Could not update work item.' });
+  }
+});
+
 app.post('/api/bookings', (request, response) => {
   const { workItemId, resourceId } = request.body ?? {};
 
@@ -80,4 +161,3 @@ app.get('*', (_request, response) => {
 app.listen(port, () => {
   console.log(`Scheduling app API running on http://localhost:${port}`);
 });
-

@@ -14,17 +14,40 @@ function skillLabel(skills: string[]) {
 export function App() {
   const [data, setData] = useState<BootstrapResponse | null>(null);
   const [selectedWorkItemId, setSelectedWorkItemId] = useState<string | null>(null);
+  const [selectedResourceId, setSelectedResourceId] = useState<string | null>(null);
+  const [editingWorkItemId, setEditingWorkItemId] = useState<string | null>(null);
+  const [editingResourceId, setEditingResourceId] = useState<string | null>(null);
   const [selectedSkill, setSelectedSkill] = useState<string>('All');
   const [suggestions, setSuggestions] = useState<Suggestion[]>([]);
+  const blankForm = useMemo(
+    () => ({
+      title: '',
+      description: '',
+      priority: 'Medium' as Priority,
+      durationMinutes: 60,
+      targetDate: new Date().toISOString().slice(0, 10),
+      requiredSkills: [] as string[],
+    }),
+    [],
+  );
   const [form, setForm] = useState({
-    title: '',
-    description: '',
-    priority: 'Medium' as Priority,
-    durationMinutes: 60,
-    targetDate: new Date().toISOString().slice(0, 10),
-    requiredSkills: [] as string[],
+    ...blankForm,
+  });
+  const blankResourceForm = useMemo(
+    () => ({
+      name: '',
+      role: '',
+      color: '#1d4ed8',
+      workingHours: { start: 9, end: 17 },
+      skills: [] as string[],
+    }),
+    [],
+  );
+  const [resourceForm, setResourceForm] = useState({
+    ...blankResourceForm,
   });
   const [draggingWorkItemId, setDraggingWorkItemId] = useState<string | null>(null);
+  const [draggingBookingId, setDraggingBookingId] = useState<string | null>(null);
 
   const load = async () => {
     const response = await fetch('/api/bootstrap');
@@ -88,12 +111,15 @@ export function App() {
   }, [data, selectedSkill]);
 
   const selectedWorkItem = selectedWorkItemId ? workItemLookup.get(selectedWorkItemId) ?? null : null;
+  const selectedResource = selectedResourceId ? resourceLookup.get(selectedResourceId) ?? null : null;
+  const editingWorkItem = editingWorkItemId ? workItemLookup.get(editingWorkItemId) ?? null : null;
+  const editingResource = editingResourceId ? resourceLookup.get(editingResourceId) ?? null : null;
 
   const submitWorkItem = async (event: FormEvent) => {
     event.preventDefault();
 
-    const response = await fetch('/api/work-items', {
-      method: 'POST',
+    const response = await fetch(editingWorkItemId ? `/api/work-items/${editingWorkItemId}` : '/api/work-items', {
+      method: editingWorkItemId ? 'PATCH' : 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(form),
     });
@@ -102,15 +128,79 @@ export function App() {
       return;
     }
 
-    setForm({
-      title: '',
-      description: '',
-      priority: 'Medium',
-      durationMinutes: 60,
-      targetDate: new Date().toISOString().slice(0, 10),
-      requiredSkills: [],
-    });
+    setForm(blankForm);
+    setEditingWorkItemId(null);
     await load();
+  };
+
+  const patchWorkItem = async (workItemId: string, body: Record<string, unknown>) => {
+    const response = await fetch(`/api/work-items/${workItemId}`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(body),
+    });
+
+    if (!response.ok) {
+      const body = await response.json().catch(() => null);
+      alert(body?.error ?? 'Could not update work item.');
+      return;
+    }
+
+    await load();
+  };
+
+  const beginEditWorkItem = (workItem: WorkItem) => {
+    setSelectedResourceId(null);
+    setEditingWorkItemId(workItem.id);
+    setForm({
+      title: workItem.title,
+      description: workItem.description,
+      priority: workItem.priority,
+      durationMinutes: workItem.durationMinutes,
+      targetDate: workItem.targetDate,
+      requiredSkills: [...workItem.requiredSkills],
+    });
+  };
+
+  const cancelEdit = () => {
+    setEditingWorkItemId(null);
+    setForm(blankForm);
+  };
+
+  const submitResource = async (event: FormEvent) => {
+    event.preventDefault();
+
+    const response = await fetch(editingResourceId ? `/api/resources/${editingResourceId}` : '/api/resources', {
+      method: editingResourceId ? 'PATCH' : 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(resourceForm),
+    });
+
+    if (!response.ok) {
+      return;
+    }
+
+    setResourceForm(blankResourceForm);
+    setEditingResourceId(null);
+    await load();
+  };
+
+  const beginEditResource = (resource: Resource) => {
+    setSelectedWorkItemId(null);
+    setSelectedResourceId(resource.id);
+    setEditingResourceId(resource.id);
+    setResourceForm({
+      name: resource.name,
+      role: resource.role,
+      color: resource.color,
+      workingHours: { ...resource.workingHours },
+      skills: [...resource.skills],
+    });
+  };
+
+  const cancelResourceEdit = () => {
+    setEditingResourceId(null);
+    setResourceForm(blankResourceForm);
   };
 
   const toggleSkill = (skill: string) => {
@@ -122,20 +212,28 @@ export function App() {
     }));
   };
 
-  const assignWorkItem = async (workItemId: string, resourceId: string) => {
-    const response = await fetch('/api/bookings', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ workItemId, resourceId }),
-    });
+  const toggleResourceSkill = (skill: string) => {
+    setResourceForm((current) => ({
+      ...current,
+      skills: current.skills.includes(skill)
+        ? current.skills.filter((entry) => entry !== skill)
+        : [...current.skills, skill],
+    }));
+  };
 
-    if (!response.ok) {
-      const body = await response.json().catch(() => null);
-      alert(body?.error ?? 'Could not book work item.');
+  const handleQueueDrop = async () => {
+    if (!data || !draggingBookingId) {
       return;
     }
 
-    await load();
+    const booking = data.bookings.find((entry) => entry.id === draggingBookingId);
+    if (!booking) {
+      setDraggingBookingId(null);
+      return;
+    }
+
+    await patchWorkItem(booking.workItemId, { assigneeId: null });
+    setDraggingBookingId(null);
   };
 
   const selectedItemBooking = selectedWorkItem?.bookingId
@@ -148,15 +246,20 @@ export function App() {
 
   return (
     <main className="shell">
-      <header className="header">
-        <div>
+      <header className="hero card">
+        <div className="hero-copy">
           <p className="eyebrow">Simple scheduling app</p>
           <h1>Assign work fast</h1>
           <p className="subtitle">Schedule-board-first MVP with a small matching engine.</p>
+          <div className="hero-stats">
+            <span className="stat-pill">3 resources</span>
+            <span className="stat-pill">3 work items</span>
+            <span className="stat-pill">Drag and drop assignment</span>
+          </div>
         </div>
 
-        <label className="filter">
-          Filter by skill
+        <label className="filter hero-filter">
+          <span>Filter by skill</span>
           <select value={selectedSkill} onChange={(event) => setSelectedSkill(event.target.value)}>
             {skillOptions.map((skill) => (
               <option key={skill} value={skill}>
@@ -169,6 +272,18 @@ export function App() {
 
       <section className="composer card">
         <form onSubmit={submitWorkItem}>
+          <div className="composer-header">
+            <div>
+              <p className="eyebrow">{editingWorkItem ? 'Edit work item' : 'Create work item'}</p>
+              <h2>{editingWorkItem ? editingWorkItem.title : 'Add new work'}</h2>
+            </div>
+            {editingWorkItem ? (
+              <button type="button" className="secondary" onClick={cancelEdit}>
+                Cancel edit
+              </button>
+            ) : null}
+          </div>
+
           <div className="grid">
             <label>
               Title
@@ -237,22 +352,31 @@ export function App() {
           </div>
 
           <button className="primary" type="submit">
-            Add work item
+            {editingWorkItem ? 'Update work item' : 'Add work item'}
           </button>
         </form>
       </section>
 
       <section className="workspace">
-        <aside className="card queue">
+        <aside className="card queue" onDragOver={(event) => event.preventDefault()} onDrop={() => void handleQueueDrop()}>
           <h2>Unscheduled work</h2>
           {visibleWorkItems.filter((item) => item.status === 'unscheduled').map((item) => (
             <article
               key={item.id}
               className={selectedWorkItemId === item.id ? 'work-item selected' : 'work-item'}
               draggable
-              onDragStart={() => setDraggingWorkItemId(item.id)}
-              onDragEnd={() => setDraggingWorkItemId(null)}
-              onClick={() => setSelectedWorkItemId(item.id)}
+              onDragStart={() => {
+                setDraggingBookingId(null);
+                setDraggingWorkItemId(item.id);
+              }}
+              onDragEnd={() => {
+                setDraggingWorkItemId(null);
+                setDraggingBookingId(null);
+              }}
+              onClick={() => {
+                setSelectedResourceId(null);
+                setSelectedWorkItemId(item.id);
+              }}
             >
               <div className="row">
                 <strong>{item.title}</strong>
@@ -279,16 +403,31 @@ export function App() {
                   className="resource-row"
                   onDragOver={(event) => event.preventDefault()}
                   onDrop={() => {
+                    if (draggingBookingId) {
+                      const booking = data.bookings.find((entry) => entry.id === draggingBookingId);
+                      if (booking) {
+                        void patchWorkItem(booking.workItemId, { assigneeId: resource.id });
+                      }
+                      return;
+                    }
+
                     if (draggingWorkItemId) {
-                      void assignWorkItem(draggingWorkItemId, resource.id);
+                      void patchWorkItem(draggingWorkItemId, { assigneeId: resource.id });
                     }
                   }}
                 >
-                  <div className="resource-card">
+                  <button
+                    type="button"
+                    className={selectedResourceId === resource.id ? 'resource-card selected' : 'resource-card'}
+                    onClick={() => {
+                      setSelectedWorkItemId(null);
+                      setSelectedResourceId(resource.id);
+                    }}
+                  >
                     <strong>{resource.name}</strong>
                     <span>{resource.role}</span>
                     <small>{skillLabel(resource.skills)}</small>
-                  </div>
+                  </button>
                   <div className="booking-strip">
                     {bookings.map((booking) => {
                       const workItem = workItemLookup.get(booking.workItemId);
@@ -297,7 +436,19 @@ export function App() {
                           key={booking.id}
                           type="button"
                           className="booking-card"
-                          onClick={() => setSelectedWorkItemId(booking.workItemId)}
+                          draggable
+                          onDragStart={() => {
+                            setDraggingWorkItemId(null);
+                            setDraggingBookingId(booking.id);
+                          }}
+                          onDragEnd={() => {
+                            setDraggingWorkItemId(null);
+                            setDraggingBookingId(null);
+                          }}
+                          onClick={() => {
+                            setSelectedResourceId(null);
+                            setSelectedWorkItemId(booking.workItemId);
+                          }}
                         >
                           <strong>{workItem?.title ?? 'Booking'}</strong>
                           {' '}
@@ -316,7 +467,34 @@ export function App() {
 
         <aside className="card inspector">
           <h2>Details</h2>
-          {selectedWorkItem ? (
+          {selectedResource ? (
+            <>
+              <p className="eyebrow">Resource</p>
+              <h3>{selectedResource.name}</h3>
+              <p>{selectedResource.role}</p>
+              <p><strong>Skills:</strong> {skillLabel(selectedResource.skills)}</p>
+              <p><strong>Working hours:</strong> {selectedResource.workingHours.start}:00 to {selectedResource.workingHours.end}:00</p>
+              <p><strong>Color:</strong> {selectedResource.color}</p>
+              <button type="button" className="secondary" onClick={() => beginEditResource(selectedResource)}>
+                Edit resource
+              </button>
+              <div className="resource-bookings">
+                <h4>Assigned work</h4>
+                {data.bookings.filter((booking) => booking.resourceId === selectedResource.id).map((booking) => {
+                  const workItem = workItemLookup.get(booking.workItemId);
+                  return (
+                    <div key={booking.id} className="booking-summary">
+                      <strong>{workItem?.title ?? 'Booking'}</strong>
+                      <span>{formatClock(booking.startTime)} - {formatClock(booking.endTime)}</span>
+                    </div>
+                  );
+                })}
+                {!data.bookings.some((booking) => booking.resourceId === selectedResource.id) ? (
+                  <p className="help-text">No work assigned yet.</p>
+                ) : null}
+              </div>
+            </>
+          ) : selectedWorkItem ? (
             <>
               <p className="eyebrow">{selectedWorkItem.priority} priority</p>
               <h3>{selectedWorkItem.title}</h3>
@@ -324,6 +502,23 @@ export function App() {
               <p><strong>Skills:</strong> {skillLabel(selectedWorkItem.requiredSkills)}</p>
               <p><strong>Duration:</strong> {selectedWorkItem.durationMinutes} minutes</p>
               <p><strong>Status:</strong> {selectedWorkItem.status}</p>
+
+              {selectedWorkItem.status === 'unscheduled' ? (
+                <button type="button" className="secondary" onClick={() => beginEditWorkItem(selectedWorkItem)}>
+                  Edit work item
+                </button>
+              ) : (
+                <>
+                  <p className="help-text">Booked items are read-only in this MVP.</p>
+                  <button
+                    type="button"
+                    className="secondary"
+                    onClick={() => void patchWorkItem(selectedWorkItem.id, { assigneeId: null })}
+                  >
+                    Unassign work item
+                  </button>
+                </>
+              )}
 
               {selectedItemBooking ? (
                 <p>
@@ -341,7 +536,7 @@ export function App() {
                     key={suggestion.resource.id}
                     type="button"
                     className="suggestion"
-                    onClick={() => void assignWorkItem(selectedWorkItem.id, suggestion.resource.id)}
+                    onClick={() => void patchWorkItem(selectedWorkItem.id, { assigneeId: suggestion.resource.id })}
                   >
                     <strong>{suggestion.resource.name}</strong>
                     <span>Score {suggestion.score}</span>
@@ -352,8 +547,108 @@ export function App() {
               </div>
             </>
           ) : (
-            <p>Select a work item to see details and suggestions.</p>
+            <p>Select a work item or resource to see details.</p>
           )}
+
+          <section className="resource-admin">
+            <div className="row">
+              <h3>Resources</h3>
+              {editingResource ? (
+                <button type="button" className="secondary" onClick={cancelResourceEdit}>
+                  Cancel edit
+                </button>
+              ) : null}
+            </div>
+
+            <form onSubmit={submitResource} className="resource-form">
+              <label>
+                Name
+                <input
+                  value={resourceForm.name}
+                  onChange={(event) => setResourceForm({ ...resourceForm, name: event.target.value })}
+                  placeholder="Avery Chen"
+                  required
+                />
+              </label>
+              <label>
+                Role
+                <input
+                  value={resourceForm.role}
+                  onChange={(event) => setResourceForm({ ...resourceForm, role: event.target.value })}
+                  placeholder="Frontend engineer"
+                  required
+                />
+              </label>
+              <div className="grid resource-mini-grid">
+                <label>
+                  Start
+                  <input
+                    type="number"
+                    min={0}
+                    max={23}
+                    value={resourceForm.workingHours.start}
+                    onChange={(event) =>
+                      setResourceForm({
+                        ...resourceForm,
+                        workingHours: { ...resourceForm.workingHours, start: Number(event.target.value) },
+                      })
+                    }
+                  />
+                </label>
+                <label>
+                  End
+                  <input
+                    type="number"
+                    min={1}
+                    max={24}
+                    value={resourceForm.workingHours.end}
+                    onChange={(event) =>
+                      setResourceForm({
+                        ...resourceForm,
+                        workingHours: { ...resourceForm.workingHours, end: Number(event.target.value) },
+                      })
+                    }
+                  />
+                </label>
+              </div>
+              <label>
+                Color
+                <input
+                  type="color"
+                  value={resourceForm.color}
+                  onChange={(event) => setResourceForm({ ...resourceForm, color: event.target.value })}
+                />
+              </label>
+              <div className="skills">
+                <span>Skills</span>
+                <div>
+                  {data.skills.map((skill) => (
+                    <button
+                      key={skill}
+                      type="button"
+                      className={resourceForm.skills.includes(skill) ? 'chip active' : 'chip'}
+                      onClick={() => toggleResourceSkill(skill)}
+                    >
+                      {skill}
+                    </button>
+                  ))}
+                </div>
+              </div>
+              <button className="primary" type="submit">
+                {editingResource ? 'Update resource' : 'Add resource'}
+              </button>
+            </form>
+
+            <div className="resource-list">
+              {data.resources.map((resource) => (
+                <button key={resource.id} type="button" className="resource-list-item" onClick={() => beginEditResource(resource)}>
+                  <strong>{resource.name}</strong>
+                  <span>{resource.role}</span>
+                  <small>{skillLabel(resource.skills)} - {resource.workingHours.start}:00 to {resource.workingHours.end}:00</small>
+                </button>
+              ))}
+            </div>
+          </section>
         </aside>
       </section>
     </main>
