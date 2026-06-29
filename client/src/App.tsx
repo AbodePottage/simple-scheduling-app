@@ -151,9 +151,9 @@ export function App() {
     const unscheduled = visibleWorkItems.filter((item) => item.status === 'unscheduled').length;
     const booked = data ? data.workItems.length - unscheduled : 0;
     return [
-      { label: 'People', value: data?.resources.length ?? 0, detail: 'Available teammates' },
-      { label: 'Booked work', value: booked, detail: 'Assigned tasks' },
-      { label: 'Unscheduled', value: unscheduled, detail: 'Needs coverage' },
+      { label: 'People on the schedule', value: data?.resources.length ?? 0, detail: 'Available teammates' },
+      { label: 'Assignments already booked', value: booked, detail: 'Assigned tasks' },
+      { label: 'Work still waiting', value: unscheduled, detail: 'Needs coverage' },
     ];
   }, [data, visibleWorkItems]);
 
@@ -163,11 +163,9 @@ export function App() {
   const editingResource = editingResourceId ? resourceLookup.get(editingResourceId) ?? null : null;
 
   const navItems = [
-    { label: 'Composer', target: 'composer' },
-    { label: 'Queue', target: 'queue' },
-    { label: 'People', target: 'people' },
     { label: 'Board', target: 'board' },
-    { label: 'Details', target: 'details' },
+    { label: 'People and queue', target: 'people-queue' },
+    { label: 'Composer', target: 'composer' },
   ];
 
   const submitWorkItem = async (event: FormEvent) => {
@@ -336,20 +334,31 @@ export function App() {
     <main className="shell">
       <header className="hero card">
         <div className="hero-copy">
-          <p className="eyebrow eyebrow-hero">Simple scheduling app</p>
+          <p className="hero-intro">A small scheduling board for assigning work to people.</p>
           <h1>Assign work fast</h1>
           <p className="subtitle">Schedule-board-first MVP with a small matching engine.</p>
           <nav className="hero-nav" aria-label="Page sections">
-            {navItems.map((item) => (
-              <button
-                key={item.target}
-                type="button"
-                className="hero-nav-pill"
-                onClick={() => document.getElementById(item.target)?.scrollIntoView({ behavior: 'smooth', block: 'start' })}
+            <label className="filter hero-filter">
+              <span>Jump to a section</span>
+              <select
+                defaultValue=""
+                onChange={(event) => {
+                  const target = event.target.value;
+                  if (target) {
+                    document.getElementById(target)?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                  }
+                }}
               >
-                {item.label}
-              </button>
-            ))}
+                <option value="" disabled>
+                  Choose a section
+                </option>
+                {navItems.map((item) => (
+                  <option key={item.target} value={item.target}>
+                    {item.label}
+                  </option>
+                ))}
+              </select>
+            </label>
           </nav>
         </div>
 
@@ -379,7 +388,7 @@ export function App() {
       <section className="overview" aria-label="Scheduling summary">
         {metrics.map((metric) => (
           <article key={metric.label} className="metric-card card">
-            <p className="eyebrow">{metric.label}</p>
+            <h2 className="metric-label">{metric.label}</h2>
             <strong className="metric-value">{metric.value}</strong>
             <span className="metric-detail">{metric.detail}</span>
           </article>
@@ -389,8 +398,7 @@ export function App() {
       <section className="composer card" ref={composerRef} id="composer">
         <div className="composer-header">
           <div>
-            <p className="eyebrow">Composer</p>
-            <h2>{activeFormPanel === 'work-item' ? 'Work item' : 'Person'}</h2>
+            <h2>{activeFormPanel === 'work-item' ? 'Create a work item' : 'Create a person'}</h2>
           </div>
           <div className="form-switcher" role="tablist" aria-label="Form selection">
             <button
@@ -418,8 +426,10 @@ export function App() {
           <form onSubmit={submitWorkItem}>
             <div className="composer-header compact">
               <div>
-                <p className="eyebrow">{editingWorkItem ? 'Edit work item' : 'Create work item'}</p>
-                <h3>{editingWorkItem ? editingWorkItem.title : 'Add new work'}</h3>
+                <p className="section-copy">
+                  {editingWorkItem ? 'You are editing a work item.' : 'Use this form to create a new work item.'}
+                </p>
+                <h3>{editingWorkItem ? editingWorkItem.title : 'New work item'}</h3>
               </div>
               {editingWorkItem ? (
                 <button type="button" className="secondary" onClick={cancelEdit}>
@@ -503,8 +513,10 @@ export function App() {
           <form onSubmit={submitResource}>
             <div className="composer-header compact">
               <div>
-                <p className="eyebrow">{editingResource ? 'Edit person' : 'Create person'}</p>
-                <h3>{editingResource ? editingResource.name : 'Add new person'}</h3>
+                <p className="section-copy">
+                  {editingResource ? 'You are editing a person.' : 'Use this form to add a person to the schedule.'}
+                </p>
+                <h3>{editingResource ? editingResource.name : 'New person'}</h3>
               </div>
               {editingResource ? (
                 <button type="button" className="secondary" onClick={cancelResourceEdit}>
@@ -597,7 +609,7 @@ export function App() {
       </section>
 
       <section className="workspace">
-        <div className="rail">
+        <div className="rail" id="people-queue">
           <aside
             className={dropTarget?.kind === 'queue' ? 'card queue drop-target' : 'card queue'}
             id="queue"
@@ -617,7 +629,7 @@ export function App() {
             }}
           >
             <div className="section-heading">
-              <h2>Unscheduled work</h2>
+              <h2>Work waiting to be scheduled</h2>
               <p className="section-copy">
                 {unscheduledWorkItems.length > displayedWorkItems.length
                   ? `Showing ${displayedWorkItems.length} of ${unscheduledWorkItems.length}.`
@@ -667,7 +679,7 @@ export function App() {
 
           <aside className="card resource-list-panel" id="people">
             <div className="section-heading">
-              <h2>People</h2>
+              <h2>People on the schedule</h2>
               <p className="section-copy">Click one to inspect or edit them.</p>
             </div>
             <div className="resource-list">
@@ -689,7 +701,7 @@ export function App() {
         <section className="board" id="board">
           <div className="board-header">
             <div>
-              <h2>Schedule board</h2>
+              <h2>Assignments on the board</h2>
             </div>
             <p className="section-copy">Drag work onto a person or use the suggestion panel.</p>
           </div>
@@ -821,7 +833,7 @@ export function App() {
             </>
           ) : selectedWorkItem ? (
             <>
-              <p className="eyebrow">{selectedWorkItem.priority} priority</p>
+              <p className="section-copy">Priority is {selectedWorkItem.priority.toLowerCase()}.</p>
               <h3>{selectedWorkItem.title}</h3>
               <p>{selectedWorkItem.description}</p>
               <div className="detail-pills">
