@@ -4,6 +4,13 @@ import type { BootstrapResponse, Booking, Resource, Suggestion, WorkItem, Priori
 const priorityOrder: Record<Priority, number> = { High: 3, Medium: 2, Low: 1 };
 type Theme = 'light' | 'dark';
 type FormPanel = 'work-item' | 'resource';
+type AppPath = '/schedule' | '/tasks' | '/team' | '/create';
+
+const validPaths: AppPath[] = ['/schedule', '/tasks', '/team', '/create'];
+
+function normalizePath(pathname: string) {
+  return validPaths.includes(pathname as AppPath) ? (pathname as AppPath) : '/schedule';
+}
 
 function formatClock(iso: string) {
   return new Date(iso).toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' });
@@ -27,6 +34,7 @@ function skillOvals(skills: string[]) {
 
 export function App() {
   const composerRef = useRef<HTMLElement | null>(null);
+  const [pathname, setPathname] = useState<AppPath>(() => normalizePath(window.location.pathname));
   const [data, setData] = useState<BootstrapResponse | null>(null);
   const [selectedWorkItemId, setSelectedWorkItemId] = useState<string | null>(null);
   const [selectedResourceId, setSelectedResourceId] = useState<string | null>(null);
@@ -67,6 +75,16 @@ export function App() {
   const [draggingWorkItemId, setDraggingWorkItemId] = useState<string | null>(null);
   const [draggingBookingId, setDraggingBookingId] = useState<string | null>(null);
 
+  const navigate = (path: AppPath) => {
+    const nextPath = normalizePath(path);
+    if (nextPath === pathname) {
+      return;
+    }
+
+    window.history.pushState({}, '', nextPath);
+    setPathname(nextPath);
+  };
+
   const load = async () => {
     const response = await fetch('/api/bootstrap');
     setData((await response.json()) as BootstrapResponse);
@@ -74,6 +92,22 @@ export function App() {
 
   useEffect(() => {
     void load();
+  }, []);
+
+  useEffect(() => {
+    const onPopState = () => {
+      setPathname(normalizePath(window.location.pathname));
+    };
+
+    window.addEventListener('popstate', onPopState);
+    return () => window.removeEventListener('popstate', onPopState);
+  }, []);
+
+  useEffect(() => {
+    if (window.location.pathname === '/') {
+      window.history.replaceState({}, '', '/schedule');
+      setPathname('/schedule');
+    }
   }, []);
 
   useEffect(() => {
@@ -163,10 +197,10 @@ export function App() {
   const editingResource = editingResourceId ? resourceLookup.get(editingResourceId) ?? null : null;
 
   const navItems = [
-    { label: 'Schedule', target: 'board' },
-    { label: 'Team', target: 'people' },
-    { label: 'Tasks', target: 'queue' },
-    { label: 'Create', target: 'composer' },
+    { label: 'Schedule', target: '/schedule' as AppPath },
+    { label: 'Team', target: '/team' as AppPath },
+    { label: 'Tasks', target: '/tasks' as AppPath },
+    { label: 'Create', target: '/create' as AppPath },
   ];
 
   const submitWorkItem = async (event: FormEvent) => {
@@ -327,6 +361,59 @@ export function App() {
     ? data?.bookings.find((booking) => booking.id === selectedWorkItem.bookingId) ?? null
     : null;
 
+  if (pathname !== '/schedule') {
+    const pageTitle = pathname === '/tasks' ? 'Tasks' : pathname === '/team' ? 'Team' : 'Create';
+    const pageCopy =
+      pathname === '/tasks'
+        ? 'Backlog and unassigned work will live here.'
+        : pathname === '/team'
+          ? 'Roster, skills, and availability will live here.'
+          : 'New work item and teammate flows will live here.';
+
+    return (
+      <main className="shell">
+        <header className="hero card">
+          <div className="hero-copy">
+            <p className="eyebrow eyebrow-hero">Simple scheduling app</p>
+            <h1>{pageTitle}</h1>
+            <p className="subtitle">Split into pages for faster scanning and cleaner editing.</p>
+            <nav className="hero-nav" aria-label="Page sections">
+              {navItems.map((item) => (
+                <button
+                  key={item.target}
+                  type="button"
+                  className={item.target === pathname ? 'hero-nav-pill active' : 'hero-nav-pill'}
+                  onClick={() => navigate(item.target)}
+                >
+                  {item.label}
+                </button>
+              ))}
+            </nav>
+          </div>
+
+          <div className="hero-actions">
+            <button
+              type="button"
+              className="secondary theme-toggle"
+              aria-label={theme === 'light' ? 'Switch to dark mode' : 'Switch to light mode'}
+              onClick={() => setTheme(theme === 'light' ? 'dark' : 'light')}
+            >
+              <span aria-hidden="true">{theme === 'light' ? '🌙' : '☀️'}</span>
+            </button>
+          </div>
+        </header>
+
+        <section className="page-placeholder card">
+          <h2>{pageTitle} page</h2>
+          <p>{pageCopy}</p>
+          <button type="button" className="primary" onClick={() => navigate('/schedule')}>
+            Back to schedule
+          </button>
+        </section>
+      </main>
+    );
+  }
+
   if (!data) {
     return <main className="shell">Loading scheduling board...</main>;
   }
@@ -343,8 +430,8 @@ export function App() {
               <button
                 key={item.target}
                 type="button"
-                className="hero-nav-pill"
-                onClick={() => document.getElementById(item.target)?.scrollIntoView({ behavior: 'smooth', block: 'start' })}
+                className={item.target === pathname ? 'hero-nav-pill active' : 'hero-nav-pill'}
+                onClick={() => navigate(item.target)}
               >
                 {item.label}
               </button>
