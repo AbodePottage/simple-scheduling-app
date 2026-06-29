@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState, type FormEvent } from 'react';
+import { useEffect, useMemo, useState, type CSSProperties, type FormEvent } from 'react';
 import type { BootstrapResponse, Booking, Resource, Suggestion, WorkItem, Priority } from './types';
 
 const priorityOrder: Record<Priority, number> = { High: 3, Medium: 2, Low: 1 };
@@ -11,6 +11,18 @@ function formatClock(iso: string) {
 
 function skillLabel(skills: string[]) {
   return skills.length ? skills.join(', ') : 'None';
+}
+
+function skillOvals(skills: string[]) {
+  if (!skills.length) {
+    return <span className="skill-oval muted">General</span>;
+  }
+
+  return skills.map((skill) => (
+    <span key={skill} className="skill-oval">
+      {skill}
+    </span>
+  ));
 }
 
 export function App() {
@@ -592,18 +604,21 @@ export function App() {
             </div>
             <div className="resource-list">
               {data.resources.map((resource) => (
-                <button key={resource.id} type="button" className="resource-list-item" onClick={() => beginEditResource(resource)}>
-                  <div className="resource-list-item-top">
-                    <span className="color-swatch" style={{ backgroundColor: resource.color }} />
-                    <div>
+                  <button
+                    key={resource.id}
+                    type="button"
+                    className="resource-list-item"
+                    style={{ '--card-accent': resource.color } as CSSProperties}
+                    onClick={() => beginEditResource(resource)}
+                  >
+                    <div className="resource-list-item-top">
+                      <span className="color-swatch" style={{ backgroundColor: resource.color }} />
                       <strong>{resource.name}</strong>
-                      <span className="resource-role">{resource.role}</span>
                     </div>
-                  </div>
-                  <small>{skillLabel(resource.skills)} - {resource.workingHours.start}:00 to {resource.workingHours.end}:00</small>
-                </button>
-              ))}
-            </div>
+                    <div className="skill-ovals">{skillOvals(resource.skills)}</div>
+                  </button>
+                ))}
+              </div>
           </aside>
         </div>
 
@@ -651,6 +666,7 @@ export function App() {
                   <button
                     type="button"
                     className={selectedResourceId === resource.id ? 'resource-card selected' : 'resource-card'}
+                    style={{ '--card-accent': resource.color } as CSSProperties}
                     onClick={() => {
                       setSelectedWorkItemId(null);
                       setSelectedResourceId(resource.id);
@@ -658,12 +674,9 @@ export function App() {
                   >
                     <div className="resource-card-top">
                       <span className="color-swatch" style={{ backgroundColor: resource.color }} />
-                      <div>
-                        <strong>{resource.name}</strong>
-                        <span className="resource-role">{resource.role}</span>
-                      </div>
+                      <strong>{resource.name}</strong>
                     </div>
-                    <small>{skillLabel(resource.skills)}</small>
+                    <div className="skill-ovals">{skillOvals(resource.skills)}</div>
                   </button>
                   <div className="booking-strip">
                     {!bookings.length ? (
@@ -684,6 +697,7 @@ export function App() {
                           ]
                             .filter(Boolean)
                             .join(' ')}
+                          style={{ '--card-accent': resource.color } as CSSProperties}
                           draggable
                           onDragStart={() => {
                             setDraggingWorkItemId(null);
@@ -699,11 +713,8 @@ export function App() {
                             setSelectedWorkItemId(booking.workItemId);
                           }}
                         >
-                          <strong>{workItem?.title ?? 'Booking'}</strong>
-                          {' '}
-                          <span>
-                            {formatClock(booking.startTime)} - {formatClock(booking.endTime)}
-                          </span>
+                        <strong>{workItem?.title ?? 'Booking'}</strong>
+                        <div className="skill-ovals">{skillOvals(workItem?.requiredSkills ?? [])}</div>
                         </button>
                       );
                     })}
