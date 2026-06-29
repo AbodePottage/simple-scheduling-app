@@ -164,7 +164,8 @@ export function App() {
 
   const navItems = [
     { label: 'Schedule', target: 'board' },
-    { label: 'Team & tasks', target: 'people-queue' },
+    { label: 'Team', target: 'people' },
+    { label: 'Tasks', target: 'queue' },
     { label: 'Create', target: 'composer' },
   ];
 
@@ -334,6 +335,7 @@ export function App() {
     <main className="shell">
       <header className="hero card">
         <div className="hero-copy">
+          <p className="eyebrow eyebrow-hero">Simple scheduling app</p>
           <h1>Assign work fast</h1>
           <p className="subtitle">Schedule-board-first MVP with a small matching engine.</p>
           <nav className="hero-nav" aria-label="Page sections">
@@ -383,215 +385,6 @@ export function App() {
         ))}
       </section>
 
-      <section className="composer card" ref={composerRef} id="composer">
-        <div className="composer-header">
-          <div>
-            <h2>Create</h2>
-          </div>
-          <div className="form-switcher" role="tablist" aria-label="Form selection">
-            <button
-              type="button"
-              role="tab"
-              aria-selected={activeFormPanel === 'work-item'}
-              className={activeFormPanel === 'work-item' ? 'secondary active' : 'secondary'}
-              onClick={() => setActiveFormPanel('work-item')}
-            >
-              Work item
-            </button>
-            <button
-              type="button"
-              role="tab"
-              aria-selected={activeFormPanel === 'resource'}
-              className={activeFormPanel === 'resource' ? 'secondary active' : 'secondary'}
-              onClick={() => setActiveFormPanel('resource')}
-            >
-              Person
-            </button>
-          </div>
-        </div>
-
-        {activeFormPanel === 'work-item' ? (
-          <form onSubmit={submitWorkItem}>
-            <div className="composer-header compact">
-              <div>
-                <p className="section-copy">{editingWorkItem ? 'Editing a work item.' : 'Create a work item.'}</p>
-                <h3>{editingWorkItem ? editingWorkItem.title : 'New work item'}</h3>
-              </div>
-              {editingWorkItem ? (
-                <button type="button" className="secondary" onClick={cancelEdit}>
-                  Cancel edit
-                </button>
-              ) : null}
-            </div>
-
-            <div className="grid">
-              <label>
-                Title
-                <input
-                  value={form.title}
-                  onChange={(event) => setForm({ ...form, title: event.target.value })}
-                  placeholder="Prepare release notes"
-                  required
-                />
-              </label>
-              <label>
-                Priority
-                <select value={form.priority} onChange={(event) => setForm({ ...form, priority: event.target.value as Priority })}>
-                  <option value="Low">Low</option>
-                  <option value="Medium">Medium</option>
-                  <option value="High">High</option>
-                </select>
-              </label>
-              <label>
-                Duration
-                <select
-                  value={form.durationMinutes}
-                  onChange={(event) => setForm({ ...form, durationMinutes: Number(event.target.value) })}
-                >
-                  <option value={30}>30 minutes</option>
-                  <option value={60}>60 minutes</option>
-                  <option value={90}>90 minutes</option>
-                  <option value={120}>120 minutes</option>
-                </select>
-              </label>
-              <label>
-                Target date
-                <input
-                  type="date"
-                  value={form.targetDate}
-                  onChange={(event) => setForm({ ...form, targetDate: event.target.value })}
-                  required
-                />
-              </label>
-            </div>
-
-            <label>
-              Description
-              <textarea
-                value={form.description}
-                onChange={(event) => setForm({ ...form, description: event.target.value })}
-                rows={2}
-                placeholder="Short description of the work."
-              />
-            </label>
-
-            <div className="skills">
-              <span>Required skills</span>
-              <div>
-                {data.skills.map((skill) => (
-                  <button
-                    key={skill}
-                    type="button"
-                    className={form.requiredSkills.includes(skill) ? 'chip active' : 'chip'}
-                    onClick={() => toggleSkill(skill)}
-                  >
-                    {skill}
-                  </button>
-                ))}
-              </div>
-            </div>
-
-            <button className="primary" type="submit">
-              {editingWorkItem ? 'Update work item' : 'Add work item'}
-            </button>
-          </form>
-        ) : (
-          <form onSubmit={submitResource}>
-            <div className="composer-header compact">
-              <div>
-                <p className="section-copy">{editingResource ? 'Editing a person.' : 'Create a person.'}</p>
-                <h3>{editingResource ? editingResource.name : 'New person'}</h3>
-              </div>
-              {editingResource ? (
-                <button type="button" className="secondary" onClick={cancelResourceEdit}>
-                  Cancel edit
-                </button>
-              ) : null}
-            </div>
-
-            <div className="grid">
-              <label>
-                Name
-                <input
-                  value={resourceForm.name}
-                  onChange={(event) => setResourceForm({ ...resourceForm, name: event.target.value })}
-                  placeholder="Avery Chen"
-                  required
-                />
-              </label>
-              <label>
-                Role
-                <input
-                  value={resourceForm.role}
-                  onChange={(event) => setResourceForm({ ...resourceForm, role: event.target.value })}
-                  placeholder="Frontend engineer"
-                  required
-                />
-              </label>
-              <label>
-                Start
-                <input
-                  type="number"
-                  min={0}
-                  max={23}
-                  value={resourceForm.workingHours.start}
-                  onChange={(event) =>
-                    setResourceForm({
-                      ...resourceForm,
-                      workingHours: { ...resourceForm.workingHours, start: Number(event.target.value) },
-                    })
-                  }
-                />
-              </label>
-              <label>
-                End
-                <input
-                  type="number"
-                  min={1}
-                  max={24}
-                  value={resourceForm.workingHours.end}
-                  onChange={(event) =>
-                    setResourceForm({
-                      ...resourceForm,
-                      workingHours: { ...resourceForm.workingHours, end: Number(event.target.value) },
-                    })
-                  }
-                />
-              </label>
-            </div>
-
-            <label>
-              Color
-              <input
-                type="color"
-                value={resourceForm.color}
-                onChange={(event) => setResourceForm({ ...resourceForm, color: event.target.value })}
-              />
-            </label>
-
-            <div className="skills">
-              <span>Skills</span>
-              <div>
-                {data.skills.map((skill) => (
-                  <button
-                    key={skill}
-                    type="button"
-                    className={resourceForm.skills.includes(skill) ? 'chip active' : 'chip'}
-                    onClick={() => toggleResourceSkill(skill)}
-                  >
-                    {skill}
-                  </button>
-                ))}
-              </div>
-            </div>
-
-            <button className="primary" type="submit">
-              {editingResource ? 'Update person' : 'Add person'}
-            </button>
-          </form>
-        )}
-      </section>
-
       <section className="workspace">
         <div className="rail" id="people-queue">
           <aside
@@ -614,11 +407,6 @@ export function App() {
           >
             <div className="section-heading">
               <h2>Tasks</h2>
-              <p className="section-copy">
-                {unscheduledWorkItems.length > displayedWorkItems.length
-                  ? `Showing ${displayedWorkItems.length} of ${unscheduledWorkItems.length}.`
-                  : 'Drag work back here to unassign it.'}
-              </p>
             </div>
             {displayedWorkItems.length ? (
               displayedWorkItems.map((item) => (
@@ -664,7 +452,6 @@ export function App() {
           <aside className="card resource-list-panel" id="people">
             <div className="section-heading">
               <h2>Team</h2>
-              <p className="section-copy">Click a person to inspect or edit.</p>
             </div>
             <div className="resource-list">
               {data.resources.map((resource) => (
@@ -687,7 +474,6 @@ export function App() {
             <div>
               <h2>Schedule</h2>
             </div>
-            <p className="section-copy">Drag work onto a person or use suggestions.</p>
           </div>
 
           <div className="resource-grid">
@@ -798,7 +584,7 @@ export function App() {
                 <span className="detail-pill">{skillLabel(selectedResource.skills)}</span>
               </div>
               <button type="button" className="secondary" onClick={() => beginEditResource(selectedResource)}>
-                Edit person
+                Edit teammate
               </button>
               <div className="resource-bookings">
                 {data.bookings.filter((booking) => booking.resourceId === selectedResource.id).map((booking) => {
@@ -877,10 +663,217 @@ export function App() {
           ) : (
             <div className="empty-state">
               <strong>Nothing selected.</strong>
-              <p>Choose a work item or person to inspect details and actions.</p>
+              <p>Choose a work item or teammate to inspect details and actions.</p>
             </div>
           )}
         </aside>
+      </section>
+
+      <section className="composer card" ref={composerRef} id="composer">
+        <div className="composer-header">
+          <div>
+            <h2>Create</h2>
+          </div>
+          <div className="form-switcher" role="tablist" aria-label="Form selection">
+            <button
+              type="button"
+              role="tab"
+              aria-selected={activeFormPanel === 'work-item'}
+              className={activeFormPanel === 'work-item' ? 'secondary active' : 'secondary'}
+              onClick={() => setActiveFormPanel('work-item')}
+            >
+              Work item
+            </button>
+            <button
+              type="button"
+              role="tab"
+              aria-selected={activeFormPanel === 'resource'}
+              className={activeFormPanel === 'resource' ? 'secondary active' : 'secondary'}
+              onClick={() => setActiveFormPanel('resource')}
+            >
+              Teammate
+            </button>
+          </div>
+        </div>
+
+        {activeFormPanel === 'work-item' ? (
+          <form onSubmit={submitWorkItem}>
+            <div className="composer-header compact">
+              <div>
+                <h3>{editingWorkItem ? editingWorkItem.title : 'New work item'}</h3>
+              </div>
+              {editingWorkItem ? (
+                <button type="button" className="secondary" onClick={cancelEdit}>
+                  Cancel edit
+                </button>
+              ) : null}
+            </div>
+
+            <div className="grid">
+              <label>
+                Title
+                <input
+                  value={form.title}
+                  onChange={(event) => setForm({ ...form, title: event.target.value })}
+                  placeholder="Prepare release notes"
+                  required
+                />
+              </label>
+              <label>
+                Priority
+                <select value={form.priority} onChange={(event) => setForm({ ...form, priority: event.target.value as Priority })}>
+                  <option value="Low">Low</option>
+                  <option value="Medium">Medium</option>
+                  <option value="High">High</option>
+                </select>
+              </label>
+              <label>
+                Duration
+                <select
+                  value={form.durationMinutes}
+                  onChange={(event) => setForm({ ...form, durationMinutes: Number(event.target.value) })}
+                >
+                  <option value={30}>30 minutes</option>
+                  <option value={60}>60 minutes</option>
+                  <option value={90}>90 minutes</option>
+                  <option value={120}>120 minutes</option>
+                </select>
+              </label>
+              <label>
+                Target date
+                <input
+                  type="date"
+                  value={form.targetDate}
+                  onChange={(event) => setForm({ ...form, targetDate: event.target.value })}
+                  required
+                />
+              </label>
+            </div>
+
+            <label>
+              Description
+              <textarea
+                value={form.description}
+                onChange={(event) => setForm({ ...form, description: event.target.value })}
+                rows={2}
+                placeholder="Short description of the work."
+              />
+            </label>
+
+            <div className="skills">
+              <span>Required skills</span>
+              <div>
+                {data.skills.map((skill) => (
+                  <button
+                    key={skill}
+                    type="button"
+                    className={form.requiredSkills.includes(skill) ? 'chip active' : 'chip'}
+                    onClick={() => toggleSkill(skill)}
+                  >
+                    {skill}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            <button className="primary" type="submit">
+              {editingWorkItem ? 'Update work item' : 'Add work item'}
+            </button>
+          </form>
+        ) : (
+          <form onSubmit={submitResource}>
+            <div className="composer-header compact">
+              <div>
+                <h3>{editingResource ? editingResource.name : 'Add teammate'}</h3>
+              </div>
+              {editingResource ? (
+                <button type="button" className="secondary" onClick={cancelResourceEdit}>
+                  Cancel edit
+                </button>
+              ) : null}
+            </div>
+
+            <div className="grid">
+              <label>
+                Name
+                <input
+                  value={resourceForm.name}
+                  onChange={(event) => setResourceForm({ ...resourceForm, name: event.target.value })}
+                  placeholder="Avery Chen"
+                  required
+                />
+              </label>
+              <label>
+                Role
+                <input
+                  value={resourceForm.role}
+                  onChange={(event) => setResourceForm({ ...resourceForm, role: event.target.value })}
+                  placeholder="Frontend engineer"
+                  required
+                />
+              </label>
+              <label>
+                Start
+                <input
+                  type="number"
+                  min={0}
+                  max={23}
+                  value={resourceForm.workingHours.start}
+                  onChange={(event) =>
+                    setResourceForm({
+                      ...resourceForm,
+                      workingHours: { ...resourceForm.workingHours, start: Number(event.target.value) },
+                    })
+                  }
+                />
+              </label>
+              <label>
+                End
+                <input
+                  type="number"
+                  min={1}
+                  max={24}
+                  value={resourceForm.workingHours.end}
+                  onChange={(event) =>
+                    setResourceForm({
+                      ...resourceForm,
+                      workingHours: { ...resourceForm.workingHours, end: Number(event.target.value) },
+                    })
+                  }
+                />
+              </label>
+            </div>
+
+            <label>
+              Color
+              <input
+                type="color"
+                value={resourceForm.color}
+                onChange={(event) => setResourceForm({ ...resourceForm, color: event.target.value })}
+              />
+            </label>
+
+            <div className="skills">
+              <span>Skills</span>
+              <div>
+                {data.skills.map((skill) => (
+                  <button
+                    key={skill}
+                    type="button"
+                    className={resourceForm.skills.includes(skill) ? 'chip active' : 'chip'}
+                    onClick={() => toggleResourceSkill(skill)}
+                  >
+                    {skill}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            <button className="primary" type="submit">
+              {editingResource ? 'Update teammate' : 'Add teammate'}
+            </button>
+          </form>
+        )}
       </section>
     </main>
   );
