@@ -1,0 +1,265 @@
+:root {
+  color-scheme: light;
+  font-family: Inter, system-ui, sans-serif;
+  background: #f5f7fb;
+  color: #1f2937;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+}
+
+button,
+input,
+select,
+textarea {
+  font: inherit;
+}
+
+.shell {
+  padding: 24px;
+  display: grid;
+  gap: 20px;
+}
+
+.header {
+  display: flex;
+  align-items: end;
+  justify-content: space-between;
+  gap: 16px;
+}
+
+.eyebrow {
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  font-size: 12px;
+  color: #6b7280;
+  margin: 0 0 6px;
+}
+
+h1,
+h2,
+h3,
+p {
+  margin-top: 0;
+}
+
+.subtitle {
+  color: #6b7280;
+}
+
+.filter {
+  display: grid;
+  gap: 6px;
+}
+
+.filter select,
+form input,
+form select,
+form textarea {
+  border: 1px solid #d1d5db;
+  border-radius: 12px;
+  padding: 10px 12px;
+  background: #fff;
+}
+
+.composer,
+.card {
+  background: #fff;
+  border: 1px solid #e5e7eb;
+  border-radius: 20px;
+  padding: 20px;
+  box-shadow: 0 10px 30px rgba(15, 23, 42, 0.06);
+}
+
+.grid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 12px;
+}
+
+label {
+  display: grid;
+  gap: 6px;
+  font-size: 14px;
+}
+
+.skills {
+  margin: 14px 0;
+  display: grid;
+  gap: 8px;
+}
+
+.skills > div {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.chip {
+  border: 1px solid #d1d5db;
+  background: #fff;
+  border-radius: 999px;
+  padding: 8px 12px;
+  cursor: pointer;
+}
+
+.chip.active {
+  background: #1d4ed8;
+  border-color: #1d4ed8;
+  color: white;
+}
+
+.primary {
+  border: none;
+  border-radius: 999px;
+  background: #1d4ed8;
+  color: white;
+  padding: 12px 18px;
+  cursor: pointer;
+}
+
+.workspace {
+  display: grid;
+  grid-template-columns: 280px minmax(0, 1fr) 320px;
+  gap: 20px;
+}
+
+.queue,
+.inspector,
+.board {
+  min-height: 500px;
+}
+
+.queue,
+.inspector {
+  display: grid;
+  gap: 12px;
+  align-content: start;
+}
+
+.work-item,
+.suggestion,
+.booking-card,
+.resource-card {
+  border: 1px solid #e5e7eb;
+  border-radius: 16px;
+  padding: 12px;
+  background: #fff;
+}
+
+.work-item {
+  cursor: grab;
+}
+
+.work-item.selected {
+  border-color: #1d4ed8;
+  box-shadow: 0 0 0 2px rgba(29, 78, 216, 0.08);
+}
+
+.row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.priority {
+  font-size: 12px;
+  border-radius: 999px;
+  padding: 4px 8px;
+  color: white;
+}
+
+.priority.high { background: #dc2626; }
+.priority.medium { background: #d97706; }
+.priority.low { background: #16a34a; }
+
+.board {
+  background: #fff;
+  border: 1px solid #e5e7eb;
+  border-radius: 20px;
+  padding: 20px;
+}
+
+.board-header {
+  display: flex;
+  align-items: end;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 16px;
+}
+
+.resource-grid {
+  display: grid;
+  gap: 12px;
+}
+
+.resource-row {
+  display: grid;
+  grid-template-columns: 180px 1fr;
+  gap: 12px;
+  align-items: stretch;
+}
+
+.booking-strip {
+  min-height: 96px;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  padding: 12px;
+  border: 1px dashed #cbd5e1;
+  border-radius: 16px;
+}
+
+.booking-card,
+.suggestion {
+  cursor: pointer;
+  text-align: left;
+}
+
+.suggestions {
+  display: grid;
+  gap: 8px;
+}
+
+.suggestion {
+  display: grid;
+  gap: 4px;
+}
+
+.resource-card {
+  display: grid;
+  gap: 4px;
+  background: #f8fafc;
+}
+
+@media (max-width: 1200px) {
+  .workspace {
+    grid-template-columns: 1fr;
+  }
+
+  .resource-row {
+    grid-template-columns: 1fr;
+  }
+
+  .grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 720px) {
+  .header {
+    flex-direction: column;
+    align-items: start;
+  }
+
+  .grid {
+    grid-template-columns: 1fr;
+  }
+}
+
