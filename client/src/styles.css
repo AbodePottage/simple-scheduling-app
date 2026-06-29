@@ -254,6 +254,29 @@ form textarea {
   margin-bottom: 12px;
 }
 
+.composer-header.compact {
+  margin-top: 12px;
+}
+
+.form-switcher {
+  display: inline-flex;
+  gap: 8px;
+  padding: 4px;
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  background: var(--surface-soft);
+}
+
+.form-switcher .secondary {
+  border: 0;
+  background: transparent;
+}
+
+.form-switcher .secondary.active {
+  background: var(--surface);
+  box-shadow: 0 8px 20px rgba(15, 23, 42, 0.08);
+}
+
 .grid {
   display: grid;
   grid-template-columns: repeat(4, minmax(0, 1fr));
@@ -313,8 +336,14 @@ label {
 
 .workspace {
   display: grid;
-  grid-template-columns: 280px minmax(0, 1fr) 320px;
+  grid-template-columns: 320px minmax(0, 1fr) 360px;
   gap: 20px;
+}
+
+.rail {
+  display: grid;
+  gap: 20px;
+  align-content: start;
 }
 
 .queue,
@@ -479,6 +508,20 @@ label {
   justify-content: space-between;
   gap: 12px;
   margin-bottom: 8px;
+}
+
+.resource-list-panel {
+  display: grid;
+  gap: 12px;
+  align-content: start;
+}
+
+.resource-list-panel .section-heading {
+  margin-bottom: 0;
+}
+
+.resource-list-panel .resource-list {
+  gap: 10px;
 }
 
 .section-copy {
