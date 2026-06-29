@@ -144,7 +144,7 @@ export function App() {
     const unscheduled = visibleWorkItems.filter((item) => item.status === 'unscheduled').length;
     const booked = data ? data.workItems.length - unscheduled : 0;
     return [
-      { label: 'Resources', value: data?.resources.length ?? 0, detail: 'Available people' },
+      { label: 'People', value: data?.resources.length ?? 0, detail: 'Available teammates' },
       { label: 'Booked work', value: booked, detail: 'Assigned tasks' },
       { label: 'Unscheduled', value: unscheduled, detail: 'Needs coverage' },
     ];
@@ -333,7 +333,7 @@ export function App() {
         <div className="composer-header">
           <div>
             <p className="eyebrow">Composer</p>
-            <h2>{activeFormPanel === 'work-item' ? 'Work item' : 'Resource'}</h2>
+            <h2>{activeFormPanel === 'work-item' ? 'Work item' : 'Person'}</h2>
           </div>
           <div className="form-switcher" role="tablist" aria-label="Form selection">
             <button
@@ -352,7 +352,7 @@ export function App() {
               className={activeFormPanel === 'resource' ? 'secondary active' : 'secondary'}
               onClick={() => setActiveFormPanel('resource')}
             >
-              Resource
+              Person
             </button>
           </div>
         </div>
@@ -446,8 +446,8 @@ export function App() {
           <form onSubmit={submitResource}>
             <div className="composer-header compact">
               <div>
-                <p className="eyebrow">{editingResource ? 'Edit resource' : 'Create resource'}</p>
-                <h3>{editingResource ? editingResource.name : 'Add new resource'}</h3>
+                <p className="eyebrow">{editingResource ? 'Edit person' : 'Create person'}</p>
+                <h3>{editingResource ? editingResource.name : 'Add new person'}</h3>
               </div>
               {editingResource ? (
                 <button type="button" className="secondary" onClick={cancelResourceEdit}>
@@ -533,7 +533,7 @@ export function App() {
             </div>
 
             <button className="primary" type="submit">
-              {editingResource ? 'Update resource' : 'Add resource'}
+              {editingResource ? 'Update person' : 'Add person'}
             </button>
           </form>
         )}
@@ -610,8 +610,8 @@ export function App() {
 
           <aside className="card resource-list-panel">
             <div className="section-heading">
-              <h2>Resources</h2>
-              <p className="section-copy">Click one to inspect or edit it.</p>
+              <h2>People</h2>
+              <p className="section-copy">Click one to inspect or edit them.</p>
             </div>
             <div className="resource-list">
               {data.resources.map((resource) => (
@@ -634,7 +634,7 @@ export function App() {
             <div>
               <h2>Schedule board</h2>
             </div>
-            <p className="section-copy">Drag work onto a resource or use the suggestion panel.</p>
+            <p className="section-copy">Drag work onto a person or use the suggestion panel.</p>
           </div>
 
           <div className="resource-grid">
@@ -747,7 +747,7 @@ export function App() {
                 <span className="detail-pill">{skillLabel(selectedResource.skills)}</span>
               </div>
               <button type="button" className="secondary" onClick={() => beginEditResource(selectedResource)}>
-                Edit resource
+                Edit person
               </button>
               <div className="resource-bookings">
                 {data.bookings.filter((booking) => booking.resourceId === selectedResource.id).map((booking) => {
@@ -826,7 +826,7 @@ export function App() {
           ) : (
             <div className="empty-state">
               <strong>Nothing selected.</strong>
-              <p>Choose a work item or resource to inspect details and actions.</p>
+              <p>Choose a work item or person to inspect details and actions.</p>
             </div>
           )}
         </aside>
