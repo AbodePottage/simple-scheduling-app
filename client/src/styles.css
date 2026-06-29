@@ -135,6 +135,18 @@ textarea:focus-visible {
   margin-bottom: 12px;
 }
 
+.eyebrow-hero {
+  display: inline-flex;
+  align-items: center;
+  width: fit-content;
+  padding: 6px 10px;
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--accent) 10%, var(--surface));
+  color: var(--accent-text);
+  border: 1px solid color-mix(in srgb, var(--accent) 18%, var(--border));
+  margin-bottom: 10px;
+}
+
 .hero .subtitle {
   max-width: 640px;
   font-size: 1.05rem;
@@ -152,26 +164,6 @@ textarea:focus-visible {
   z-index: 1;
   min-width: 240px;
   justify-self: end;
-}
-
-.hero-stats {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 10px;
-  margin-top: 18px;
-}
-
-.stat-pill {
-  display: inline-flex;
-  align-items: center;
-  gap: 8px;
-  border: 1px solid var(--border);
-  background: var(--surface-overlay);
-  color: var(--accent-text);
-  border-radius: 999px;
-  padding: 8px 12px;
-  font-size: 13px;
-  box-shadow: 0 10px 20px rgba(15, 23, 42, 0.04);
 }
 
 .eyebrow {

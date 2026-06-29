@@ -298,14 +298,9 @@ export function App() {
     <main className="shell">
       <header className="hero card">
         <div className="hero-copy">
-          <p className="eyebrow">Simple scheduling app</p>
+          <p className="eyebrow eyebrow-hero">Simple scheduling app</p>
           <h1>Assign work fast</h1>
           <p className="subtitle">Schedule-board-first MVP with a small matching engine.</p>
-          <div className="hero-stats">
-            <span className="stat-pill">Resources</span>
-            <span className="stat-pill">Work items</span>
-            <span className="stat-pill">Drag and drop assignment</span>
-          </div>
         </div>
 
         <div className="hero-actions">
@@ -320,8 +315,13 @@ export function App() {
             </select>
           </label>
 
-          <button type="button" className="secondary theme-toggle" onClick={() => setTheme(theme === 'light' ? 'dark' : 'light')}>
-            {theme === 'light' ? 'Dark mode' : 'Light mode'}
+          <button
+            type="button"
+            className="secondary theme-toggle"
+            aria-label={theme === 'light' ? 'Switch to dark mode' : 'Switch to light mode'}
+            onClick={() => setTheme(theme === 'light' ? 'dark' : 'light')}
+          >
+            <span aria-hidden="true">{theme === 'light' ? '🌙' : '☀️'}</span>
           </button>
         </div>
       </header>
