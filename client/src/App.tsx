@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState, type CSSProperties, type FormEvent } from 'react';
+import { useEffect, useMemo, useRef, useState, type CSSProperties, type FormEvent } from 'react';
 import type { BootstrapResponse, Booking, Resource, Suggestion, WorkItem, Priority } from './types';
 
 const priorityOrder: Record<Priority, number> = { High: 3, Medium: 2, Low: 1 };
@@ -26,6 +26,7 @@ function skillOvals(skills: string[]) {
 }
 
 export function App() {
+  const composerRef = useRef<HTMLElement | null>(null);
   const [data, setData] = useState<BootstrapResponse | null>(null);
   const [selectedWorkItemId, setSelectedWorkItemId] = useState<string | null>(null);
   const [selectedResourceId, setSelectedResourceId] = useState<string | null>(null);
@@ -92,6 +93,12 @@ export function App() {
       setSuggestions((await response.json()) as Suggestion[]);
     })();
   }, [selectedWorkItemId]);
+
+  useEffect(() => {
+    if (editingWorkItemId || editingResourceId) {
+      composerRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }
+  }, [editingWorkItemId, editingResourceId, activeFormPanel]);
 
   const workItemLookup = useMemo(() => {
     const map = new Map<string, WorkItem>();
@@ -329,7 +336,7 @@ export function App() {
         ))}
       </section>
 
-      <section className="composer card">
+      <section className="composer card" ref={composerRef}>
         <div className="composer-header">
           <div>
             <p className="eyebrow">Composer</p>
