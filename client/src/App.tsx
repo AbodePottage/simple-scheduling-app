@@ -252,6 +252,36 @@ export function App() {
     setResourceForm(blankResourceForm);
   };
 
+  const resetSelectionAndForms = () => {
+    setSelectedWorkItemId(null);
+    setSelectedResourceId(null);
+    setEditingWorkItemId(null);
+    setEditingResourceId(null);
+    setActiveFormPanel('work-item');
+    setForm(blankForm);
+    setResourceForm(blankResourceForm);
+  };
+
+  const toggleWorkItemSelection = (workItemId: string) => {
+    if (selectedWorkItemId === workItemId) {
+      resetSelectionAndForms();
+      return;
+    }
+
+    setSelectedResourceId(null);
+    setSelectedWorkItemId(workItemId);
+  };
+
+  const toggleResourceSelection = (resourceId: string) => {
+    if (selectedResourceId === resourceId) {
+      resetSelectionAndForms();
+      return;
+    }
+
+    setSelectedWorkItemId(null);
+    setSelectedResourceId(resourceId);
+  };
+
   const toggleSkill = (skill: string) => {
     setForm((current) => ({
       ...current,
@@ -595,8 +625,7 @@ export function App() {
                     setDropTarget(null);
                   }}
                   onClick={() => {
-                    setSelectedResourceId(null);
-                    setSelectedWorkItemId(item.id);
+                    toggleWorkItemSelection(item.id);
                   }}
                 >
                   <div className="row">
@@ -622,7 +651,7 @@ export function App() {
             </div>
             <div className="resource-list">
               {data.resources.map((resource) => (
-                <button key={resource.id} type="button" className="resource-list-item" onClick={() => beginEditResource(resource)}>
+                <button key={resource.id} type="button" className="resource-list-item" onClick={() => toggleResourceSelection(resource.id)}>
                   <div className="resource-list-item-top">
                     <span className="color-swatch" style={{ backgroundColor: resource.color }} />
                     <div>
@@ -682,8 +711,7 @@ export function App() {
                     className={selectedResourceId === resource.id ? 'resource-card selected' : 'resource-card'}
                     style={{ '--card-accent': resource.color } as CSSProperties}
                     onClick={() => {
-                      setSelectedWorkItemId(null);
-                      setSelectedResourceId(resource.id);
+                      toggleResourceSelection(resource.id);
                     }}
                   >
                     <div className="resource-card-top">
@@ -723,8 +751,7 @@ export function App() {
                             setDropTarget(null);
                           }}
                           onClick={() => {
-                            setSelectedResourceId(null);
-                            setSelectedWorkItemId(booking.workItemId);
+                            toggleWorkItemSelection(booking.workItemId);
                           }}
                         >
                           <strong>{workItem?.title ?? 'Booking'}</strong>
