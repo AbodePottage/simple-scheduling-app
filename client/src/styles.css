@@ -72,6 +72,28 @@ textarea {
   gap: 24px;
 }
 
+.overview {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 16px;
+}
+
+.metric-card {
+  display: grid;
+  gap: 8px;
+}
+
+.metric-value {
+  font-size: clamp(1.8rem, 3vw, 2.6rem);
+  line-height: 1;
+  letter-spacing: -0.04em;
+}
+
+.metric-detail {
+  color: var(--muted);
+  font-size: 14px;
+}
+
 .hero {
   display: flex;
   align-items: end;
@@ -186,6 +208,28 @@ form textarea {
   border-radius: 20px;
   padding: 20px;
   box-shadow: var(--shadow);
+}
+
+.card,
+.work-item,
+.suggestion,
+.booking-card,
+.resource-card,
+.resource-list-item {
+  transition:
+    transform 160ms ease,
+    border-color 160ms ease,
+    box-shadow 160ms ease,
+    background-color 160ms ease;
+}
+
+.card:hover,
+.work-item:hover,
+.suggestion:hover,
+.booking-card:hover,
+.resource-card:hover,
+.resource-list-item:hover {
+  transform: translateY(-1px);
 }
 
 .composer-header {
@@ -371,9 +415,47 @@ label {
   cursor: pointer;
 }
 
+.resource-card-top,
+.resource-list-item-top {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.resource-card strong,
+.resource-list-item strong {
+  display: block;
+}
+
+.resource-role {
+  color: var(--muted);
+}
+
+.color-swatch {
+  width: 12px;
+  height: 12px;
+  border-radius: 999px;
+  box-shadow: 0 0 0 3px color-mix(in srgb, currentColor 10%, transparent);
+  flex: none;
+}
+
 .resource-card.selected {
   border-color: var(--accent);
   box-shadow: 0 0 0 2px var(--accent-soft);
+}
+
+.section-heading {
+  display: flex;
+  align-items: end;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 8px;
+}
+
+.section-copy {
+  margin: 0;
+  color: var(--muted);
+  font-size: 14px;
 }
 
 .help-text {

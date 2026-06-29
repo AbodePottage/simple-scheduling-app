@@ -118,6 +118,16 @@ export function App() {
     });
   }, [data, selectedSkill]);
 
+  const metrics = useMemo(() => {
+      const unscheduled = visibleWorkItems.filter((item) => item.status === 'unscheduled').length;
+      const booked = data ? data.workItems.length - unscheduled : 0;
+      return [
+        { label: 'Resources', value: data?.resources.length ?? 0, detail: 'Available people' },
+        { label: 'Booked work', value: booked, detail: 'Assigned tasks' },
+        { label: 'Unscheduled', value: unscheduled, detail: 'Needs coverage' },
+      ];
+  }, [data, visibleWorkItems]);
+
   const selectedWorkItem = selectedWorkItemId ? workItemLookup.get(selectedWorkItemId) ?? null : null;
   const selectedResource = selectedResourceId ? resourceLookup.get(selectedResourceId) ?? null : null;
   const editingWorkItem = editingWorkItemId ? workItemLookup.get(editingWorkItemId) ?? null : null;
@@ -284,6 +294,16 @@ export function App() {
         </div>
       </header>
 
+      <section className="overview" aria-label="Scheduling summary">
+        {metrics.map((metric) => (
+          <article key={metric.label} className="metric-card card">
+            <p className="eyebrow">{metric.label}</p>
+            <strong className="metric-value">{metric.value}</strong>
+            <span className="metric-detail">{metric.detail}</span>
+          </article>
+        ))}
+      </section>
+
       <section className="composer card">
         <form onSubmit={submitWorkItem}>
           <div className="composer-header">
@@ -373,7 +393,13 @@ export function App() {
 
       <section className="workspace">
         <aside className="card queue" onDragOver={(event) => event.preventDefault()} onDrop={() => void handleQueueDrop()}>
-          <h2>Unscheduled work</h2>
+          <div className="section-heading">
+            <div>
+              <p className="eyebrow">Queue</p>
+              <h2>Unscheduled work</h2>
+            </div>
+            <p className="section-copy">Drag work back here to unassign it.</p>
+          </div>
           {visibleWorkItems.filter((item) => item.status === 'unscheduled').map((item) => (
             <article
               key={item.id}
@@ -404,8 +430,11 @@ export function App() {
 
         <section className="board">
           <div className="board-header">
-            <h2>Schedule board</h2>
-            <p>Drag work onto a resource or use the suggestion panel.</p>
+            <div>
+              <p className="eyebrow">Board</p>
+              <h2>Schedule board</h2>
+            </div>
+            <p className="section-copy">Drag work onto a resource or use the suggestion panel.</p>
           </div>
 
           <div className="resource-grid">
@@ -438,8 +467,13 @@ export function App() {
                       setSelectedResourceId(resource.id);
                     }}
                   >
-                    <strong>{resource.name}</strong>
-                    <span>{resource.role}</span>
+                    <div className="resource-card-top">
+                      <span className="color-swatch" style={{ backgroundColor: resource.color }} />
+                      <div>
+                        <strong>{resource.name}</strong>
+                        <span className="resource-role">{resource.role}</span>
+                      </div>
+                    </div>
                     <small>{skillLabel(resource.skills)}</small>
                   </button>
                   <div className="booking-strip">
@@ -480,7 +514,12 @@ export function App() {
         </section>
 
         <aside className="card inspector">
-          <h2>Details</h2>
+          <div className="section-heading">
+            <div>
+              <p className="eyebrow">Inspector</p>
+              <h2>Details</h2>
+            </div>
+          </div>
           {selectedResource ? (
             <>
               <p className="eyebrow">Resource</p>
@@ -656,8 +695,13 @@ export function App() {
             <div className="resource-list">
               {data.resources.map((resource) => (
                 <button key={resource.id} type="button" className="resource-list-item" onClick={() => beginEditResource(resource)}>
-                  <strong>{resource.name}</strong>
-                  <span>{resource.role}</span>
+                  <div className="resource-list-item-top">
+                    <span className="color-swatch" style={{ backgroundColor: resource.color }} />
+                    <div>
+                      <strong>{resource.name}</strong>
+                      <span className="resource-role">{resource.role}</span>
+                    </div>
+                  </div>
                   <small>{skillLabel(resource.skills)} - {resource.workingHours.start}:00 to {resource.workingHours.end}:00</small>
                 </button>
               ))}
