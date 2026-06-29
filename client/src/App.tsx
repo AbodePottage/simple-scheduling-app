@@ -623,9 +623,7 @@ export function App() {
                       <span className="resource-role">{resource.role}</span>
                     </div>
                   </div>
-                  <small>
-                    {skillLabel(resource.skills)} - {resource.workingHours.start}:00 to {resource.workingHours.end}:00
-                  </small>
+                <small>{resource.role}</small>
                 </button>
               ))}
             </div>
