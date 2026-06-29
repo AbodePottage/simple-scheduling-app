@@ -252,8 +252,8 @@ export function App() {
           <h1>Assign work fast</h1>
           <p className="subtitle">Schedule-board-first MVP with a small matching engine.</p>
           <div className="hero-stats">
-            <span className="stat-pill">3 resources</span>
-            <span className="stat-pill">3 work items</span>
+            <span className="stat-pill">Resources</span>
+            <span className="stat-pill">Work items</span>
             <span className="stat-pill">Drag and drop assignment</span>
           </div>
         </div>
