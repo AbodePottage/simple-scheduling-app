@@ -615,13 +615,12 @@ label {
 
 .resource-list-item {
   display: grid;
-  gap: 8px;
+  gap: 4px;
   text-align: left;
-  border: 1px solid color-mix(in srgb, var(--card-accent) 30%, var(--border));
+  border: 1px solid var(--border);
   border-radius: 16px;
   padding: 12px;
-  background:
-    linear-gradient(180deg, color-mix(in srgb, var(--card-accent) 8%, var(--surface)) 0%, var(--surface) 100%);
+  background: var(--surface);
   cursor: pointer;
 }
 

@@ -604,21 +604,20 @@ export function App() {
             </div>
             <div className="resource-list">
               {data.resources.map((resource) => (
-                  <button
-                    key={resource.id}
-                    type="button"
-                    className="resource-list-item"
-                    style={{ '--card-accent': resource.color } as CSSProperties}
-                    onClick={() => beginEditResource(resource)}
-                  >
-                    <div className="resource-list-item-top">
-                      <span className="color-swatch" style={{ backgroundColor: resource.color }} />
+                <button key={resource.id} type="button" className="resource-list-item" onClick={() => beginEditResource(resource)}>
+                  <div className="resource-list-item-top">
+                    <span className="color-swatch" style={{ backgroundColor: resource.color }} />
+                    <div>
                       <strong>{resource.name}</strong>
+                      <span className="resource-role">{resource.role}</span>
                     </div>
-                    <div className="skill-ovals">{skillOvals(resource.skills)}</div>
-                  </button>
-                ))}
-              </div>
+                  </div>
+                  <small>
+                    {skillLabel(resource.skills)} - {resource.workingHours.start}:00 to {resource.workingHours.end}:00
+                  </small>
+                </button>
+              ))}
+            </div>
           </aside>
         </div>
 
@@ -713,8 +712,8 @@ export function App() {
                             setSelectedWorkItemId(booking.workItemId);
                           }}
                         >
-                        <strong>{workItem?.title ?? 'Booking'}</strong>
-                        <div className="skill-ovals">{skillOvals(workItem?.requiredSkills ?? [])}</div>
+                          <strong>{workItem?.title ?? 'Booking'}</strong>
+                          <div className="skill-ovals">{skillOvals(workItem?.requiredSkills ?? [])}</div>
                         </button>
                       );
                     })}
