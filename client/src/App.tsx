@@ -5,6 +5,8 @@ const priorityOrder: Record<Priority, number> = { High: 3, Medium: 2, Low: 1 };
 type Theme = 'light' | 'dark';
 type FormPanel = 'work-item' | 'resource';
 type AppPath = '/schedule' | '/tasks' | '/team' | '/create';
+type TaskDimension = 'status' | 'priority' | 'skills';
+type TaskSort = 'priority' | 'date' | 'name' | 'duration';
 
 const validPaths: AppPath[] = ['/schedule', '/tasks', '/team', '/create'];
 
@@ -32,6 +34,10 @@ function skillOvals(skills: string[]) {
   ));
 }
 
+function formatTaskDate(iso: string) {
+  return new Date(iso).toLocaleDateString([], { month: 'short', day: 'numeric' });
+}
+
 export function App() {
   const composerRef = useRef<HTMLElement | null>(null);
   const [pathname, setPathname] = useState<AppPath>(() => normalizePath(window.location.pathname));
@@ -41,6 +47,9 @@ export function App() {
   const [editingWorkItemId, setEditingWorkItemId] = useState<string | null>(null);
   const [editingResourceId, setEditingResourceId] = useState<string | null>(null);
   const [selectedSkill, setSelectedSkill] = useState<string>('All');
+  const [taskDimension, setTaskDimension] = useState<TaskDimension>('status');
+  const [taskFilterValue, setTaskFilterValue] = useState<string>('all');
+  const [taskSort, setTaskSort] = useState<TaskSort>('priority');
   const [theme, setTheme] = useState<Theme>(() => (localStorage.getItem('theme') as Theme) || 'light');
   const [activeFormPanel, setActiveFormPanel] = useState<FormPanel>('work-item');
   const [dropTarget, setDropTarget] = useState<{ kind: 'queue' | 'resource'; id?: string } | null>(null);
@@ -173,6 +182,128 @@ export function App() {
       return item.requiredSkills.length === 0 || item.requiredSkills.includes(selectedSkill);
     });
   }, [data, selectedSkill]);
+
+  const taskDimensionOptions = useMemo(
+    () => [
+      { value: 'status' as TaskDimension, label: 'Status' },
+      { value: 'priority' as TaskDimension, label: 'Priority' },
+      { value: 'skills' as TaskDimension, label: 'Skills' },
+    ],
+    [],
+  );
+
+  const taskValueOptions = useMemo(() => {
+    if (!data) {
+      return [];
+    }
+
+    if (taskDimension === 'status') {
+      return [
+        { value: 'all', label: 'All' },
+        { value: 'open', label: 'Open' },
+        { value: 'assigned', label: 'Assigned' },
+      ];
+    }
+
+    if (taskDimension === 'priority') {
+      return [
+        { value: 'all', label: 'All' },
+        { value: 'High', label: 'High' },
+        { value: 'Medium', label: 'Medium' },
+        { value: 'Low', label: 'Low' },
+      ];
+    }
+
+    const skills = new Set<string>();
+    data.workItems.forEach((item) => item.requiredSkills.forEach((skill) => skills.add(skill)));
+    return [{ value: 'all', label: 'All' }, ...Array.from(skills).map((skill) => ({ value: skill, label: skill }))];
+  }, [data, taskDimension]);
+
+  const sortTaskItems = (items: WorkItem[]) => {
+    return [...items].sort((a, b) => {
+      switch (taskSort) {
+        case 'priority':
+          return priorityOrder[b.priority] - priorityOrder[a.priority] || a.title.localeCompare(b.title);
+        case 'date':
+          return a.targetDate.localeCompare(b.targetDate) || a.title.localeCompare(b.title);
+        case 'name':
+          return a.title.localeCompare(b.title);
+        case 'duration':
+          return b.durationMinutes - a.durationMinutes || a.title.localeCompare(b.title);
+      }
+    });
+  };
+
+  const groupLabelFor = (item: WorkItem) => {
+    if (taskDimension === 'status') {
+      return item.status === 'unscheduled' ? 'Open' : 'Assigned';
+    }
+
+    if (taskDimension === 'priority') {
+      return item.priority;
+    }
+
+    return item.requiredSkills.length ? item.requiredSkills[0] : 'No skills';
+  };
+
+  const taskItems = useMemo(() => {
+    if (!data) {
+      return [];
+    }
+
+    return data.workItems.filter((item) => {
+      if (taskDimension === 'status' && taskFilterValue !== 'all') {
+        const isOpen = item.status === 'unscheduled';
+        if (taskFilterValue === 'open' && !isOpen) {
+          return false;
+        }
+
+        if (taskFilterValue === 'assigned' && isOpen) {
+          return false;
+        }
+      }
+
+      if (taskDimension === 'priority' && taskFilterValue !== 'all' && item.priority !== taskFilterValue) {
+        return false;
+      }
+
+      if (taskDimension === 'skills' && taskFilterValue !== 'all' && !item.requiredSkills.includes(taskFilterValue)) {
+        return false;
+      }
+
+      return true;
+    });
+  }, [data, taskDimension, taskFilterValue]);
+
+  const taskGroups = useMemo(() => {
+    const grouped = new Map<string, WorkItem[]>();
+
+    taskItems.forEach((item) => {
+      const groupKey = groupLabelFor(item);
+
+      const list = grouped.get(groupKey) ?? [];
+      list.push(item);
+      grouped.set(groupKey, list);
+    });
+
+    const order =
+      taskDimension === 'status'
+        ? ['Open', 'Assigned']
+        : taskDimension === 'priority'
+          ? ['High', 'Medium', 'Low']
+          : undefined;
+
+    const entries = Array.from(grouped.entries()).map(([label, items]) => ({
+      label,
+      items: sortTaskItems(items),
+    }));
+
+    if (!order) {
+      return entries.sort((a, b) => a.label.localeCompare(b.label));
+    }
+
+    return entries.sort((a, b) => order.indexOf(a.label) - order.indexOf(b.label));
+  }, [groupLabelFor, sortTaskItems, taskDimension, taskItems]);
 
   const unscheduledWorkItems = useMemo(
       () => visibleWorkItems.filter((item) => item.status === 'unscheduled'),
@@ -361,14 +492,145 @@ export function App() {
     ? data?.bookings.find((booking) => booking.id === selectedWorkItem.bookingId) ?? null
     : null;
 
+  if (!data) {
+    return <main className="shell">Loading scheduling board...</main>;
+  }
+
   if (pathname !== '/schedule') {
     const pageTitle = pathname === '/tasks' ? 'Tasks' : pathname === '/team' ? 'Team' : 'Create';
-    const pageCopy =
-      pathname === '/tasks'
-        ? 'Backlog and unassigned work will live here.'
-        : pathname === '/team'
-          ? 'Roster, skills, and availability will live here.'
-          : 'New work item and teammate flows will live here.';
+    if (pathname === '/tasks') {
+      return (
+        <main className="shell">
+          <header className="hero card">
+            <div className="hero-copy">
+              <p className="eyebrow eyebrow-hero">Simple scheduling app</p>
+              <h1>{pageTitle}</h1>
+              <nav className="hero-nav" aria-label="Page sections">
+                {navItems.map((item) => (
+                  <button
+                    key={item.target}
+                    type="button"
+                    className={item.target === pathname ? 'hero-nav-pill active' : 'hero-nav-pill'}
+                    onClick={() => navigate(item.target)}
+                  >
+                    {item.label}
+                  </button>
+                ))}
+              </nav>
+            </div>
+
+            <div className="hero-actions">
+              <button
+                type="button"
+                className="secondary theme-toggle"
+                aria-label={theme === 'light' ? 'Switch to dark mode' : 'Switch to light mode'}
+                onClick={() => setTheme(theme === 'light' ? 'dark' : 'light')}
+              >
+                <span aria-hidden="true">{theme === 'light' ? '🌙' : '☀️'}</span>
+              </button>
+            </div>
+          </header>
+
+          <section className="card tasks-page">
+            <div className="tasks-toolbar">
+              <div className="section-heading tasks-heading" />
+
+              <div className="task-filters" aria-label="Task filters">
+                <label className="task-dimension-filter">
+                  <span>Dimension</span>
+                  <select
+                    value={taskDimension}
+                    onChange={(event) => {
+                      setTaskDimension(event.target.value as TaskDimension);
+                      setTaskFilterValue('all');
+                    }}
+                  >
+                    {taskDimensionOptions.map((option) => (
+                      <option key={option.value} value={option.value}>
+                        {option.label}
+                      </option>
+                    ))}
+                  </select>
+                </label>
+
+                <div className="task-value-group" aria-label="Task values">
+                  {taskValueOptions.map((option) => (
+                    <button
+                      key={option.value}
+                      type="button"
+                      className={taskFilterValue === option.value ? 'task-filter-chip active' : 'task-filter-chip'}
+                      onClick={() => setTaskFilterValue(option.value)}
+                    >
+                      {option.label}
+                    </button>
+                  ))}
+                </div>
+
+                <label className="task-dimension-filter task-sort-filter">
+                  <span>Sort</span>
+                  <select value={taskSort} onChange={(event) => setTaskSort(event.target.value as TaskSort)}>
+                    <option value="priority">Priority</option>
+                    <option value="date">Due date</option>
+                    <option value="name">Name</option>
+                    <option value="duration">Duration</option>
+                  </select>
+                </label>
+              </div>
+            </div>
+
+            <div className="task-groups">
+              {taskGroups.map(({ label, items }) => (
+                <section key={label} className="task-group">
+                  <div className="task-group-heading">
+                    <h3>{label}</h3>
+                    <span>{items.length}</span>
+                  </div>
+
+                  <div className="task-list">
+                    {items.map((item) => (
+                      <button
+                        key={item.id}
+                        type="button"
+                        className="work-item task-item"
+                        onClick={() => {
+                          toggleWorkItemSelection(item.id);
+                          navigate('/schedule');
+                        }}
+                      >
+                        <div className="task-item-copy">
+                          <strong>{item.title}</strong>
+                          <p>{item.description}</p>
+                        </div>
+
+                        <div className="task-item-chips">
+                          <span className="task-chip task-chip-state" data-state={item.status === 'unscheduled' ? 'open' : 'assigned'}>
+                            {item.status === 'unscheduled' ? 'Open' : 'Assigned'}
+                          </span>
+                          <span className="task-chip task-chip-priority" data-priority={item.priority}>
+                            {item.priority}
+                          </span>
+                          <span className="task-chip task-chip-neutral">{item.durationMinutes}m</span>
+                          <span className="task-chip task-chip-neutral">{formatTaskDate(item.targetDate)}</span>
+                          {item.requiredSkills.length ? (
+                            item.requiredSkills.map((skill) => (
+                              <span key={skill} className="task-chip task-chip-skill">
+                                {skill}
+                              </span>
+                            ))
+                          ) : (
+                            <span className="task-chip task-chip-neutral">No skills</span>
+                          )}
+                        </div>
+                      </button>
+                    ))}
+                  </div>
+                </section>
+              ))}
+            </div>
+          </section>
+        </main>
+      );
+    }
 
     return (
       <main className="shell">
@@ -376,7 +638,6 @@ export function App() {
           <div className="hero-copy">
             <p className="eyebrow eyebrow-hero">Simple scheduling app</p>
             <h1>{pageTitle}</h1>
-            <p className="subtitle">Split into pages for faster scanning and cleaner editing.</p>
             <nav className="hero-nav" aria-label="Page sections">
               {navItems.map((item) => (
                 <button
@@ -402,10 +663,9 @@ export function App() {
             </button>
           </div>
         </header>
-
         <section className="page-placeholder card">
           <h2>{pageTitle} page</h2>
-          <p>{pageCopy}</p>
+          <h2>{pageTitle} page</h2>
           <button type="button" className="primary" onClick={() => navigate('/schedule')}>
             Back to schedule
           </button>
@@ -414,17 +674,12 @@ export function App() {
     );
   }
 
-  if (!data) {
-    return <main className="shell">Loading scheduling board...</main>;
-  }
-
   return (
     <main className="shell">
       <header className="hero card">
         <div className="hero-copy">
           <p className="eyebrow eyebrow-hero">Simple scheduling app</p>
           <h1>Assign work fast</h1>
-          <p className="subtitle">Schedule-board-first MVP with a small matching engine.</p>
           <nav className="hero-nav" aria-label="Page sections">
             {navItems.map((item) => (
               <button
