@@ -133,6 +133,13 @@ export function App() {
     });
   }, [data, selectedSkill]);
 
+  const unscheduledWorkItems = useMemo(
+      () => visibleWorkItems.filter((item) => item.status === 'unscheduled'),
+      [visibleWorkItems],
+  );
+
+  const displayedWorkItems = useMemo(() => unscheduledWorkItems.slice(0, 5), [unscheduledWorkItems]);
+
   const metrics = useMemo(() => {
     const unscheduled = visibleWorkItems.filter((item) => item.status === 'unscheduled').length;
     const booked = data ? data.workItems.length - unscheduled : 0;
@@ -553,10 +560,14 @@ export function App() {
           >
             <div className="section-heading">
               <h2>Unscheduled work</h2>
-              <p className="section-copy">Drag work back here to unassign it.</p>
+              <p className="section-copy">
+                {unscheduledWorkItems.length > displayedWorkItems.length
+                  ? `Showing ${displayedWorkItems.length} of ${unscheduledWorkItems.length}.`
+                  : 'Drag work back here to unassign it.'}
+              </p>
             </div>
-            {visibleWorkItems.filter((item) => item.status === 'unscheduled').length ? (
-              visibleWorkItems.filter((item) => item.status === 'unscheduled').map((item) => (
+            {displayedWorkItems.length ? (
+              displayedWorkItems.map((item) => (
                 <article
                   key={item.id}
                   className={[
