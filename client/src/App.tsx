@@ -151,9 +151,9 @@ export function App() {
     const unscheduled = visibleWorkItems.filter((item) => item.status === 'unscheduled').length;
     const booked = data ? data.workItems.length - unscheduled : 0;
     return [
-      { label: 'People on the schedule', value: data?.resources.length ?? 0, detail: 'Available teammates' },
-      { label: 'Assignments already booked', value: booked, detail: 'Assigned tasks' },
-      { label: 'Work still waiting', value: unscheduled, detail: 'Needs coverage' },
+      { label: 'Team', value: data?.resources.length ?? 0, detail: 'Available people' },
+      { label: 'Booked', value: booked, detail: 'Assigned tasks' },
+      { label: 'Waiting', value: unscheduled, detail: 'Needs coverage' },
     ];
   }, [data, visibleWorkItems]);
 
@@ -163,9 +163,9 @@ export function App() {
   const editingResource = editingResourceId ? resourceLookup.get(editingResourceId) ?? null : null;
 
   const navItems = [
-    { label: 'Board', target: 'board' },
-    { label: 'People and queue', target: 'people-queue' },
-    { label: 'Composer', target: 'composer' },
+    { label: 'Schedule', target: 'board' },
+    { label: 'Team & tasks', target: 'people-queue' },
+    { label: 'Create', target: 'composer' },
   ];
 
   const submitWorkItem = async (event: FormEvent) => {
@@ -334,31 +334,19 @@ export function App() {
     <main className="shell">
       <header className="hero card">
         <div className="hero-copy">
-          <p className="hero-intro">A small scheduling board for assigning work to people.</p>
           <h1>Assign work fast</h1>
           <p className="subtitle">Schedule-board-first MVP with a small matching engine.</p>
           <nav className="hero-nav" aria-label="Page sections">
-            <label className="filter hero-filter">
-              <span>Jump to a section</span>
-              <select
-                defaultValue=""
-                onChange={(event) => {
-                  const target = event.target.value;
-                  if (target) {
-                    document.getElementById(target)?.scrollIntoView({ behavior: 'smooth', block: 'start' });
-                  }
-                }}
+            {navItems.map((item) => (
+              <button
+                key={item.target}
+                type="button"
+                className="hero-nav-pill"
+                onClick={() => document.getElementById(item.target)?.scrollIntoView({ behavior: 'smooth', block: 'start' })}
               >
-                <option value="" disabled>
-                  Choose a section
-                </option>
-                {navItems.map((item) => (
-                  <option key={item.target} value={item.target}>
-                    {item.label}
-                  </option>
-                ))}
-              </select>
-            </label>
+                {item.label}
+              </button>
+            ))}
           </nav>
         </div>
 
@@ -398,7 +386,7 @@ export function App() {
       <section className="composer card" ref={composerRef} id="composer">
         <div className="composer-header">
           <div>
-            <h2>{activeFormPanel === 'work-item' ? 'Create a work item' : 'Create a person'}</h2>
+            <h2>Create</h2>
           </div>
           <div className="form-switcher" role="tablist" aria-label="Form selection">
             <button
@@ -426,9 +414,7 @@ export function App() {
           <form onSubmit={submitWorkItem}>
             <div className="composer-header compact">
               <div>
-                <p className="section-copy">
-                  {editingWorkItem ? 'You are editing a work item.' : 'Use this form to create a new work item.'}
-                </p>
+                <p className="section-copy">{editingWorkItem ? 'Editing a work item.' : 'Create a work item.'}</p>
                 <h3>{editingWorkItem ? editingWorkItem.title : 'New work item'}</h3>
               </div>
               {editingWorkItem ? (
@@ -513,9 +499,7 @@ export function App() {
           <form onSubmit={submitResource}>
             <div className="composer-header compact">
               <div>
-                <p className="section-copy">
-                  {editingResource ? 'You are editing a person.' : 'Use this form to add a person to the schedule.'}
-                </p>
+                <p className="section-copy">{editingResource ? 'Editing a person.' : 'Create a person.'}</p>
                 <h3>{editingResource ? editingResource.name : 'New person'}</h3>
               </div>
               {editingResource ? (
@@ -629,7 +613,7 @@ export function App() {
             }}
           >
             <div className="section-heading">
-              <h2>Work waiting to be scheduled</h2>
+              <h2>Tasks</h2>
               <p className="section-copy">
                 {unscheduledWorkItems.length > displayedWorkItems.length
                   ? `Showing ${displayedWorkItems.length} of ${unscheduledWorkItems.length}.`
@@ -679,8 +663,8 @@ export function App() {
 
           <aside className="card resource-list-panel" id="people">
             <div className="section-heading">
-              <h2>People on the schedule</h2>
-              <p className="section-copy">Click one to inspect or edit them.</p>
+              <h2>Team</h2>
+              <p className="section-copy">Click a person to inspect or edit.</p>
             </div>
             <div className="resource-list">
               {data.resources.map((resource) => (
@@ -701,9 +685,9 @@ export function App() {
         <section className="board" id="board">
           <div className="board-header">
             <div>
-              <h2>Assignments on the board</h2>
+              <h2>Schedule</h2>
             </div>
-            <p className="section-copy">Drag work onto a person or use the suggestion panel.</p>
+            <p className="section-copy">Drag work onto a person or use suggestions.</p>
           </div>
 
           <div className="resource-grid">
