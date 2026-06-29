@@ -153,6 +153,28 @@ textarea:focus-visible {
   line-height: 1.6;
 }
 
+.hero-nav {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 16px;
+}
+
+.hero-nav-pill {
+  border: 1px solid var(--border);
+  background: var(--surface);
+  color: var(--text);
+  border-radius: 999px;
+  padding: 8px 12px;
+  cursor: pointer;
+  box-shadow: 0 10px 20px rgba(15, 23, 42, 0.04);
+}
+
+.hero-nav-pill:hover {
+  border-color: var(--accent);
+  color: var(--accent-text);
+}
+
 .hero-actions {
   display: grid;
   gap: 12px;

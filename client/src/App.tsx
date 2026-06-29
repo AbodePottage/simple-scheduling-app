@@ -162,6 +162,14 @@ export function App() {
   const editingWorkItem = editingWorkItemId ? workItemLookup.get(editingWorkItemId) ?? null : null;
   const editingResource = editingResourceId ? resourceLookup.get(editingResourceId) ?? null : null;
 
+  const navItems = [
+    { label: 'Composer', target: 'composer' },
+    { label: 'Queue', target: 'queue' },
+    { label: 'People', target: 'people' },
+    { label: 'Board', target: 'board' },
+    { label: 'Details', target: 'details' },
+  ];
+
   const submitWorkItem = async (event: FormEvent) => {
     event.preventDefault();
 
@@ -331,6 +339,18 @@ export function App() {
           <p className="eyebrow eyebrow-hero">Simple scheduling app</p>
           <h1>Assign work fast</h1>
           <p className="subtitle">Schedule-board-first MVP with a small matching engine.</p>
+          <nav className="hero-nav" aria-label="Page sections">
+            {navItems.map((item) => (
+              <button
+                key={item.target}
+                type="button"
+                className="hero-nav-pill"
+                onClick={() => document.getElementById(item.target)?.scrollIntoView({ behavior: 'smooth', block: 'start' })}
+              >
+                {item.label}
+              </button>
+            ))}
+          </nav>
         </div>
 
         <div className="hero-actions">
@@ -366,7 +386,7 @@ export function App() {
         ))}
       </section>
 
-      <section className="composer card" ref={composerRef}>
+      <section className="composer card" ref={composerRef} id="composer">
         <div className="composer-header">
           <div>
             <p className="eyebrow">Composer</p>
@@ -580,6 +600,7 @@ export function App() {
         <div className="rail">
           <aside
             className={dropTarget?.kind === 'queue' ? 'card queue drop-target' : 'card queue'}
+            id="queue"
             onDragOver={(event) => event.preventDefault()}
             onDragEnter={() => {
               if (draggingWorkItemId || draggingBookingId) {
@@ -644,7 +665,7 @@ export function App() {
             )}
           </aside>
 
-          <aside className="card resource-list-panel">
+          <aside className="card resource-list-panel" id="people">
             <div className="section-heading">
               <h2>People</h2>
               <p className="section-copy">Click one to inspect or edit them.</p>
@@ -665,7 +686,7 @@ export function App() {
           </aside>
         </div>
 
-        <section className="board">
+        <section className="board" id="board">
           <div className="board-header">
             <div>
               <h2>Schedule board</h2>
@@ -766,7 +787,7 @@ export function App() {
           </div>
         </section>
 
-        <aside className="card inspector">
+        <aside className="card inspector" id="details">
           <div className="section-heading">
             <h2>Details</h2>
           </div>
