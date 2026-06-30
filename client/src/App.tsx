@@ -990,7 +990,6 @@ export function App() {
         <main className="shell">
           <header className="hero card">
             <div className="hero-copy">
-              <p className="eyebrow eyebrow-hero">MVP</p>
               <h1>{pageTitle}</h1>
               <nav className="hero-nav" aria-label="Page sections">
                 {navItems.map((item) => (
@@ -1117,7 +1116,6 @@ export function App() {
         <main className="shell">
           <header className="hero card">
             <div className="hero-copy">
-              <p className="eyebrow eyebrow-hero">MVP</p>
               <h1>{pageTitle}</h1>
               <nav className="hero-nav" aria-label="Page sections">
                 {navItems.map((item) => (
@@ -1311,7 +1309,6 @@ export function App() {
       <main className="shell">
         <header className="hero card">
           <div className="hero-copy">
-            <p className="eyebrow eyebrow-hero">MVP</p>
             <h1>{pageTitle}</h1>
             <nav className="hero-nav" aria-label="Page sections">
               {navItems.map((item) => (
@@ -1348,7 +1345,6 @@ export function App() {
     <main className="shell">
       <header className="hero card">
         <div className="hero-copy">
-          <p className="eyebrow eyebrow-hero">MVP</p>
           <h1>Assign work fast</h1>
           <nav className="hero-nav" aria-label="Page sections">
             {navItems.map((item) => (

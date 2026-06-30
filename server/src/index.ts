@@ -8,6 +8,8 @@ import {
   createResource,
   createWorkItem,
   getSuggestions,
+  queryResources,
+  queryWorkItems,
   setBookingStatus,
   state,
   updateResource,
@@ -38,6 +40,33 @@ app.use(express.json());
 
 app.get('/api/bootstrap', (_request, response) => {
   response.json(state);
+});
+
+app.get('/api/work-items', (request, response) => {
+  const { page, pageSize, search, status, priority, skill, sort } = request.query;
+  response.json(
+    queryWorkItems({
+      page,
+      pageSize,
+      search: typeof search === 'string' ? search : undefined,
+      status: typeof status === 'string' ? status : undefined,
+      priority: typeof priority === 'string' ? priority : undefined,
+      skill: typeof skill === 'string' ? skill : undefined,
+      sort: typeof sort === 'string' ? sort : undefined,
+    }),
+  );
+});
+
+app.get('/api/resources', (request, response) => {
+  const { page, pageSize, search, discipline } = request.query;
+  response.json(
+    queryResources({
+      page,
+      pageSize,
+      search: typeof search === 'string' ? search : undefined,
+      discipline: typeof discipline === 'string' ? discipline : undefined,
+    }),
+  );
 });
 
 app.get('/api/suggestions/:workItemId', (request, response) => {

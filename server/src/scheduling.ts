@@ -1,4 +1,4 @@
-import type { AppState, Booking, Resource, WorkItem } from './domain.js';
+import type { AppState, Booking, Priority, Resource, ResourceDiscipline, WorkItem } from './domain.js';
 
 const initialDate = new Date().toISOString().slice(0, 10);
 
@@ -734,4 +734,135 @@ export function setBookingStatus(bookingId: string, status: Booking['status']) {
   }
 
   return booking;
+}
+
+const priorityRank: Record<Priority, number> = { High: 3, Medium: 2, Low: 1 };
+
+export interface Page<T> {
+  items: T[];
+  total: number;
+  page: number;
+  pageSize: number;
+}
+
+function clampInt(value: unknown, fallback: number, min: number, max: number) {
+  const parsed = Number(value);
+  if (!Number.isFinite(parsed)) {
+    return fallback;
+  }
+  return Math.min(max, Math.max(min, Math.trunc(parsed)));
+}
+
+function paginate<T>(items: T[], page: number, pageSize: number): Page<T> {
+  const total = items.length;
+  const lastPage = Math.max(1, Math.ceil(total / pageSize));
+  const safePage = Math.min(page, lastPage);
+  const start = (safePage - 1) * pageSize;
+  return {
+    items: items.slice(start, start + pageSize),
+    total,
+    page: safePage,
+    pageSize,
+  };
+}
+
+export type WorkItemSort = 'priority' | 'date' | 'name' | 'duration';
+
+export interface WorkItemQuery {
+  page?: unknown;
+  pageSize?: unknown;
+  search?: string;
+  status?: string;
+  priority?: string;
+  skill?: string;
+  sort?: string;
+}
+
+export function queryWorkItems(query: WorkItemQuery): Page<WorkItem> {
+  const page = clampInt(query.page, 1, 1, Number.MAX_SAFE_INTEGER);
+  const pageSize = clampInt(query.pageSize, 10, 1, 100);
+  const search = (query.search ?? '').trim().toLowerCase();
+  const status = query.status ?? 'all';
+  const priority = query.priority ?? 'all';
+  const skill = query.skill ?? 'all';
+  const sort: WorkItemSort = (['priority', 'date', 'name', 'duration'] as const).includes(
+    query.sort as WorkItemSort,
+  )
+    ? (query.sort as WorkItemSort)
+    : 'priority';
+
+  let items = state.workItems.filter((item) => {
+    if (status === 'open' && item.status !== 'unscheduled') {
+      return false;
+    }
+    if (status === 'assigned' && item.status === 'unscheduled') {
+      return false;
+    }
+    if (priority !== 'all' && item.priority !== priority) {
+      return false;
+    }
+    if (skill !== 'all' && !item.requiredSkills.includes(skill)) {
+      return false;
+    }
+    if (search) {
+      const haystack = [item.title, item.description, item.priority, item.targetDate, ...item.requiredSkills]
+        .join(' ')
+        .toLowerCase();
+      if (!haystack.includes(search)) {
+        return false;
+      }
+    }
+    return true;
+  });
+
+  items = [...items].sort((a, b) => {
+    switch (sort) {
+      case 'name':
+        return a.title.localeCompare(b.title);
+      case 'duration':
+        return b.durationMinutes - a.durationMinutes || a.title.localeCompare(b.title);
+      case 'date':
+      case 'priority':
+      default:
+        return (
+          priorityRank[b.priority] - priorityRank[a.priority] ||
+          a.targetDate.localeCompare(b.targetDate) ||
+          a.title.localeCompare(b.title)
+        );
+    }
+  });
+
+  return paginate(items, page, pageSize);
+}
+
+export interface ResourceQuery {
+  page?: unknown;
+  pageSize?: unknown;
+  search?: string;
+  discipline?: string;
+}
+
+export function queryResources(query: ResourceQuery): Page<Resource> {
+  const page = clampInt(query.page, 1, 1, Number.MAX_SAFE_INTEGER);
+  const pageSize = clampInt(query.pageSize, 8, 1, 100);
+  const search = (query.search ?? '').trim().toLowerCase();
+  const discipline = query.discipline ?? 'all';
+  const disciplines: ResourceDiscipline[] = ['Engineer', 'Data scientist'];
+  const disciplineFilter = disciplines.includes(discipline as ResourceDiscipline)
+    ? (discipline as ResourceDiscipline)
+    : null;
+
+  const items = state.resources
+    .filter((resource) => {
+      if (disciplineFilter && resource.discipline !== disciplineFilter) {
+        return false;
+      }
+      if (search && !resource.name.toLowerCase().includes(search)) {
+        return false;
+      }
+      return true;
+    })
+    .sort((a, b) => a.name.localeCompare(b.name));
+
+  return paginate(items, page, pageSize);
 }
