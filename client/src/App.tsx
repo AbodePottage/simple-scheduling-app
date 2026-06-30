@@ -11,10 +11,6 @@ import type {
 
 const priorityOrder: Record<Priority, number> = { High: 3, Medium: 2, Low: 1 };
 const taskGroupRenderLimit = 8;
-const scheduleStartHour = 9;
-const scheduleEndHour = 17;
-const scheduleSlotMinutes = 15;
-const scheduleSlotCount = ((scheduleEndHour - scheduleStartHour) * 60) / scheduleSlotMinutes;
 const resourceLevelOrder: Record<ResourceLevel, number> = {
   Junior: 1,
   Senior: 2,
@@ -46,29 +42,40 @@ function skillLabel(skills: string[]) {
   return skills.length ? skills.join(', ') : 'None';
 }
 
-function skillOvals(skills: string[]) {
-  if (!skills.length) {
-    return <span className="skill-oval muted">General</span>;
-  }
-
-  return skills.map((skill) => (
-    <span key={skill} className="skill-oval">
-      {skill}
-    </span>
-  ));
-}
-
 function formatTaskDate(iso: string) {
   return new Date(iso).toLocaleDateString([], { month: 'short', day: 'numeric' });
 }
 
-function minutesSinceMidnight(iso: string) {
-  const date = new Date(iso);
-  return date.getHours() * 60 + date.getMinutes();
-}
+function scheduleAccent(targetDate: string) {
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
 
-function formatHourLabel(hour: number) {
-  return new Date(2000, 0, 1, hour).toLocaleTimeString([], { hour: 'numeric' });
+  const target = new Date(targetDate);
+  target.setHours(0, 0, 0, 0);
+
+  const diffDays = Math.round((target.getTime() - today.getTime()) / 86400000);
+
+  if (diffDays < 0) {
+    return 'hsl(8 88% 52%)';
+  }
+
+  if (diffDays === 0) {
+    return 'hsl(16 92% 54%)';
+  }
+
+  if (diffDays <= 2) {
+    return 'hsl(38 92% 52%)';
+  }
+
+  if (diffDays <= 5) {
+    return 'hsl(96 60% 44%)';
+  }
+
+  if (diffDays <= 10) {
+    return 'hsl(164 56% 40%)';
+  }
+
+  return 'hsl(214 72% 48%)';
 }
 
 function formatResourceRole(resource: Pick<Resource, 'level' | 'discipline'>) {
@@ -249,29 +256,6 @@ export function App() {
     return map;
   }, [data]);
 
-  const scheduleSlots = useMemo(
-    () =>
-      Array.from({ length: scheduleSlotCount }, (_, index) => {
-        const totalMinutes = scheduleStartHour * 60 + index * scheduleSlotMinutes;
-        return {
-          index: index + 1,
-          label: totalMinutes % 120 === 0 ? formatHourLabel(totalMinutes / 60) : '',
-        };
-      }),
-    [],
-  );
-
-  const positionForBooking = (booking: Booking) => {
-    const rawStart = minutesSinceMidnight(booking.startTime);
-    const rawEnd = minutesSinceMidnight(booking.endTime);
-    const clampedStart = Math.max(scheduleStartHour * 60, rawStart);
-    const clampedEnd = Math.min(scheduleEndHour * 60, rawEnd);
-    const startSlot = Math.max(1, Math.floor((clampedStart - scheduleStartHour * 60) / scheduleSlotMinutes) + 1);
-    const span = Math.max(1, Math.ceil((clampedEnd - clampedStart) / scheduleSlotMinutes));
-
-    return { startSlot, span };
-  };
-
   const resourceWorkloads = useMemo(() => {
     if (!data) {
       return [];
@@ -347,6 +331,11 @@ export function App() {
       }
     });
   }, [visibleWorkItems, taskSort, workItemQuery]);
+
+  const visibleBacklogItems = useMemo(
+    () => backlogItems.slice(0, taskGroupRenderLimit * 2),
+    [backlogItems],
+  );
 
   const taskDimensionOptions = useMemo(
     () => [
@@ -592,6 +581,7 @@ export function App() {
   );
   const editingWorkItem = editingWorkItemId ? workItemLookup.get(editingWorkItemId) ?? null : null;
   const editingResource = editingResourceId ? resourceLookup.get(editingResourceId) ?? null : null;
+  const hasScheduleDetails = Boolean(selectedResource || selectedWorkItem);
 
   const navItems = [
     { label: 'Schedule', target: '/schedule' as AppPath },
@@ -768,6 +758,25 @@ export function App() {
   const selectedItemBooking = selectedWorkItem?.bookingId
     ? data?.bookings.find((booking) => booking.id === selectedWorkItem.bookingId) ?? null
     : null;
+
+  const groupBookingsByStart = (bookings: Booking[]) => {
+    const sorted = [...bookings].sort(
+      (a, b) => new Date(a.startTime).getTime() - new Date(b.startTime).getTime() || new Date(a.endTime).getTime() - new Date(b.endTime).getTime(),
+    );
+    const groups: Array<{ startTime: string; bookings: Booking[] }> = [];
+
+    sorted.forEach((booking) => {
+      const lastGroup = groups[groups.length - 1];
+      if (lastGroup && lastGroup.startTime === booking.startTime) {
+        lastGroup.bookings.push(booking);
+        return;
+      }
+
+      groups.push({ startTime: booking.startTime, bookings: [booking] });
+    });
+
+    return groups;
+  };
 
   if (!data) {
     return <main className="shell">Loading scheduling board...</main>;
@@ -1218,22 +1227,6 @@ export function App() {
                         <DetailTable
                           fields={[
                             { label: 'Role', value: formatResourceRole(selectedResource) },
-                            {
-                              label: 'Skills',
-                              value: (
-                                <div className="task-detail-chip-row">
-                                  {selectedResource.skills.length ? (
-                                    selectedResource.skills.map((skill) => (
-                                      <span key={skill} className="task-chip task-chip-skill">
-                                        {skill}
-                                      </span>
-                                    ))
-                                  ) : (
-                                    <span className="task-chip task-chip-neutral">No skills</span>
-                                  )}
-                                </div>
-                              ),
-                            },
                           ]}
                         />
 
@@ -1502,19 +1495,24 @@ export function App() {
                           <div className="team-card-title-row">
                             <strong>{selectedWorkItem.title}</strong>
                             <div className="task-detail-title-actions">
-                              <span className="task-chip task-chip-state" data-state={selectedWorkItem.status === 'unscheduled' ? 'open' : 'assigned'}>
-                                {selectedWorkItem.status === 'unscheduled' ? 'Open' : 'Assigned'}
-                              </span>
                               {selectedWorkItem.status === 'unscheduled' ? (
                                 <button type="button" className="secondary task-detail-action-inline" onClick={() => beginEditWorkItem(selectedWorkItem)}>
                                   Edit work item
                                 </button>
-                              ) : null}
+                              ) : (
+                                <button
+                                  type="button"
+                                  className="secondary task-detail-action-inline"
+                                  onClick={() => void patchWorkItem(selectedWorkItem.id, { assigneeId: null })}
+                                >
+                                  Unassign work item
+                                </button>
+                              )}
                             </div>
                           </div>
-                          <p>{selectedWorkItem.description}</p>
                           <DetailTable
                             fields={[
+                              { label: 'Description', value: selectedWorkItem.description },
                               { label: 'Priority', value: selectedWorkItem.priority },
                               { label: 'Duration', value: `${selectedWorkItem.durationMinutes}m` },
                               { label: 'Due date', value: formatTaskDate(selectedWorkItem.targetDate) },
@@ -1524,36 +1522,8 @@ export function App() {
                                   ? `${resourceLookup.get(selectedItemBooking.resourceId)?.name ?? 'Unknown'} - ${formatClock(selectedItemBooking.startTime)} to ${formatClock(selectedItemBooking.endTime)}`
                                   : 'Not yet scheduled',
                               },
-                              {
-                                label: 'Skills',
-                                value: (
-                                  <div className="task-detail-chip-row">
-                                    {selectedWorkItem.requiredSkills.length ? (
-                                      selectedWorkItem.requiredSkills.map((skill) => (
-                                        <span key={skill} className="task-chip task-chip-skill">
-                                          {skill}
-                                        </span>
-                                      ))
-                                    ) : (
-                                      <span className="task-chip task-chip-neutral">No skills</span>
-                                    )}
-                                  </div>
-                                ),
-                              },
                             ]}
                           />
-
-                          <div className="task-detail-actions">
-                            {selectedWorkItem.status !== 'unscheduled' ? (
-                              <button
-                                type="button"
-                                className="secondary"
-                                onClick={() => void patchWorkItem(selectedWorkItem.id, { assigneeId: null })}
-                              >
-                                Unassign work item
-                              </button>
-                            ) : null}
-                          </div>
 
                         </>
                       )}
@@ -1646,32 +1616,30 @@ export function App() {
         </div>
       </header>
 
-      <section className="overview" aria-label="Scheduling summary">
-        {metrics.map((metric) => (
-          <article key={metric.label} className="metric-card card">
-            <h2 className="metric-label">{metric.label}</h2>
-            <strong className="metric-value">{metric.value}</strong>
-            <span className="metric-detail">{metric.detail}</span>
-          </article>
-        ))}
-      </section>
-
       <section className="workspace schedule-workspace">
         <aside className="card backlog-panel" aria-label="Work item backlog">
           <div className="section-heading">
             <h2>Work items</h2>
-            <span>{backlogItems.length}</span>
+            <span>
+              Showing {visibleBacklogItems.length} out of {backlogItems.length} work items
+            </span>
           </div>
           <label className="backlog-search">
-            <span>Find work</span>
-            <input
-              value={workItemQuery}
-              onChange={(event) => setWorkItemQuery(event.target.value)}
-              placeholder="Search title, skill, or date"
-            />
+            <div className="search-shell">
+              <span aria-hidden="true" className="search-icon">
+                Search
+              </span>
+              <input
+                type="search"
+                value={workItemQuery}
+                onChange={(event) => setWorkItemQuery(event.target.value)}
+                placeholder="title, skill, or date"
+                aria-label="Search work items"
+              />
+            </div>
           </label>
           <div className="backlog-list">
-            {backlogItems.slice(0, taskGroupRenderLimit * 2).map((item) => (
+            {visibleBacklogItems.map((item) => (
               <button
                 key={item.id}
                 type="button"
@@ -1686,9 +1654,11 @@ export function App() {
                 }}
                 onClick={() => toggleWorkItemSelection(item.id)}
               >
-                <strong>{item.title}</strong>
-                <p>{item.description}</p>
-                <div className="backlog-item-meta">
+                <div className="task-item-copy">
+                  <strong>{item.title}</strong>
+                </div>
+
+                <div className="task-item-chips">
                   <span className="task-chip task-chip-state" data-state={item.status === 'unscheduled' ? 'open' : 'assigned'}>
                     {item.status === 'unscheduled' ? 'Open' : 'Assigned'}
                   </span>
@@ -1696,6 +1666,15 @@ export function App() {
                     {item.priority}
                   </span>
                   <span className="task-chip task-chip-neutral">{item.durationMinutes}m</span>
+                  {item.requiredSkills.length ? (
+                    item.requiredSkills.map((skill) => (
+                      <span key={skill} className="task-chip task-chip-skill">
+                        {skill}
+                      </span>
+                    ))
+                  ) : (
+                    <span className="task-chip task-chip-neutral">No skills</span>
+                  )}
                 </div>
               </button>
             ))}
@@ -1710,18 +1689,10 @@ export function App() {
           </div>
 
           <div className="schedule-grid">
-            <div className="schedule-axis" aria-hidden="true">
-              <div className="schedule-axis-track" style={{ gridTemplateColumns: `repeat(${scheduleSlotCount}, minmax(0, 1fr))` }}>
-                {scheduleSlots.map((slot) => (
-                  <div key={slot.index} className="schedule-axis-slot">
-                    {slot.label ? <span>{slot.label}</span> : null}
-                  </div>
-                ))}
-              </div>
-            </div>
-
             {visibleResources.map((resource) => {
               const bookings = bookingsByResourceId.get(resource.id) ?? [];
+              const bookingGroups = groupBookingsByStart(bookings);
+
               return (
                 <div key={resource.id} className="schedule-row">
                   <button
@@ -1733,14 +1704,13 @@ export function App() {
                     }}
                   >
                     <div className="resource-card-top">
-                      <span className="color-swatch" style={{ backgroundColor: resource.color }} />
                       <strong>{resource.name}</strong>
                     </div>
-                    <div className="skill-ovals">{skillOvals(resource.skills)}</div>
                   </button>
 
                   <div
-                    className={dropTarget?.kind === 'resource' && dropTarget.id === resource.id ? 'schedule-track drop-target' : 'schedule-track'}
+                    className={dropTarget?.kind === 'resource' && dropTarget.id === resource.id ? 'schedule-lane drop-target' : 'schedule-lane'}
+                    style={{ '--card-accent': resource.color } as CSSProperties}
                     onDragOver={(event) => event.preventDefault()}
                     onDragEnter={() => {
                       if (draggingWorkItemId || draggingBookingId) {
@@ -1766,14 +1736,7 @@ export function App() {
                       }
                       setDropTarget(null);
                     }}
-                    style={{ gridTemplateColumns: `repeat(${scheduleSlotCount}, minmax(0, 1fr))` }}
                   >
-                    {scheduleSlots.map((slot) => (
-                      <div key={slot.index} className={slot.label ? 'schedule-slot schedule-slot-hour' : 'schedule-slot'} aria-hidden="true">
-                        {slot.label ? <span>{slot.label}</span> : null}
-                      </div>
-                    ))}
-
                     {!bookings.length ? (
                       <div className="empty-state empty-state-inline schedule-empty">
                         <strong>Open slot</strong>
@@ -1781,45 +1744,45 @@ export function App() {
                       </div>
                     ) : null}
 
-                    {bookings.map((booking) => {
-                      const workItem = workItemLookup.get(booking.workItemId);
-                      const { startSlot, span } = positionForBooking(booking);
-                      return (
-                        <button
-                          key={booking.id}
-                          type="button"
-                          className={['booking-card', 'schedule-booking', draggingBookingId === booking.id ? 'dragging' : '']
-                            .filter(Boolean)
-                            .join(' ')}
-                          style={
-                            {
-                              '--card-accent': resource.color,
-                              gridColumn: `${startSlot} / span ${span}`,
-                              gridRow: 1,
-                            } as CSSProperties
-                          }
-                          draggable
-                          onDragStart={() => {
-                            setDraggingWorkItemId(null);
-                            setDraggingBookingId(booking.id);
-                          }}
-                          onDragEnd={() => {
-                            setDraggingWorkItemId(null);
-                            setDraggingBookingId(null);
-                            setDropTarget(null);
-                          }}
-                          onClick={() => {
-                            toggleWorkItemSelection(booking.workItemId);
-                          }}
-                        >
-                          <strong>{workItem?.title ?? 'Booking'}</strong>
-                          <span className="booking-time">
-                            {formatClock(booking.startTime)} - {formatClock(booking.endTime)}
-                          </span>
-                          <div className="skill-ovals">{skillOvals(workItem?.requiredSkills ?? [])}</div>
-                        </button>
-                      );
-                    })}
+                    {bookingGroups.map((group) => (
+                      <div key={`${resource.id}-${group.startTime}`} className="booking-group">
+                        <span className="booking-group-time">{formatClock(group.startTime)}</span>
+                        <div className="booking-stack">
+                          {group.bookings.map((booking) => {
+                            const workItem = workItemLookup.get(booking.workItemId);
+                            const cardAccent = scheduleAccent(workItem?.targetDate ?? booking.startTime);
+                            return (
+                              <button
+                                key={booking.id}
+                                type="button"
+                                className={['booking-card', 'schedule-booking', draggingBookingId === booking.id ? 'dragging' : '']
+                                  .filter(Boolean)
+                                  .join(' ')}
+                                style={{ '--card-accent': cardAccent } as CSSProperties}
+                                draggable
+                                onDragStart={() => {
+                                  setDraggingWorkItemId(null);
+                                  setDraggingBookingId(booking.id);
+                                }}
+                                onDragEnd={() => {
+                                  setDraggingWorkItemId(null);
+                                  setDraggingBookingId(null);
+                                  setDropTarget(null);
+                                }}
+                                onClick={() => {
+                                  toggleWorkItemSelection(booking.workItemId);
+                                }}
+                              >
+                                <strong>{workItem?.title ?? 'Booking'}</strong>
+                                <span className="booking-time">
+                                  {formatClock(booking.startTime)} - {formatClock(booking.endTime)}
+                                </span>
+                              </button>
+                            );
+                          })}
+                        </div>
+                      </div>
+                    ))}
                   </div>
                 </div>
               );
@@ -1827,121 +1790,105 @@ export function App() {
           </div>
         </section>
 
-        <aside className="card inspector schedule-detail-panel" id="details">
-          <div className="section-heading">
-            <h2>Details</h2>
-          </div>
-          {selectedResource ? (
-            <>
-              <div className="team-card-title-row">
-                <strong>{selectedResource.name}</strong>
-                <button type="button" className="secondary task-detail-action-inline" onClick={() => beginEditResource(selectedResource)}>
-                  Edit teammate
-                </button>
-              </div>
-              <DetailTable
-                fields={[
-                  { label: 'Role', value: formatResourceRole(selectedResource) },
-                  {
-                    label: 'Skills',
-                    value: (
-                      <div className="task-detail-chip-row">
-                        {selectedResource.skills.length ? (
-                          selectedResource.skills.map((skill) => (
-                            <span key={skill} className="task-chip task-chip-skill">
-                              {skill}
-                            </span>
-                          ))
-                        ) : (
-                          <span className="task-chip task-chip-neutral">No skills</span>
-                        )}
-                      </div>
-                    ),
-                  },
-                ]} 
-              />
-              <div className="resource-bookings">
-                {data.bookings.filter((booking) => booking.resourceId === selectedResource.id).map((booking) => {
-                  const workItem = workItemLookup.get(booking.workItemId);
-                  return (
-                    <div key={booking.id} className="booking-summary">
-                      <strong>{workItem?.title ?? 'Booking'}</strong>
-                    </div>
-                  );
-                })}
-                {!data.bookings.some((booking) => booking.resourceId === selectedResource.id) ? (
-                  <p className="help-text">No work assigned yet.</p>
-                ) : null}
-              </div>
-            </>
-          ) : selectedWorkItem ? (
-            <>
-              <div className="team-card-title-row">
-                <strong>{selectedWorkItem.title}</strong>
-                <div className="task-detail-title-actions">
-                  <span className="task-chip task-chip-state" data-state={selectedWorkItem.status === 'unscheduled' ? 'open' : 'assigned'}>
-                    {selectedWorkItem.status === 'unscheduled' ? 'Open' : 'Assigned'}
-                  </span>
-                  {selectedWorkItem.status === 'unscheduled' ? (
-                    <button type="button" className="secondary task-detail-action-inline" onClick={() => beginEditWorkItem(selectedWorkItem)}>
-                      Edit work item
-                    </button>
-                  ) : null}
+        {hasScheduleDetails ? (
+          selectedResource ? (
+            <aside
+              className="team-detail-rail"
+              onClick={() => {
+                cancelResourceEdit();
+                setSelectedResourceId(null);
+              }}
+            >
+              <section className="task-detail card team-detail" aria-label="Selected teammate" onClick={(event) => event.stopPropagation()}>
+                <div className="team-card-title-row">
+                  <strong>{selectedResource.name}</strong>
+                  <button type="button" className="secondary task-detail-action-inline" onClick={() => beginEditResource(selectedResource)}>
+                    Edit teammate
+                  </button>
                 </div>
-              </div>
-              <p>{selectedWorkItem.description}</p>
-              <DetailTable
-                fields={[
-                  { label: 'Priority', value: selectedWorkItem.priority },
-                  { label: 'Duration', value: `${selectedWorkItem.durationMinutes}m` },
-                  { label: 'Due date', value: formatTaskDate(selectedWorkItem.targetDate) },
-                  {
-                    label: 'Booked',
-                    value: selectedItemBooking
-                      ? `${resourceLookup.get(selectedItemBooking.resourceId)?.name ?? 'Unknown'} - ${formatClock(selectedItemBooking.startTime)} to ${formatClock(selectedItemBooking.endTime)}`
-                      : 'Not yet scheduled',
-                  },
-                  {
-                    label: 'Skills',
-                    value: (
-                      <div className="task-detail-chip-row">
-                        {selectedWorkItem.requiredSkills.length ? (
-                          selectedWorkItem.requiredSkills.map((skill) => (
-                            <span key={skill} className="task-chip task-chip-skill">
-                              {skill}
-                            </span>
-                          ))
-                        ) : (
-                          <span className="task-chip task-chip-neutral">No skills</span>
-                        )}
-                      </div>
-                    ),
-                  },
-                ]}
-              />
+                <DetailTable
+                  fields={[
+                    { label: 'Role', value: formatResourceRole(selectedResource) },
+                  ]}
+                />
+                <div className="team-bookings">
+                  <div className="team-bookings-header">
+                    <strong>Booked tasks</strong>
+                    <span>{selectedResourceWorkload?.bookings.length ?? 0}</span>
+                  </div>
+                  {selectedResourceWorkload?.bookings.length ? (
+                    selectedResourceWorkload.bookings.map((booking) => {
+                      const workItem = workItemLookup.get(booking.workItemId);
+                      return (
+                        <button
+                          key={booking.id}
+                          type="button"
+                          className="booking-summary"
+                          onClick={() => {
+                            if (workItem) {
+                              toggleWorkItemSelection(workItem.id);
+                            }
+                          }}
+                        >
+                          <strong>{workItem?.title ?? 'Booking'}</strong>
+                          <p>{workItem?.description ?? 'No description available.'}</p>
+                        </button>
+                      );
+                    })
+                  ) : (
+                    <p className="help-text">No work assigned yet.</p>
+                  )}
+                </div>
+              </section>
+            </aside>
+          ) : selectedWorkItem ? (
+            <aside
+              className="task-detail-rail"
+              onClick={() => {
+                cancelEdit();
+                setSelectedWorkItemId(null);
+              }}
+            >
+              <section className="task-detail" aria-label="Selected task" onClick={(event) => event.stopPropagation()}>
+                <div className="task-detail-card card">
+                <div className="team-card-title-row">
+                  <strong>{selectedWorkItem.title}</strong>
+                  <div className="task-detail-title-actions">
+                    {selectedWorkItem.status === 'unscheduled' ? (
+                      <button type="button" className="secondary task-detail-action-inline" onClick={() => beginEditWorkItem(selectedWorkItem)}>
+                        Edit work item
+                      </button>
+                    ) : (
+                      <button
+                        type="button"
+                        className="secondary task-detail-action-inline"
+                        onClick={() => void patchWorkItem(selectedWorkItem.id, { assigneeId: null })}
+                      >
+                        Unassign work item
+                      </button>
+                    )}
+                  </div>
+                </div>
+                <DetailTable
+                  fields={[
+                    { label: 'Description', value: selectedWorkItem.description },
+                    { label: 'Priority', value: selectedWorkItem.priority },
+                    { label: 'Duration', value: `${selectedWorkItem.durationMinutes}m` },
+                    { label: 'Due date', value: formatTaskDate(selectedWorkItem.targetDate) },
+                    {
+                      label: 'Booked',
+                      value: selectedItemBooking
+                        ? `${resourceLookup.get(selectedItemBooking.resourceId)?.name ?? 'Unknown'} - ${formatClock(selectedItemBooking.startTime)} to ${formatClock(selectedItemBooking.endTime)}`
+                        : 'Not yet scheduled',
+                    },
+                  ]}
+                />
 
-              <div className="task-detail-actions">
-                {selectedWorkItem.status !== 'unscheduled' ? (
-                  <>
-                    <p className="help-text">Booked items are read-only in this MVP.</p>
-                    <button
-                      type="button"
-                      className="secondary"
-                      onClick={() => void patchWorkItem(selectedWorkItem.id, { assigneeId: null })}
-                    >
-                      Unassign work item
-                    </button>
-                  </>
-                ) : null}
-              </div>
-            </>
-          ) : (
-            <div className="empty-state">
-              <strong>Nothing selected.</strong>
-              <p>Choose a work item or teammate to inspect details and actions.</p>
-            </div>
-          )}
-        </aside>
+                </div>
+              </section>
+            </aside>
+          ) : null
+        ) : null}
       </section>
 
     </main>

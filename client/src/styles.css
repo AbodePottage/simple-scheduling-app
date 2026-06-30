@@ -253,7 +253,6 @@ form textarea {
     background-color 160ms ease;
 }
 
-.card:hover,
 .work-item:hover,
 .suggestion:hover,
 .booking-card:hover,
@@ -368,7 +367,11 @@ label {
 }
 
 .schedule-workspace {
-  grid-template-columns: 300px minmax(0, 1fr) 360px;
+  grid-template-columns: minmax(0, 1fr);
+}
+
+.schedule-workspace-with-details {
+  grid-template-columns: minmax(0, 1fr) 360px;
 }
 
 .inspector,
@@ -382,6 +385,10 @@ label {
   display: grid;
   gap: 12px;
   align-content: start;
+}
+
+.backlog-panel {
+  grid-column: 1 / -1;
 }
 
 .work-item,
@@ -403,8 +410,7 @@ label {
   box-shadow: 0 0 0 2px var(--accent-soft);
 }
 
-.queue.drop-target,
-.schedule-track.drop-target {
+.queue.drop-target {
   border-color: var(--accent);
   background: var(--accent-soft);
 }
@@ -444,7 +450,7 @@ label {
 
 .backlog-search {
   display: grid;
-  gap: 6px;
+  gap: 8px;
 }
 
 .backlog-search span {
@@ -453,31 +459,71 @@ label {
   color: var(--muted);
 }
 
+.search-shell {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 14px;
+  border: 1px solid color-mix(in srgb, var(--border-strong) 70%, transparent);
+  border-radius: 18px;
+  background:
+    linear-gradient(180deg, color-mix(in srgb, var(--surface-soft) 88%, transparent) 0%, var(--surface) 100%);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.5),
+    0 8px 20px rgba(15, 23, 42, 0.04);
+}
+
+.search-icon {
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  white-space: nowrap;
+}
+
+.search-shell input {
+  border: 0;
+  background: transparent;
+  box-shadow: none;
+  padding: 0;
+  min-width: 0;
+  width: 100%;
+}
+
+.search-shell input::placeholder {
+  color: color-mix(in srgb, var(--muted) 72%, transparent);
+}
+
 .backlog-list {
   display: grid;
-  gap: 10px;
-  max-height: 820px;
-  overflow: auto;
-  padding-right: 4px;
+  grid-auto-flow: column;
+  grid-auto-columns: minmax(224px, 1fr);
+  grid-template-rows: repeat(2, minmax(0, 1fr));
+  gap: 10px 12px;
+  overflow-x: auto;
+  overflow-y: hidden;
+  padding: 4px 4px 8px 0;
+  scroll-snap-type: x proximity;
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}
+
+.backlog-list::-webkit-scrollbar {
+  display: none;
 }
 
 .backlog-item {
   display: grid;
-  gap: 8px;
+  gap: 10px;
   cursor: grab;
+  min-width: 0;
+  min-height: 132px;
+  scroll-snap-align: start;
 }
 
-.backlog-item p {
-  margin: 0;
-  color: var(--muted);
-  font-size: 13px;
-  line-height: 1.45;
-}
-
-.backlog-item-meta {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 6px;
+.backlog-item .task-item-chips {
+  justify-content: flex-start;
+  max-width: none;
 }
 
 .schedule-grid {
@@ -486,7 +532,6 @@ label {
   min-width: 0;
 }
 
-.schedule-axis,
 .schedule-row {
   display: grid;
   grid-template-columns: 180px minmax(0, 1fr);
@@ -494,68 +539,48 @@ label {
   align-items: stretch;
 }
 
-.schedule-axis-label {
+.schedule-lane {
   display: flex;
-  align-items: center;
-  justify-content: flex-start;
+  gap: 12px;
+  min-width: 0;
+  overflow-x: auto;
+  overflow-y: hidden;
+  padding: 12px;
+  align-items: flex-start;
+  position: relative;
+  border: 1px solid color-mix(in srgb, var(--card-accent) 45%, var(--border));
+  border-radius: 16px;
+  background: color-mix(in srgb, var(--card-accent) 18%, var(--surface));
+}
+
+.schedule-lane.drop-target {
+  border-color: var(--accent);
+  background: var(--accent-soft);
+}
+
+.booking-group {
+  display: grid;
+  gap: 8px;
+  min-width: 220px;
+  flex: 0 0 auto;
+}
+
+.booking-group-time {
   color: var(--muted);
-  font-size: 12px;
+  font-size: 11px;
   font-weight: 700;
   text-transform: uppercase;
   letter-spacing: 0.08em;
-  padding: 0 6px;
+  padding-left: 6px;
 }
 
-.schedule-axis-track,
-.schedule-track {
+.booking-stack {
   display: grid;
-  gap: 0;
-  min-width: 0;
-}
-
-.schedule-axis-slot,
-.schedule-slot {
-  min-height: 88px;
-  border-right: 1px solid color-mix(in srgb, var(--border) 80%, transparent);
-}
-
-.schedule-axis-slot {
-  display: flex;
-  align-items: flex-end;
-  padding: 0 6px 8px;
-  color: var(--muted);
-  font-size: 11px;
-  font-weight: 700;
-}
-
-.schedule-slot {
-  grid-row: 1;
-}
-
-.schedule-slot-hour {
-  background: linear-gradient(180deg, color-mix(in srgb, var(--surface-soft) 72%, transparent) 0%, transparent 100%);
-}
-
-.schedule-slot-hour span {
-  color: var(--muted);
-  font-size: 11px;
-  font-weight: 700;
-}
-
-.schedule-track {
-  position: relative;
-  overflow: hidden;
-  padding: 0;
-  border: 1px dashed var(--border-strong);
-  border-radius: 16px;
+  gap: 10px;
 }
 
 .schedule-booking {
-  grid-row: 1;
-  z-index: 1;
-  margin: 8px 4px;
   min-width: 0;
-  align-self: stretch;
 }
 
 .booking-time {
@@ -564,9 +589,13 @@ label {
   font-weight: 600;
 }
 
+.schedule-detail-card {
+  margin-top: 0;
+  border-top: 0;
+  padding-top: 18px;
+}
+
 .schedule-empty {
-  grid-column: 1 / -1;
-  grid-row: 1;
   margin: 16px;
 }
 
@@ -592,13 +621,15 @@ label {
 
 .resource-card {
   display: grid;
-  gap: 10px;
-  background:
-    linear-gradient(180deg, color-mix(in srgb, var(--card-accent) 10%, var(--surface)) 0%, var(--surface) 100%);
-  border-color: color-mix(in srgb, var(--card-accent) 34%, var(--border));
+  gap: 0;
+  background: transparent;
+  border: 0;
+  border-radius: 0;
+  padding: 10px 4px 10px 0;
   width: 100%;
   text-align: left;
   cursor: pointer;
+  box-shadow: none;
 }
 
 .resource-card-top,
@@ -611,6 +642,12 @@ label {
 .resource-card strong,
 .resource-list-item strong {
   display: block;
+  font-size: 0.98rem;
+}
+
+.resource-card strong {
+  flex: 1;
+  text-align: right;
 }
 
 .resource-role {
@@ -636,29 +673,6 @@ label {
   font-size: 12px;
 }
 
-.skill-ovals {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 6px;
-}
-
-.skill-oval {
-  display: inline-flex;
-  align-items: center;
-  border-radius: 999px;
-  padding: 4px 8px;
-  font-size: 11px;
-  line-height: 1;
-  background: color-mix(in srgb, var(--card-accent) 14%, var(--surface));
-  color: color-mix(in srgb, var(--card-accent) 70%, var(--text));
-  border: 1px solid color-mix(in srgb, var(--card-accent) 24%, var(--border));
-}
-
-.skill-oval.muted {
-  background: var(--surface-soft);
-  color: var(--muted);
-}
-
 .color-swatch {
   width: 12px;
   height: 12px;
@@ -668,14 +682,13 @@ label {
 }
 
 .resource-card.selected {
-  border-color: var(--accent);
-  box-shadow: 0 0 0 2px var(--accent-soft);
+  color: var(--accent-text);
 }
 
 .booking-card {
   display: grid;
   gap: 8px;
-  min-width: 210px;
+  min-width: 220px;
   background:
     linear-gradient(180deg, color-mix(in srgb, var(--card-accent) 12%, var(--surface)) 0%, var(--surface) 100%);
   border-color: color-mix(in srgb, var(--card-accent) 40%, var(--border));
@@ -702,6 +715,15 @@ body.detail-open .inspector:hover,
 body.detail-open .board:hover,
 body.detail-open .composer:hover {
   box-shadow: none;
+}
+
+body.detail-open .shell {
+  pointer-events: none;
+}
+
+body.detail-open .task-detail-rail,
+body.detail-open .team-detail-rail {
+  pointer-events: auto;
 }
 
 .section-heading {
@@ -758,19 +780,11 @@ body.detail-open .composer:hover {
   inset: 0;
   display: flex;
   justify-content: center;
-  align-items: center;
+  align-items: flex-start;
   padding: 24px;
-  background: rgba(15, 23, 42, 0.18);
-  overflow: auto;
-  z-index: 40;
-}
-
-.task-detail-rail::before,
-.team-detail-rail::before {
-  content: '';
-  position: absolute;
-  inset: 0;
-  background: rgba(15, 23, 42, 0.18);
+  background: rgba(15, 23, 42, 0.32);
+  overflow: hidden;
+  z-index: 1000;
 }
 
 .task-detail-rail > *,
@@ -781,7 +795,9 @@ body.detail-open .composer:hover {
 
 .task-detail-rail .task-detail {
   width: min(720px, 100%);
-  margin-top: 0;
+  margin: auto;
+  max-height: calc(100vh - 48px);
+  overflow: auto;
 }
 
 .tasks-toolbar {
@@ -1040,16 +1056,18 @@ body.detail-open .composer:hover {
   inset: 0;
   display: flex;
   justify-content: center;
-  align-items: center;
+  align-items: flex-start;
   padding: 24px;
-  background: rgba(15, 23, 42, 0.18);
-  overflow: auto;
-  z-index: 40;
+  background: rgba(15, 23, 42, 0.32);
+  overflow: hidden;
+  z-index: 1000;
 }
 
 .team-detail-rail .team-detail {
   width: min(720px, 100%);
-  margin-top: 0;
+  margin: auto;
+  max-height: calc(100vh - 48px);
+  overflow: auto;
 }
 
 .task-detail-title-actions {
@@ -1346,6 +1364,8 @@ body.detail-open .composer:hover {
   border: 1px solid var(--border);
   border-radius: 16px;
   background: var(--surface-soft);
+  text-align: left;
+  justify-items: start;
 }
 
 .booking-summary p {
