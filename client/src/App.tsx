@@ -11,8 +11,8 @@ import type {
 
 const priorityOrder: Record<Priority, number> = { High: 3, Medium: 2, Low: 1 };
 const taskGroupRenderLimit = 8;
-const scheduleStartHour = 8;
-const scheduleEndHour = 18;
+const scheduleStartHour = 9;
+const scheduleEndHour = 17;
 const scheduleSlotMinutes = 15;
 const scheduleSlotCount = ((scheduleEndHour - scheduleStartHour) * 60) / scheduleSlotMinutes;
 const resourceLevelOrder: Record<ResourceLevel, number> = {
@@ -106,6 +106,7 @@ export function App() {
   const [editingWorkItemId, setEditingWorkItemId] = useState<string | null>(null);
   const [editingResourceId, setEditingResourceId] = useState<string | null>(null);
   const [selectedSkill, setSelectedSkill] = useState<string>('All');
+  const [workItemQuery, setWorkItemQuery] = useState<string>('');
   const [taskDimension, setTaskDimension] = useState<TaskDimension>('status');
   const [taskFilterValue, setTaskFilterValue] = useState<string>('all');
   const [taskSort, setTaskSort] = useState<TaskSort>('priority');
@@ -254,7 +255,7 @@ export function App() {
         const totalMinutes = scheduleStartHour * 60 + index * scheduleSlotMinutes;
         return {
           index: index + 1,
-          label: totalMinutes % 60 === 0 ? formatHourLabel(totalMinutes / 60) : '',
+          label: totalMinutes % 120 === 0 ? formatHourLabel(totalMinutes / 60) : '',
         };
       }),
     [],
@@ -316,6 +317,37 @@ export function App() {
     });
   }, [data, selectedSkill]);
 
+  const backlogItems = useMemo(() => {
+    const query = workItemQuery.trim().toLowerCase();
+    const filtered = visibleWorkItems.filter((item) => {
+      if (!query) {
+        return true;
+      }
+
+      return [item.title, item.description, item.priority, item.targetDate, ...item.requiredSkills]
+        .join(' ')
+        .toLowerCase()
+        .includes(query);
+    });
+
+    return [...filtered].sort((a, b) => {
+      switch (taskSort) {
+        case 'priority':
+          return (
+            priorityOrder[b.priority] - priorityOrder[a.priority] ||
+            a.targetDate.localeCompare(b.targetDate) ||
+            a.title.localeCompare(b.title)
+          );
+        case 'date':
+          return priorityOrder[b.priority] - priorityOrder[a.priority] || a.targetDate.localeCompare(b.targetDate) || a.title.localeCompare(b.title);
+        case 'name':
+          return a.title.localeCompare(b.title);
+        case 'duration':
+          return b.durationMinutes - a.durationMinutes || a.title.localeCompare(b.title);
+      }
+    });
+  }, [visibleWorkItems, taskSort, workItemQuery]);
+
   const taskDimensionOptions = useMemo(
     () => [
       { value: 'status' as TaskDimension, label: 'Status' },
@@ -352,7 +384,7 @@ export function App() {
     return [{ value: 'all', label: 'All' }, ...Array.from(skills).map((skill) => ({ value: skill, label: skill }))];
   }, [data, taskDimension]);
 
-  const sortTaskItems = (items: WorkItem[]) => {
+  function sortTaskItems(items: WorkItem[]) {
     return [...items].sort((a, b) => {
       switch (taskSort) {
         case 'priority':
@@ -369,7 +401,7 @@ export function App() {
           return b.durationMinutes - a.durationMinutes || a.title.localeCompare(b.title);
       }
     });
-  };
+  }
 
   const groupLabelFor = (item: WorkItem) => {
     if (taskDimension === 'status') {
@@ -1055,10 +1087,6 @@ export function App() {
                             <strong>{resource.name}</strong>
                             <p>{formatResourceRole(resource)}</p>
                           </div>
-
-                          <div className="task-item-chips">
-                            {skillOvals(resource.skills)}
-                          </div>
                         </button>
                       ))}
                     </div>
@@ -1628,8 +1656,53 @@ export function App() {
         ))}
       </section>
 
-      <section className="workspace">
-        <section className="board" id="board">
+      <section className="workspace schedule-workspace">
+        <aside className="card backlog-panel" aria-label="Work item backlog">
+          <div className="section-heading">
+            <h2>Work items</h2>
+            <span>{backlogItems.length}</span>
+          </div>
+          <label className="backlog-search">
+            <span>Find work</span>
+            <input
+              value={workItemQuery}
+              onChange={(event) => setWorkItemQuery(event.target.value)}
+              placeholder="Search title, skill, or date"
+            />
+          </label>
+          <div className="backlog-list">
+            {backlogItems.slice(0, taskGroupRenderLimit * 2).map((item) => (
+              <button
+                key={item.id}
+                type="button"
+                className={selectedWorkItemId === item.id ? 'work-item backlog-item selected' : 'work-item backlog-item'}
+                draggable
+                onDragStart={() => {
+                  setDraggingWorkItemId(item.id);
+                }}
+                onDragEnd={() => {
+                  setDraggingWorkItemId(null);
+                  setDropTarget(null);
+                }}
+                onClick={() => toggleWorkItemSelection(item.id)}
+              >
+                <strong>{item.title}</strong>
+                <p>{item.description}</p>
+                <div className="backlog-item-meta">
+                  <span className="task-chip task-chip-state" data-state={item.status === 'unscheduled' ? 'open' : 'assigned'}>
+                    {item.status === 'unscheduled' ? 'Open' : 'Assigned'}
+                  </span>
+                  <span className="task-chip task-chip-priority" data-priority={item.priority}>
+                    {item.priority}
+                  </span>
+                  <span className="task-chip task-chip-neutral">{item.durationMinutes}m</span>
+                </div>
+              </button>
+            ))}
+          </div>
+        </aside>
+
+        <section className="board schedule-board" id="board">
           <div className="board-header">
             <div>
               <h2>Schedule</h2>
@@ -1638,7 +1711,6 @@ export function App() {
 
           <div className="schedule-grid">
             <div className="schedule-axis" aria-hidden="true">
-              <div className="schedule-axis-label">Team</div>
               <div className="schedule-axis-track" style={{ gridTemplateColumns: `repeat(${scheduleSlotCount}, minmax(0, 1fr))` }}>
                 {scheduleSlots.map((slot) => (
                   <div key={slot.index} className="schedule-axis-slot">
@@ -1755,13 +1827,18 @@ export function App() {
           </div>
         </section>
 
-        <aside className="card inspector" id="details">
+        <aside className="card inspector schedule-detail-panel" id="details">
           <div className="section-heading">
             <h2>Details</h2>
           </div>
           {selectedResource ? (
             <>
-              <h3>{selectedResource.name}</h3>
+              <div className="team-card-title-row">
+                <strong>{selectedResource.name}</strong>
+                <button type="button" className="secondary task-detail-action-inline" onClick={() => beginEditResource(selectedResource)}>
+                  Edit teammate
+                </button>
+              </div>
               <DetailTable
                 fields={[
                   { label: 'Role', value: formatResourceRole(selectedResource) },
@@ -1781,11 +1858,8 @@ export function App() {
                       </div>
                     ),
                   },
-                ]}
+                ]} 
               />
-              <button type="button" className="secondary" onClick={() => beginEditResource(selectedResource)}>
-                Edit teammate
-              </button>
               <div className="resource-bookings">
                 {data.bookings.filter((booking) => booking.resourceId === selectedResource.id).map((booking) => {
                   const workItem = workItemLookup.get(booking.workItemId);
@@ -1802,7 +1876,19 @@ export function App() {
             </>
           ) : selectedWorkItem ? (
             <>
-              <h3>{selectedWorkItem.title}</h3>
+              <div className="team-card-title-row">
+                <strong>{selectedWorkItem.title}</strong>
+                <div className="task-detail-title-actions">
+                  <span className="task-chip task-chip-state" data-state={selectedWorkItem.status === 'unscheduled' ? 'open' : 'assigned'}>
+                    {selectedWorkItem.status === 'unscheduled' ? 'Open' : 'Assigned'}
+                  </span>
+                  {selectedWorkItem.status === 'unscheduled' ? (
+                    <button type="button" className="secondary task-detail-action-inline" onClick={() => beginEditWorkItem(selectedWorkItem)}>
+                      Edit work item
+                    </button>
+                  ) : null}
+                </div>
+              </div>
               <p>{selectedWorkItem.description}</p>
               <DetailTable
                 fields={[
@@ -1834,23 +1920,20 @@ export function App() {
                 ]}
               />
 
-              {selectedWorkItem.status === 'unscheduled' ? (
-                <button type="button" className="secondary" onClick={() => beginEditWorkItem(selectedWorkItem)}>
-                  Edit work item
-                </button>
-              ) : (
-                <>
-                  <p className="help-text">Booked items are read-only in this MVP.</p>
-                  <button
-                    type="button"
-                    className="secondary"
-                    onClick={() => void patchWorkItem(selectedWorkItem.id, { assigneeId: null })}
-                  >
-                    Unassign work item
-                  </button>
-                </>
-              )}
-
+              <div className="task-detail-actions">
+                {selectedWorkItem.status !== 'unscheduled' ? (
+                  <>
+                    <p className="help-text">Booked items are read-only in this MVP.</p>
+                    <button
+                      type="button"
+                      className="secondary"
+                      onClick={() => void patchWorkItem(selectedWorkItem.id, { assigneeId: null })}
+                    >
+                      Unassign work item
+                    </button>
+                  </>
+                ) : null}
+              </div>
             </>
           ) : (
             <div className="empty-state">

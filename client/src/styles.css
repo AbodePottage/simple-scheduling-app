@@ -364,16 +364,21 @@ label {
 
 .workspace {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) 360px;
   gap: 18px;
 }
 
+.schedule-workspace {
+  grid-template-columns: 300px minmax(0, 1fr) 360px;
+}
+
 .inspector,
-.board {
+.board,
+.backlog-panel {
   min-height: 500px;
 }
 
-.inspector {
+.inspector,
+.backlog-panel {
   display: grid;
   gap: 12px;
   align-content: start;
@@ -437,6 +442,44 @@ label {
   margin-bottom: 14px;
 }
 
+.backlog-search {
+  display: grid;
+  gap: 6px;
+}
+
+.backlog-search span {
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--muted);
+}
+
+.backlog-list {
+  display: grid;
+  gap: 10px;
+  max-height: 820px;
+  overflow: auto;
+  padding-right: 4px;
+}
+
+.backlog-item {
+  display: grid;
+  gap: 8px;
+  cursor: grab;
+}
+
+.backlog-item p {
+  margin: 0;
+  color: var(--muted);
+  font-size: 13px;
+  line-height: 1.45;
+}
+
+.backlog-item-meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
 .schedule-grid {
   display: grid;
   gap: 12px;
@@ -472,7 +515,7 @@ label {
 
 .schedule-axis-slot,
 .schedule-slot {
-  min-height: 112px;
+  min-height: 88px;
   border-right: 1px solid color-mix(in srgb, var(--border) 80%, transparent);
 }
 
@@ -525,6 +568,10 @@ label {
   grid-column: 1 / -1;
   grid-row: 1;
   margin: 16px;
+}
+
+.schedule-board .section-heading {
+  margin-bottom: 6px;
 }
 
 .booking-card,
