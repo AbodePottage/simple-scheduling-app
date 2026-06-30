@@ -27,7 +27,9 @@
         <li><a href="s5-css.html"><span class="sb-num">S5</span><span>CSS &amp; design system</span></a></li>
         <li><a href="s6-react.html"><span class="sb-num">S6</span><span>React state &amp; effects</span></a></li>
         <li><a href="s7-lessons.html"><span class="sb-num">S7</span><span>Redirects &amp; lessons</span></a></li>
-        <li><a href="s8-rebuild.html"><span class="sb-num">S8</span><span>Rebuild: clean + Docker</span></a></li>
+        <li><a href="s8-rebuild.html"><span class="sb-num">S8</span><span>Rebuild 1: brief &amp; plan</span></a></li>
+        <li><a href="s9-clean-architecture.html"><span class="sb-num">S9</span><span>Rebuild 2: the server</span></a></li>
+        <li><a href="s10-frontend-conventions.html"><span class="sb-num">S10</span><span>Rebuild 3: the client</span></a></li>
       </ol>
     </aside>
 
@@ -43,6 +45,40 @@
       <article class="body">
         <p>You already know a statically typed language. So skip the sales pitch. TypeScript is <strong>JavaScript + a type layer that is erased at build time</strong>. The types are a compile-time conversation with the compiler; at runtime, it's plain JS and the types are gone. That single fact explains most of its quirks.</p>
         <p>This slide teaches TS through the code that's actually in the app. Five differences will surprise a backend engineer, flagged as <span class="pill warn">⚠ different</span> as we go.</p>
+
+        <h2>0. First, the JavaScript under the types</h2>
+        <p>TypeScript is just JavaScript with annotations. So before the type rules, here is the <strong>JavaScript syntax that shows up in literally every snippet in this deck</strong> &mdash; the idioms a C#/Java native has never had to read. None of these are TypeScript; they are the modern JS the types sit on top of.</p>
+        <table>
+          <thead><tr><th>Idiom</th><th>Looks like</th><th>What it is (in your terms)</th></tr></thead>
+          <tbody>
+            <tr><td><strong>Arrow function</strong></td><td><code>const add = (a, b) =&gt; a + b;</code></td><td>A lambda. <code>=&gt;</code> is the lambda arrow. A one-liner returns implicitly; a <code>{ }</code> body needs an explicit <code>return</code>. Used as every callback and event handler.</td></tr>
+            <tr><td><strong>Object destructuring</strong></td><td><code>const { page, total } = props;</code></td><td>Pull named fields into locals in one line. Same as <code>var page = props.page;</code> repeated. Function params do it too: <code>function f({ page, total })</code>.</td></tr>
+            <tr><td><strong>Array destructuring</strong></td><td><code>const [value, setValue] = useState(0);</code></td><td>Positional unpack. This is why every <code>useState</code> reads as a pair &mdash; it returns a 2-element array and you name both slots.</td></tr>
+            <tr><td><strong>Spread / rest</strong></td><td><code>{ ...form, title: 'x' }</code> &middot; <code>[...seeds]</code></td><td>"Copy all of that, then override." Makes a shallow copy with one field changed &mdash; the backbone of immutable state updates (S6). On params, <code>(...args)</code> collects the rest.</td></tr>
+            <tr><td><strong>Template literal</strong></td><td><code>`Showing ${from}-${to}`</code></td><td>String interpolation with backticks. Same as C# <code>$"Showing {from}-{to}"</code>.</td></tr>
+            <tr><td><strong>Optional chaining / nullish</strong></td><td><code>user?.name ?? 'none'</code></td><td><code>?.</code> short-circuits to <code>undefined</code> if the left is null/undefined; <code>??</code> supplies a default only for null/undefined (not for <code>0</code> or <code>''</code>).</td></tr>
+            <tr><td><strong>Strict equality</strong></td><td><code>a === b</code> (not <code>==</code>)</td><td>Always use <code>===</code>/<code>!==</code>. The two-character <code>==</code> does type coercion and has surprising rules; the three-character form is the one you mean.</td></tr>
+          </tbody>
+        </table>
+
+        <h3>Modules: one file is one module <span class="pill warn">⚠ different</span></h3>
+        <p>There is no namespace keyword and no project-wide compile unit. <strong>Every file is a module</strong>; you explicitly <code>export</code> what's public and <code>import</code> it by file path:</p>
+        <pre><code>// domain.ts
+export interface WorkItem { /* ... */ }    // export = make it importable
+
+// index.ts
+import { WorkItem } from './domain';        // import by relative path, no extension
+import express from 'express';              // bare name = a package from node_modules</code></pre>
+        <p>A relative path (<code>./domain</code>) is your own file; a bare name (<code>express</code>, <code>react</code>) resolves to an installed package. This is ES Modules (ESM) &mdash; the modern standard. (More on where packages come from in <a href="s2-architecture.html">S2</a>.)</p>
+
+        <h3>Promises and <code>async</code> / <code>await</code>: the network is asynchronous</h3>
+        <p>Anything that touches the network or disk returns a <strong>Promise</strong> &mdash; a value that isn't here yet (your <code>Task&lt;T&gt;</code>). You <code>await</code> it inside an <code>async</code> function, exactly like C#:</p>
+        <pre><code>async function load() {                       // an async fn always returns a Promise
+  const response = await fetch('/api/bootstrap');   // await = pause until it resolves
+  const data = await response.json();               // .json() is async too
+  setData(data);
+}</code></pre>
+        <div class="callout"><span class="label">The <code>void</code> you keep seeing</span>The app writes <code>void load();</code> in several effects. <code>load()</code> returns a Promise nobody awaits; the bare <code>void</code> operator says <em>"I am deliberately fire-and-forgetting this"</em> &mdash; it silences the linter's "floating promise" warning and documents the intent. It is not the C# <code>void</code> return type; it's an expression that evaluates its operand and discards the result.</div>
 
         <h2>1. Types annotate; inference does the rest</h2>
         <pre><code>const port = Number(process.env.PORT ?? 3001);  // inferred: number
@@ -159,6 +195,6 @@ event.target.value as TaskSort</code></pre>
     </main>
   </div>
 
-  <footer class="site-footer">Chronicle of <code>simple-scheduling-app</code> &middot; S3 of 8</footer>
+  <footer class="site-footer">Chronicle of <code>simple-scheduling-app</code> &middot; S3 of 10</footer>
 </body>
 </html>

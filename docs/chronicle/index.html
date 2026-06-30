@@ -28,14 +28,16 @@
         <li><a href="s5-css.html"><span class="sb-num">S5</span><span>CSS &amp; design system</span></a></li>
         <li><a href="s6-react.html"><span class="sb-num">S6</span><span>React state &amp; effects</span></a></li>
         <li><a href="s7-lessons.html"><span class="sb-num">S7</span><span>Redirects &amp; lessons</span></a></li>
-        <li><a href="s8-rebuild.html"><span class="sb-num">S8</span><span>Rebuild: clean + Docker</span></a></li>
+        <li><a href="s8-rebuild.html"><span class="sb-num">S8</span><span>Rebuild 1: brief &amp; plan</span></a></li>
+        <li><a href="s9-clean-architecture.html"><span class="sb-num">S9</span><span>Rebuild 2: the server</span></a></li>
+        <li><a href="s10-frontend-conventions.html"><span class="sb-num">S10</span><span>Rebuild 3: the client</span></a></li>
       </ol>
     </aside>
 
     <main class="content">
       <section class="hero">
         <div class="eyebrow">Field chronicle</div>
-        <h1>How a backend engineer built a frontend in a weekend</h1>
+        <h1>Breaking down React</h1>
         <p class="lede">A commit-by-commit autopsy of a real React&nbsp;+&nbsp;Node scheduling app &mdash; 35 commits, ~13 hours, from empty folder to a tagged <code>v1</code> &mdash; rebuilt here as a crash course in TypeScript, HTML, and CSS.</p>
         <div class="meta-row">
           <span>35 commits</span>
@@ -48,7 +50,9 @@
       <article class="body">
         <h2>What this is</h2>
         <p>This deck chronicles the actual construction of <code>simple-scheduling-app</code> &mdash; a small work-assignment tool inspired by Microsoft's Universal Resource Scheduling. It was built fast and a little messily, on purpose. The mess is the point: every reversal, every "temp" commit, every place the design wandered is a teaching moment.</p>
-        <p>You are a backend engineer. You read this to learn how the front of the house works &mdash; the three languages of the browser (<strong>HTML, CSS, TypeScript/JS</strong>), the React mental model, and how client concerns (state, layout, perceived speed) differ from the server concerns you already know. Then you hand the rebuild plan in <a href="s8-rebuild.html">S8</a> to a fresh agent and rebuild it <em>clean</em>, end-to-end, in a Docker container.</p>
+        <p>You are a backend engineer. You read this to learn how the front of the house works &mdash; the three languages of the browser (<strong>HTML, CSS, TypeScript/JS</strong>), the React mental model, and how client concerns (state, layout, perceived speed) differ from the server concerns you already know. Then you rebuild the app <em>clean</em> yourself &mdash; AI-assisted, but reviewing every diff with your own eyes &mdash; following the ordered rebuild in <a href="s8-rebuild.html">S8&ndash;S10</a> and the full companion lesson, <a href="the-gap-poc-to-clean-architecture.md">the-gap-poc-to-clean-architecture.md</a>.</p>
+
+        <div class="callout"><span class="label">This is a private learning artifact, not a presentation</span>The deck format is just a convenient way to read. The point is not to present to anyone &mdash; it is to cement the concepts you brushed over on the fast first pass, because you are about to build real UIs and want the fundamentals solid. The app itself is a throwaway training ground; the understanding you carry out is the real deliverable.</div>
 
         <div class="callout warn">
           <span class="label">An honest disclaimer</span>
@@ -57,7 +61,7 @@
 
         <div class="callout">
           <span class="label">How to read this</span>
-          Slides <strong>S1&ndash;S2</strong> tell the story and map the architecture. Slides <strong>S3&ndash;S6</strong> are the crash course, each grounded in real code from this repo. Slide <strong>S7</strong> distills the mistakes. Slide <strong>S8</strong> is the rebuild brief you'll feed to a tutorial-generating agent.
+          The deck runs in two movements. <strong>Understand the POC (S1&ndash;S7):</strong> S1&ndash;S2 tell the story and map the architecture; S3&ndash;S6 are the crash course, each grounded in real code from this repo; S7 distills the mistakes. <strong>Rebuild it right (S8&ndash;S10), in three beats:</strong> S8 is the brief, the method, and the ordered plan; S9 rebuilds the server with clean architecture and DDD; S10 rebuilds the client with production React conventions. The deeper companion lesson is <a href="the-gap-poc-to-clean-architecture.md">the-gap-poc-to-clean-architecture.md</a>.
         </div>
 
         <h2>The deck</h2>
@@ -105,10 +109,22 @@
             <div class="emoji">🔁</div>
           </a>
           <a class="deck-card" href="s8-rebuild.html">
-            <div class="num">S8 &middot; the brief</div>
-            <h3>Rebuild: clean + Docker</h3>
-            <div class="meta">A target architecture and a weekend learning path. Hand this to an agent.</div>
+            <div class="num">S8 &middot; the rebuild &middot; 1 of 3</div>
+            <h3>The rebuild: brief, method &amp; plan</h3>
+            <div class="meta">The brief, the review-every-diff method, and the ordered phase plan for the whole rebuild.</div>
             <div class="emoji">📦</div>
+          </a>
+          <a class="deck-card" href="s9-clean-architecture.html">
+            <div class="num">S9 &middot; the rebuild &middot; 2 of 3</div>
+            <h3>The server: clean architecture &amp; DDD</h3>
+            <div class="meta">Four layers, a rich domain, aggregates and value objects &mdash; the server half, rebuilt.</div>
+            <div class="emoji">🧱</div>
+          </a>
+          <a class="deck-card" href="s10-frontend-conventions.html">
+            <div class="num">S10 &middot; the rebuild &middot; 3 of 3</div>
+            <h3>The client: React at scale</h3>
+            <div class="meta">Three kinds of state, custom hooks, co-location, path aliases, lint/test/validate, RTL.</div>
+            <div class="emoji">🧰</div>
           </a>
         </div>
 

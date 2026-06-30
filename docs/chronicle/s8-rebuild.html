@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>S8 &middot; Rebuild: clean + Docker</title>
+  <title>S8 &middot; The rebuild: brief &amp; plan</title>
   <link rel="stylesheet" href="chronicle.css">
   <script src="chronicle.js"></script>
 </head>
@@ -27,7 +27,9 @@
         <li><a href="s5-css.html"><span class="sb-num">S5</span><span>CSS &amp; design system</span></a></li>
         <li><a href="s6-react.html"><span class="sb-num">S6</span><span>React state &amp; effects</span></a></li>
         <li><a href="s7-lessons.html"><span class="sb-num">S7</span><span>Redirects &amp; lessons</span></a></li>
-        <li class="active"><a href="s8-rebuild.html"><span class="sb-num">S8</span><span>Rebuild: clean + Docker</span></a></li>
+        <li class="active"><a href="s8-rebuild.html"><span class="sb-num">S8</span><span>Rebuild 1: brief &amp; plan</span></a></li>
+        <li><a href="s9-clean-architecture.html"><span class="sb-num">S9</span><span>Rebuild 2: the server</span></a></li>
+        <li><a href="s10-frontend-conventions.html"><span class="sb-num">S10</span><span>Rebuild 3: the client</span></a></li>
       </ol>
     </aside>
 
@@ -35,13 +37,13 @@
       <header class="mission-header">
         <a class="crumb" href="index.html">&larr; Overview</a>
         <div class="badge-large">📦</div>
-        <div class="kicker">S8 &middot; the brief</div>
-        <h1>Rebuild: clean + Docker</h1>
-        <div class="meta-row"><span>the redo</span><span>E2E in one container</span><span>a weekend</span></div>
+        <div class="kicker">S8 &middot; the rebuild &middot; 1 of 3</div>
+        <h1>The rebuild: brief, method &amp; plan</h1>
+        <div class="meta-row"><span>the redo</span><span>review every diff</span><span>ordered &amp; shippable</span></div>
       </header>
 
       <article class="body">
-        <p>Now you relearn by redoing. Same app, same features, same data model &mdash; but built deliberately, with every S7 lesson baked into the structure, and shipped as one self-contained Docker container. This slide is both a <strong>target architecture</strong> and a <strong>brief you can hand to an agent</strong> (or work through yourself over two days).</p>
+        <p>Now you relearn by redoing. Same app, same features, same data model &mdash; but built deliberately, with every S7 lesson baked into the structure, and shipped as one self-contained Docker container. This slide is the <strong>brief, the method, and the ordered plan</strong> for the whole rebuild; the next two go deep on each half &mdash; <strong>S9 the server</strong>, then <strong>S10 the client</strong>. Use AI to draft each chunk, but review every diff with your own eyes &mdash; the review is where the learning happens. The companion lesson <a href="the-gap-poc-to-clean-architecture.md">the-gap-poc-to-clean-architecture.md</a> breaks the rebuild into small, review-sized chunks with a learning checkpoint for each.</p>
 
         <h2>Guiding principles (each answers a S7 debt)</h2>
         <table>
@@ -56,6 +58,29 @@
             <tr><td><strong>Type-check + test in CI.</strong> Green build means green types.</td><td><code>vite build</code> skipping client types</td></tr>
           </tbody>
         </table>
+
+        <h2>The method: small chunks, strict order, review every diff</h2>
+        <div class="callout warn"><span class="label">For learning, do not just hand off the brief</span>You could hand this whole brief to an agent and get an app back. <strong>Don't.</strong> This app is a throwaway training ground; the understanding you carry out is the real artifact. Use AI to go faster, but you read and approve every diff. The agent can type faster than you &mdash; only you can understand <em>for</em> you.</div>
+        <ul>
+          <li><strong>AI assists, you review.</strong> If you cannot explain a line in the diff, you have not learned it yet. Stop and dig in.</li>
+          <li><strong>Small, scoped chunks.</strong> A chunk you cannot review in a few minutes is too big. Split it.</li>
+          <li><strong>Strict order.</strong> Dependency order means you never review a chunk whose foundation you have not already verified. That is what keeps iteration fast.</li>
+          <li><strong>A verify gate per chunk.</strong> Types pass, a test passes, or a route works &mdash; before the next chunk begins.</li>
+        </ul>
+        <figure class="diagram">
+          <pre class="mermaid">
+flowchart LR
+  A["Agent drafts&lt;br/&gt;one small chunk"] --&gt; B["You read&lt;br/&gt;every diff"]
+  B --&gt; C{"Can you&lt;br/&gt;explain it?"}
+  C -- "no" --&gt; D["Dig in,&lt;br/&gt;ask, rewrite"]
+  D --&gt; B
+  C -- "yes" --&gt; E["Verify gate&lt;br/&gt;green?"]
+  E -- "no" --&gt; D
+  E -- "yes" --&gt; F["Next chunk"]
+  F --&gt; A
+          </pre>
+          <figcaption>The loop that turns a fast rebuild into a learning exercise: nothing advances until you understand it.</figcaption>
+        </figure>
 
         <h2>Target repo layout</h2>
         <pre><code class="nohighlight">scheduling/
@@ -111,20 +136,35 @@ services:
         <pre><code>docker compose up --build      # → open http://localhost:3001</code></pre>
         <div class="callout"><span class="label">Why this is the right shape</span>One container, one port, both halves inside. No CORS in production (same origin). The SQLite file lives on a mounted volume so data survives <code>docker compose down</code> &mdash; the exact debt the in-memory POC couldn't pay. This is "self-contained" in the truest sense: <code>git clone</code> + <code>docker compose up</code> and a stranger has your app running.</div>
 
-        <h2>A weekend plan</h2>
-        <h3>Saturday &mdash; backend &amp; contract (the home turf)</h3>
-        <ul>
-          <li><strong>AM:</strong> Stand up <code>shared/domain.ts</code> with types <em>and</em> Zod schemas. Scaffold the server with <code>routes/</code> + <code>services/</code> + a <code>Repository</code> interface. Port <code>paginate.ts</code> verbatim.</li>
-          <li><strong>PM:</strong> Implement the SQLite repository + seed. Wire the routes, validating input with the schemas. Write a few endpoint tests. You're using S3 (types) and S2 (data flow) the whole time.</li>
-        </ul>
-        <h3>Sunday &mdash; frontend (the new turf)</h3>
-        <ul>
-          <li><strong>AM:</strong> One feature folder end to end &mdash; <code>TasksPage</code>: fetch a page, render the flat list, drop in the kept <code>Pagination</code>. This exercises S4 (JSX lists), S5 (a CSS Module), and S6 (the fetch effect) at once.</li>
-          <li><strong>PM:</strong> Repeat the pattern for Home, Team, Schedule. Extract shared bits (<code>Hero</code>, <code>ThemeToggle</code>) as you notice them. Dockerize. <code>docker compose up</code>. Click through. Done.</li>
-        </ul>
-        <div class="callout"><span class="label">Order matters</span>Backend first, on Saturday, on purpose: start where you're strong, lock the contract, then the frontend has a stable thing to talk to. It mirrors the one disciplined arc from the POC &mdash; <em>doc &rarr; server &rarr; client</em> &mdash; that produced its cleanest feature.</div>
+        <h2>The rebuild, in order</h2>
+        <p>Backend first, on purpose: start where you are strong, lock the contract, then the frontend has a stable thing to talk to. Each phase ends on a green gate before the next begins. <strong>S9</strong> goes deep on P1&ndash;P3 (the server); <strong>S10</strong> goes deep on P4&ndash;P5 (the client).</p>
+        <figure class="diagram">
+          <pre class="mermaid">
+flowchart LR
+  P0["P0&lt;br/&gt;contract&lt;br/&gt;+ scaffold"] --&gt; P1["P1&lt;br/&gt;domain"]
+  P1 --&gt; P2["P2&lt;br/&gt;app + infra"]
+  P2 --&gt; P3["P3&lt;br/&gt;API"]
+  P3 --&gt; P4["P4&lt;br/&gt;one client&lt;br/&gt;feature E2E"]
+  P4 --&gt; P5["P5&lt;br/&gt;rest&lt;br/&gt;+ Docker"]
+          </pre>
+          <figcaption>Six phases, ~20 small chunks. The full table with a "review lens" per chunk is in the companion doc.</figcaption>
+        </figure>
+        <table>
+          <thead><tr><th>Phase</th><th>The chunks</th><th>Green gate</th></tr></thead>
+          <tbody>
+            <tr><td><strong>P0</strong> contract + scaffold</td><td><code>shared/</code> DTOs + Zod; folder skeleton; port <code>paginate&lt;T&gt;()</code> verbatim; wire <code>typecheck</code> + tests into CI</td><td>Project type-checks; empty test suite is green</td></tr>
+            <tr><td><strong>P1</strong> domain</td><td>Value objects; <code>Resource</code> aggregate with <code>book()</code>; <code>WorkItem</code> entity; <code>Scheduler</code> service; rule unit tests</td><td>Domain tests pass with <em>zero</em> infrastructure imported</td></tr>
+            <tr><td><strong>P2</strong> app + infra</td><td>Repository ports in the domain; use cases; SQLite repos + seeding; use-case tests against fakes</td><td>Use-case tests pass; SQLite round-trips an aggregate</td></tr>
+            <tr><td><strong>P3</strong> API</td><td>Thin routes validating with Zod; error mapping (409/400/404); endpoint tests</td><td>API tests pass; responses match the <code>shared/</code> schemas</td></tr>
+            <tr><td><strong>P4</strong> one client feature E2E</td><td>Router-only <code>App.tsx</code>; <code>useWorkItems</code> hook; <code>TasksPage</code> + kept <code>Pagination</code>; four-state render; scoped CSS Module</td><td>Tasks route works against the real API, paginates server-side, survives empty</td></tr>
+            <tr><td><strong>P5</strong> the rest + Docker</td><td>Repeat the pattern for Home/Team/Schedule; scoped cache invalidation; multi-stage Dockerfile + compose with a SQLite volume</td><td><code>docker compose up --build</code> serves on one port; data survives a restart</td></tr>
+          </tbody>
+        </table>
+        <div class="callout"><span class="label">Why this order</span>Each phase produces a stable foundation the next one stands on, so you are never debugging two unfamiliar layers at once. P1 finishing with "zero infrastructure imported" is not a slogan &mdash; it is the literal proof that your dependency arrows point the right way.</div>
+        <div class="callout"><span class="label">What a focused weekend looks like</span><strong>Saturday &mdash; backend &amp; contract (home turf):</strong> stand up <code>shared/domain.ts</code> with types <em>and</em> Zod schemas, scaffold <code>routes/services/repository</code>, port <code>paginate.ts</code> verbatim, implement the SQLite repo + seed, wire and validate the routes, write a few endpoint tests (that's P0&ndash;P3, all S3 types and S2 data flow). <strong>Sunday &mdash; frontend (new turf):</strong> one feature folder end to end (<code>TasksPage</code>: fetch a page, render the list, drop in the kept <code>Pagination</code> &mdash; S4 JSX, S5 a CSS Module, S6 the fetch effect at once), then repeat the pattern for Home/Team/Schedule, extract shared bits as you notice them, Dockerize, <code>docker compose up</code>, click through (P4&ndash;P5). It mirrors the one disciplined arc from the POC &mdash; <em>doc &rarr; server &rarr; client</em> &mdash; that produced its cleanest feature.</div>
 
         <h2>Definition of done</h2>
+        <p>Two kinds of done. First the artifact:</p>
         <ul>
           <li><code>docker compose up --build</code> serves the working app on one port.</li>
           <li>Data survives a restart (SQLite on a volume).</li>
@@ -133,23 +173,30 @@ services:
           <li>One <code>shared/</code> type definition; zero blind <code>as</code> on network data.</li>
           <li>Every list view handles loading, empty, and error states explicitly.</li>
         </ul>
+        <p>Then the learning &mdash; the part that actually matters here, because <em>you</em> are the real artifact:</p>
+        <ul>
+          <li>You can answer the review-lens question for every chunk you accepted &mdash; in your own words, without the diff in front of you.</li>
+          <li>You can point at any business rule and name the one type that owns it.</li>
+          <li>You can explain, for any piece of client state, why it is server, UI, or URL state.</li>
+        </ul>
 
-        <h2>Brief to hand a rebuild agent</h2>
+        <h2>Driving the rebuild yourself</h2>
+        <p>Work one small chunk at a time, in the order from the <a href="the-gap-poc-to-clean-architecture.md">companion lesson</a> (contract &rarr; domain &rarr; app+infra &rarr; API &rarr; one client feature &rarr; the rest). Let AI draft a chunk, then read the whole diff before you accept it: if you cannot explain a line, you have not learned it yet. A useful per-chunk prompt:</p>
         <div class="callout">
-          <span class="label">Copy-paste starting prompt</span>
-          "Rebuild the <code>simple-scheduling-app</code> with the same features and data model (see <code>docs/chronicle/</code>), but in a clean architecture: a <code>shared/</code> types+Zod package; an Express server split into <code>routes/services/repository</code> with a SQLite-backed <code>Repository</code> interface and the existing <code>paginate&lt;T&gt;()</code> kept; a React client split into per-feature folders (<code>home/schedule/team/tasks</code>) with CSS Modules and a single <code>tokens.css</code>; keep the <code>Pagination</code> component and <code>Page&lt;T&gt;</code> envelope. Pagination/filtering/sorting are server-side only. Ship it as one multi-stage Docker image that serves API + static client on port 3001, with <code>docker compose up</code> and a persisted SQLite volume. Wire <code>typecheck</code> + tests into CI. Build backend first, then frontend, verifying each layer."
+          <span class="label">Per-chunk prompt (you review the result)</span>
+          "Implement only <em>this</em> chunk of the <code>simple-scheduling-app</code> rebuild: [the one chunk]. Match the clean architecture from <code>docs/chronicle/</code>: a <code>shared/</code> types+Zod package; an Express server split into <code>domain/application/infrastructure/api</code> with a SQLite-backed <code>Repository</code> and the existing <code>paginate&lt;T&gt;()</code> kept; a React client of per-feature folders with CSS Modules and one <code>tokens.css</code>; keep the <code>Pagination</code> component and <code>Page&lt;T&gt;</code> envelope; pagination/filtering/sorting server-side only. Show me the full diff and stop. Do not move to the next chunk."
         </div>
 
-        <div class="callout good"><span class="label">The whole point</span>You shipped a rough thing, read its scars, and learned the three browser languages from real code. Now you rebuild it knowing exactly why each clean choice matters &mdash; because you felt the cost of its absence. That's the method: <strong>learn by doing, relearn by redoing.</strong> Go build the second one.</div>
+        <div class="callout good"><span class="label">Next: build it, server first</span>You have the brief, the method, the shape, and the ordered plan. The next two slides are the build itself &mdash; <strong>S9</strong> rebuilds the server (clean architecture + a rich domain), then <strong>S10</strong> rebuilds the client (the three kinds of state, hooks, and the conventions that keep it clean). Start on home turf.</div>
       </article>
 
       <nav class="slide-nav">
         <a href="s7-lessons.html"><div class="dir">Previous</div><div class="ttl">S7 &middot; Redirects &amp; lessons</div></a>
-        <a class="next" href="index.html"><div class="dir">Back to</div><div class="ttl">Overview</div></a>
+        <a class="next" href="s9-clean-architecture.html"><div class="dir">Next</div><div class="ttl">S9 &middot; The server: clean architecture</div></a>
       </nav>
     </main>
   </div>
 
-  <footer class="site-footer">Chronicle of <code>simple-scheduling-app</code> &middot; S8 of 8 &middot; learn by doing, relearn by redoing</footer>
+  <footer class="site-footer">Chronicle of <code>simple-scheduling-app</code> &middot; S8 of 10 &middot; learn by doing, relearn by redoing</footer>
 </body>
 </html>

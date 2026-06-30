@@ -27,7 +27,9 @@
         <li><a href="s5-css.html"><span class="sb-num">S5</span><span>CSS &amp; design system</span></a></li>
         <li class="active"><a href="s6-react.html"><span class="sb-num">S6</span><span>React state &amp; effects</span></a></li>
         <li><a href="s7-lessons.html"><span class="sb-num">S7</span><span>Redirects &amp; lessons</span></a></li>
-        <li><a href="s8-rebuild.html"><span class="sb-num">S8</span><span>Rebuild: clean + Docker</span></a></li>
+        <li><a href="s8-rebuild.html"><span class="sb-num">S8</span><span>Rebuild 1: brief &amp; plan</span></a></li>
+        <li><a href="s9-clean-architecture.html"><span class="sb-num">S9</span><span>Rebuild 2: the server</span></a></li>
+        <li><a href="s10-frontend-conventions.html"><span class="sb-num">S10</span><span>Rebuild 3: the client</span></a></li>
       </ol>
     </aside>
 
@@ -101,6 +103,20 @@ const [data, setData] = useState&lt;BootstrapResponse | null&gt;(null);</code></
         <strong>(2) The <code>cancelled</code> flag</strong> guards against a race: if the user clicks fast, an older request must not overwrite a newer one. The returned cleanup function flips the flag.
         <strong>(3) Trust the server:</strong> if the API clamped <code>?page=999</code> down to the real last page, the client syncs to the corrected number.</div>
 
+        <h2>The two rules that cause the most pain</h2>
+        <p>The hooks are simple; the two ways they bite are not. Learn these now and skip a week of confusion.</p>
+        <div class="two-col">
+          <div class="card">
+            <strong class="pill bad">Rule 1 &middot; Hooks run at the top level, every time</strong>
+            <p>Never call a hook inside an <code>if</code>, a loop, or after an early <code>return</code>. React tracks hooks <em>by call order</em> &mdash; the 1st <code>useState</code>, the 2nd, the 3rd. Skip one conditionally and every later hook shifts by one slot and reads the wrong state. Call all hooks unconditionally at the top of the component; put the condition <em>inside</em> the hook instead.</p>
+          </div>
+          <div class="card">
+            <strong class="pill bad">Rule 2 &middot; The stale closure</strong>
+            <p>Each render is a fresh function call, so a callback "captures" the variables <em>from the render it was created in</em>. An effect with <code>[]</code> deps that reads <code>count</code> sees the <em>first</em> render's <code>count</code> forever &mdash; it went stale. The dependency array is how you tell React "rebuild this closure when these change." A wrong array is the source of both stale screens and infinite loops.</p>
+          </div>
+        </div>
+        <div class="callout"><span class="label">The escape hatch: <code>useRef</code></span>Sometimes you need a value that survives re-renders but should <em>not</em> trigger one when it changes &mdash; a timer id, the previous value, a raw DOM node. That's <code>useRef</code>: <code>const ref = useRef(0)</code> gives you a stable <code>{ current: 0 }</code> box you can read and mutate freely. <strong>Changing <code>ref.current</code> never re-renders</strong> &mdash; the opposite of <code>useState</code>. Rule of thumb: if it should repaint the screen, it's state; if it's just bookkeeping, it's a ref.</div>
+
         <h2>Controlled inputs: the form <em>is</em> state</h2>
         <p>In React, an input's value comes <em>from</em> state and changes <em>through</em> state &mdash; a round trip:</p>
         <pre><code>&lt;input value={form.title}
@@ -136,6 +152,6 @@ graph TD
     </main>
   </div>
 
-  <footer class="site-footer">Chronicle of <code>simple-scheduling-app</code> &middot; S6 of 8</footer>
+  <footer class="site-footer">Chronicle of <code>simple-scheduling-app</code> &middot; S6 of 10</footer>
 </body>
 </html>

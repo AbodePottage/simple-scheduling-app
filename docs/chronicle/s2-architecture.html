@@ -27,7 +27,9 @@
         <li><a href="s5-css.html"><span class="sb-num">S5</span><span>CSS &amp; design system</span></a></li>
         <li><a href="s6-react.html"><span class="sb-num">S6</span><span>React state &amp; effects</span></a></li>
         <li><a href="s7-lessons.html"><span class="sb-num">S7</span><span>Redirects &amp; lessons</span></a></li>
-        <li><a href="s8-rebuild.html"><span class="sb-num">S8</span><span>Rebuild: clean + Docker</span></a></li>
+        <li><a href="s8-rebuild.html"><span class="sb-num">S8</span><span>Rebuild 1: brief &amp; plan</span></a></li>
+        <li><a href="s9-clean-architecture.html"><span class="sb-num">S9</span><span>Rebuild 2: the server</span></a></li>
+        <li><a href="s10-frontend-conventions.html"><span class="sb-num">S10</span><span>Rebuild 3: the client</span></a></li>
       </ol>
     </aside>
 
@@ -160,6 +162,54 @@ server: { proxy: { '/api': 'http://localhost:3001' } }</code></pre>
         </table>
         <div class="callout warn"><span class="label">Gotcha that bit this build</span><code>vite build</code> uses esbuild, which strips types <em>without checking them</em>. So a client type error can ship a green build. Always run <code>npm run typecheck</code> &mdash; it's the only client type gate. The rebuild wires this into CI.</div>
 
+        <h2>The JS ecosystem, in .NET terms</h2>
+        <p>The single biggest source of "where am I" for a backend engineer isn't the code &mdash; it's the <em>toolchain</em>. Here is the whole JS build world mapped onto the .NET one you already know:</p>
+        <table>
+          <thead><tr><th>JavaScript / Node</th><th>.NET equivalent</th><th>Role</th></tr></thead>
+          <tbody>
+            <tr><td><code>package.json</code></td><td><code>.csproj</code></td><td>Declares dependencies, versions, and runnable scripts for one project.</td></tr>
+            <tr><td><strong>npm</strong> (the registry + CLI)</td><td>NuGet</td><td><code>npm install</code> downloads packages from the public registry into the project.</td></tr>
+            <tr><td><code>node_modules/</code></td><td><code>~/.nuget</code> + <code>bin</code> restore</td><td>The actual downloaded dependency code, on disk, per project. Never committed; rebuilt from the lockfile.</td></tr>
+            <tr><td><code>package-lock.json</code></td><td><code>packages.lock.json</code></td><td>Pins the <em>exact</em> resolved version tree so installs are reproducible.</td></tr>
+            <tr><td><code>npm run &lt;name&gt;</code></td><td>MSBuild target / <code>dotnet run</code></td><td>Runs a named script from <code>package.json</code> (<code>dev</code>, <code>build</code>, <code>typecheck</code>).</td></tr>
+            <tr><td><strong>Vite</strong> / esbuild</td><td>MSBuild + the bundler</td><td>Compiles TS&rarr;JS, JSX&rarr;JS, bundles many files into a few, and runs the dev server.</td></tr>
+            <tr><td><code>tsc</code> (TypeScript compiler)</td><td>Roslyn (type-check pass)</td><td>Checks types and can emit JS. In this app it's the type <em>gate</em>; esbuild does the fast emit.</td></tr>
+            <tr><td><code>import</code> / ESM</td><td><code>using</code> + assembly ref</td><td>Pulls in another module or package. Resolved at build time by the bundler.</td></tr>
+          </tbody>
+        </table>
+
+        <h2>Why a build step exists at all</h2>
+        <p>This is the crux of "how the JS ecosystem builds UIs." <strong>A browser can only run plain JavaScript, HTML, and CSS.</strong> It cannot run TypeScript, it cannot run JSX, and it would choke on hundreds of separate <code>import</code> files over the network. So a <em>bundler</em> (Vite, powered by esbuild) does three jobs before anything reaches the browser:</p>
+        <figure class="diagram">
+          <pre class="mermaid">
+graph LR
+  subgraph SRC["What you write (Node-only)"]
+    A["App.tsx&lt;br/&gt;(TypeScript + JSX)"]
+    B["types.ts, api.ts&lt;br/&gt;(modules)"]
+    C["styles.css&lt;br/&gt;(tokens, rules)"]
+  end
+  subgraph VITE["Vite / esbuild: the build"]
+    T["1 · Transpile&lt;br/&gt;TS + JSX &amp;rarr; plain JS"]
+    U["2 · Bundle&lt;br/&gt;many files &amp;rarr; a few"]
+    V["3 · Optimize&lt;br/&gt;minify + hash names"]
+  end
+  subgraph OUT["What the browser runs"]
+    D["index.html&lt;br/&gt;assets/*.js&lt;br/&gt;assets/*.css"]
+  end
+  A --&gt; T
+  B --&gt; T
+  C --&gt; U
+  T --&gt; U --&gt; V --&gt; D
+          </pre>
+          <figcaption>The bundler turns Node-only source (TS, JSX, modules) into the three things a browser actually understands.</figcaption>
+        </figure>
+        <ul>
+          <li><strong>Transpile:</strong> strip the types and lower JSX into <code>React.createElement</code> calls &mdash; the browser never sees a single <code>: number</code> or <code>&lt;App/&gt;</code>.</li>
+          <li><strong>Bundle:</strong> follow every <code>import</code> and stitch the module graph into a handful of files, so the browser makes a few requests, not hundreds.</li>
+          <li><strong>Optimize:</strong> minify, tree-shake unused code, and fingerprint filenames for caching &mdash; the production <code>vite build</code> step.</li>
+        </ul>
+        <div class="callout"><span class="label">Dev server &amp; hot reload</span>In development, <code>npm run dev</code> doesn't pre-build everything &mdash; Vite transpiles each module on demand and pushes changes into the running page via <strong>Hot Module Replacement (HMR)</strong>. You save a file and the UI updates in well under a second, keeping component state. It's the closest thing to "edit-and-continue" the front end has, and it's why the feedback loop feels so fast.</div>
+
         <h2>The monolith: one 1,676-line component</h2>
         <p>The whole UI lives in a single <code>App.tsx</code>: routing, all four pages, every popup, every form, every handler. It grew organically &mdash; and it's the app's biggest structural debt.</p>
         <div class="two-col">
@@ -184,6 +234,6 @@ server: { proxy: { '/api': 'http://localhost:3001' } }</code></pre>
     </main>
   </div>
 
-  <footer class="site-footer">Chronicle of <code>simple-scheduling-app</code> &middot; S2 of 8</footer>
+  <footer class="site-footer">Chronicle of <code>simple-scheduling-app</code> &middot; S2 of 10</footer>
 </body>
 </html>

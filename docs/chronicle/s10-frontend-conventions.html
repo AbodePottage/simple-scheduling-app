@@ -1,0 +1,229 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>S10 &middot; The client: React at scale</title>
+  <link rel="stylesheet" href="chronicle.css">
+  <script src="chronicle.js"></script>
+</head>
+<body>
+  <header class="topnav">
+    <div class="topnav-inner">
+      <a class="brand" href="index.html"><span class="mark">🗓️</span> Scheduling SPA Chronicle</a>
+      <button class="theme-toggle" type="button" aria-label="Toggle theme"><span class="icon-moon">🌙</span><span class="icon-sun">☀️</span></button>
+    </div>
+  </header>
+
+  <div class="layout">
+    <aside class="sidebar">
+      <div class="sidebar-eyebrow">The deck</div>
+      <ol>
+        <li><a href="index.html"><span class="sb-num">00</span><span>Overview</span></a></li>
+        <li><a href="s1-timeline.html"><span class="sb-num">S1</span><span>The build timeline</span></a></li>
+        <li><a href="s2-architecture.html"><span class="sb-num">S2</span><span>Architecture &amp; data flow</span></a></li>
+        <li><a href="s3-typescript.html"><span class="sb-num">S3</span><span>TypeScript</span></a></li>
+        <li><a href="s4-html-jsx.html"><span class="sb-num">S4</span><span>HTML &amp; JSX</span></a></li>
+        <li><a href="s5-css.html"><span class="sb-num">S5</span><span>CSS &amp; design system</span></a></li>
+        <li><a href="s6-react.html"><span class="sb-num">S6</span><span>React state &amp; effects</span></a></li>
+        <li><a href="s7-lessons.html"><span class="sb-num">S7</span><span>Redirects &amp; lessons</span></a></li>
+        <li><a href="s8-rebuild.html"><span class="sb-num">S8</span><span>Rebuild 1: brief &amp; plan</span></a></li>
+        <li><a href="s9-clean-architecture.html"><span class="sb-num">S9</span><span>Rebuild 2: the server</span></a></li>
+        <li class="active"><a href="s10-frontend-conventions.html"><span class="sb-num">S10</span><span>Rebuild 3: the client</span></a></li>
+      </ol>
+    </aside>
+
+    <main class="content">
+      <header class="mission-header">
+        <a class="crumb" href="index.html">&larr; Overview</a>
+        <div class="badge-large">🧰</div>
+        <div class="kicker">S10 &middot; the rebuild &middot; 3 of 3</div>
+        <h1>The client: React at scale</h1>
+        <div class="meta-row"><span>three kinds of state</span><span>custom hooks</span><span>lint &middot; test &middot; validate</span></div>
+      </header>
+
+      <article class="body">
+        <p>The server (S9) now owns the data truth. This is build phase two: the <strong>client</strong>, rebuilt to mirror that server cleanly. First the mental model a backend engineer is missing &mdash; the three kinds of state &mdash; then the <strong>conventions production React codebases converge on</strong> to stay maintainable as they grow. The conventions are drawn from two well-regarded starters worth reading end to end &mdash; <a href="https://github.com/luciancaetano/startercraft" target="_blank" rel="noopener">startercraft</a> (an opinionated, scalable boilerplate) and <a href="https://github.com/RyomenDev/react-ts-base" target="_blank" rel="noopener">react-ts-base</a> (a typed-React concept primer). Each answers a question the monolith never had to: <em>where does this code live, and how do we keep it from rotting?</em></p>
+
+        <h2>First, the mental model: three kinds of state</h2>
+        <p>Backend engineers conflate all state into "the data." On the client there are three distinct kinds, and the POC's mistake was cramming all three into <code>useState</code> inside one 1,528-line <code>App.tsx</code>.</p>
+        <table>
+          <thead><tr><th>Kind</th><th>Example here</th><th>Where it belongs</th></tr></thead>
+          <tbody>
+            <tr><td>Server state</td><td>work items, resources, bookings</td><td>A server-state cache (TanStack Query), not raw <code>useState</code></td></tr>
+            <tr><td>UI state</td><td>which modal is open, dark mode, drag-in-progress</td><td>Local <code>useState</code> in the nearest component</td></tr>
+            <tr><td>URL state</td><td>current route, page number, active filter</td><td>The URL itself, so a link is shareable and back works</td></tr>
+          </tbody>
+        </table>
+        <p>The POC also mutates on the server then <strong>refetches the entire world</strong> (<code>/api/bootstrap</code>) on every change. In .NET terms that is invalidating your whole output cache on every write. The fix is scoped cache keys &mdash; the client mirroring the server's contract instead of re-pulling all of it:</p>
+        <figure class="diagram">
+          <pre class="mermaid">
+sequenceDiagram
+  participant U as User
+  participant C as Component
+  participant Q as Query cache
+  participant S as Server
+  U-&gt;&gt;C: clicks Book
+  C-&gt;&gt;S: POST /api/bookings
+  S--&gt;&gt;C: 201 created
+  C-&gt;&gt;Q: invalidate work-items, bookings
+  Q-&gt;&gt;S: refetch ONLY those keys
+  S--&gt;&gt;Q: fresh pages
+  Q--&gt;&gt;C: re-render affected views
+          </pre>
+          <figcaption>Targeted invalidation instead of refetch-the-world: the same instinct as scoped cache keys on the server.</figcaption>
+        </figure>
+        <pre><code class="language-ts">// features/tasks/useWorkItems.ts — the shape you're aiming for
+export function useWorkItems(params: WorkItemQuery) {
+  return useQuery({
+    queryKey: ['work-items', params],          // the cache key
+    queryFn: () =&gt; fetchWorkItems(params),     // your existing api.ts helper
+  });
+}</code></pre>
+        <div class="callout"><span class="label">Two more non-negotiables</span><strong>Decompose:</strong> one component, one file, one job &mdash; per-feature folders (<code>home/schedule/team/tasks</code>), a router-only <code>App.tsx</code>. <strong>Handle every async branch:</strong> loading, error, empty, and data &mdash; the four-state machine the POC only half-built. And scope styles with CSS Modules, keeping one global <code>tokens.css</code>. The eight conventions below are how you get there.</div>
+
+        <h2>1. Custom hooks: your own reusable stateful logic</h2>
+        <p>The built-in hooks (S6) are primitives. The real abstraction is that <strong>you write your own hooks</strong> by composing them &mdash; any function named <code>useX</code> that calls other hooks. This is the single tool the POC lacked: all its logic was inlined in <code>App</code>, so nothing was reusable. A custom hook is the front end's version of <em>extracting a service</em>.</p>
+        <pre><code>// features/tasks/useWorkItems.ts — logic lifted out of the component
+export function useWorkItems(params: WorkItemQuery) {
+  const [page, setPage] = useState&lt;Page&lt;WorkItem&gt; | null&gt;(null);
+  const [status, setStatus] = useState&lt;'loading' | 'error' | 'ready'&gt;('loading');
+
+  useEffect(() =&gt; {
+    let cancelled = false;
+    setStatus('loading');
+    fetchWorkItems(params)
+      .then((p) =&gt; { if (!cancelled) { setPage(p); setStatus('ready'); } })
+      .catch(() =&gt; { if (!cancelled) setStatus('error'); });
+    return () =&gt; { cancelled = true; };
+  }, [params]);
+
+  return { page, status };          // the component just consumes this
+}</code></pre>
+        <pre><code>// the component shrinks to presentation:
+function TasksPage() {
+  const { page, status } = useWorkItems(query);
+  if (status === 'loading') return &lt;Spinner /&gt;;
+  if (status === 'error')   return &lt;ErrorState /&gt;;
+  return &lt;TaskList items={page!.items} /&gt;;
+}</code></pre>
+        <div class="callout good"><span class="label">Why this is the keystone convention</span>Move the fetching, the flags, and the effect into <code>useWorkItems</code>, and the same logic is reusable, testable in isolation, and the component becomes a thin view. Do this consistently and the 1,528-line <code>App</code> dissolves into a dozen small hooks and a dozen small views. <strong>In production you'd back this with TanStack Query</strong> (the React standard for server state) so caching, loading, and error come for free &mdash; see the companion lesson.</div>
+
+        <h2>2. The view-model split: logic apart from presentation</h2>
+        <p>Push the hook idea one step and you get the convention <code>startercraft</code> bakes into every component: a <strong>view</strong> file that is pure JSX and a <strong>view-model</strong> (a hook) that holds the state and handlers. It is the same separation of concerns you reach for in MVC/MVVM &mdash; the view binds, the model decides.</p>
+        <figure class="diagram">
+          <pre class="mermaid">
+graph LR
+  V["View: TasksPage.tsx&lt;br/&gt;JSX + bindings, no logic"] -- "calls" --&gt; H["View-model: useTasks()&lt;br/&gt;state, effects, handlers"]
+  H -- "returns data + actions" --&gt; V
+  H -- "fetch / mutate" --&gt; API["api.ts &amp;rarr; server"]
+          </pre>
+          <figcaption>The view renders; the hook decides. Each can be read, tested, and changed on its own.</figcaption>
+        </figure>
+
+        <h2>3. <code>useReducer</code> + Context: when <code>useState</code> outgrows itself</h2>
+        <p>The POC holds ~20 <code>useState</code> slices in one component and threads values through deep prop chains. Two standard tools fix each half of that pain:</p>
+        <div class="two-col">
+          <div class="card">
+            <strong><code>useReducer</code> &mdash; a state machine you already know</strong>
+            <p>When several pieces of state change together by a few well-defined actions, a reducer is clearer than a fistful of setters. It is the exact <code>(state, action) =&gt; state</code> function you'd write on the backend.</p>
+            <pre><code>function reducer(s: FormState, a: Action) {
+  switch (a.type) {
+    case 'set': return { ...s, [a.field]: a.value };
+    case 'reset': return initial;
+  }
+}
+const [form, dispatch] = useReducer(reducer, initial);</code></pre>
+          </div>
+          <div class="card">
+            <strong>Context &mdash; dependency injection for the tree</strong>
+            <p>For truly cross-cutting state (theme, current user) that many components need, Context lets a provider supply a value to its whole subtree &mdash; no prop drilling. Treat it like a registered singleton, not a dumping ground.</p>
+            <pre><code>const ThemeContext = createContext&lt;Theme&gt;('light');
+// provide once near the root:
+&lt;ThemeContext.Provider value={theme}&gt; ... &lt;/ThemeContext.Provider&gt;
+// consume anywhere below:
+const theme = useContext(ThemeContext);</code></pre>
+          </div>
+        </div>
+        <div class="callout warn"><span class="label">Reach for these in order</span>Default to local <code>useState</code> in the smallest component (S6 colocation). Promote to <code>useReducer</code> when the transitions get complex. Promote to Context only for state that is genuinely global. Skipping straight to "put everything in Context" recreates the monolith's god-object in a new shape.</div>
+
+        <h2>4. Co-locate everything a component owns</h2>
+        <p>The scalable file convention isn't just "a file per component" (S2/S8) &mdash; it's a <strong>folder per component</strong> that keeps the view, its test, its scoped styles, its types, and its logic side by side, with a barrel <code>index.ts</code> as the public door:</p>
+        <pre><code class="nohighlight">components/elements/WorkItemForm/
+├── WorkItemForm.tsx            # the view
+├── WorkItemForm.view-model.ts  # the hook: state + handlers
+├── WorkItemForm.module.css     # styles scoped to this component
+├── WorkItemForm.types.ts       # its props + local types
+├── WorkItemForm.spec.tsx       # its test, right next to it
+└── index.ts                    # export { WorkItemForm }  — the only public surface</code></pre>
+        <div class="callout"><span class="label">Why co-location beats grouping by type</span>When everything a component needs lives in one folder, you delete the folder to delete the feature, and a change touches one place. The opposite (all CSS in <code>/styles</code>, all types in <code>/types</code>) scatters a single change across the tree &mdash; the same force that made the POC's edits sprawl. The <code>index.ts</code> barrel means callers import from the folder, not its internals, so you can refactor inside freely.</div>
+
+        <h2>5. Path aliases: kill the <code>../../../</code> imports</h2>
+        <p>Deep relative imports are brittle and unreadable. Both starters map alias prefixes to folders once, so every import is absolute and stable:</p>
+        <pre><code>// tsconfig.json                         // vite.config.ts mirrors these
+"paths": {
+  "@features/*": ["./src/app/features/*"],
+  "@components/*": ["./src/app/components/*"],
+  "@hooks/*": ["./src/app/hooks/*"]
+}
+// then, anywhere:
+import { Pagination } from '@components/Pagination';   // not '../../../components/Pagination'</code></pre>
+        <p>Configure the same aliases in <code>tsconfig.json</code> (so the type-checker resolves them) <em>and</em> in <code>vite.config.ts</code> (so the bundler does). It's the JS answer to a project reference: a name that doesn't break when you move a file.</p>
+
+        <h2>6. Lint, format, and a single validate gate</h2>
+        <p>The deck has talked about the <em>type</em> gate (S2); production frontends add two more, then bundle all three into one command. This is the DX backbone of both reference repos.</p>
+        <table>
+          <thead><tr><th>Tool</th><th>Catches</th><th>.NET analogue</th></tr></thead>
+          <tbody>
+            <tr><td><strong>ESLint</strong></td><td>Likely bugs and bad patterns: missing effect deps, unused vars, the rules-of-hooks violations from S6.</td><td>Roslyn analyzers</td></tr>
+            <tr><td><strong>Prettier</strong></td><td>Formatting &mdash; runs automatically so nobody argues about it in review.</td><td><code>dotnet format</code> / EditorConfig</td></tr>
+            <tr><td><strong>tsc --noEmit</strong></td><td>Type errors the bundler skips.</td><td>The compile step</td></tr>
+          </tbody>
+        </table>
+        <pre><code>// package.json — one gate that CI and you both run
+"scripts": {
+  "validate": "tsc --noEmit &amp;&amp; eslint . &amp;&amp; vitest run"
+}</code></pre>
+        <div class="callout good"><span class="label">One green checkmark</span><code>npm run validate</code> = types sound + lint clean + tests pass, in one command. Wire it into CI and a pull request is either green or it isn't &mdash; the same confidence a clean <code>dotnet build</code> + test run gives you today. An <code>eslint-plugin-react-hooks</code> rule would have flagged the exact dependency-array mistakes S6 warns about, before runtime.</div>
+
+        <h2>7. Frontend tests assert behavior, not implementation</h2>
+        <p>S8 says "tests in CI" but never shows a UI test. The standard is <strong>Vitest</strong> (the runner) plus <strong>React Testing Library</strong> (RTL), whose guiding rule is: <em>test what a user sees and does, not the component's internals.</em> You query the rendered output the way a person or a screen reader would &mdash; by role and text &mdash; then simulate an interaction and assert on the result.</p>
+        <pre><code>// Pagination.spec.tsx — the app's cleanest component is the easiest to test
+import { render, screen } from '@testing-library/react';
+import userEvent from '@testing-library/user-event';
+
+test('reports the page the user clicked', async () =&gt; {
+  const onPageChange = vi.fn();
+  render(&lt;Pagination page={1} total={60} pageSize={10} noun="tasks" onPageChange={onPageChange} /&gt;);
+
+  await userEvent.click(screen.getByRole('button', { name: '2' }));
+
+  expect(onPageChange).toHaveBeenCalledWith(2);   // the contract, not the DOM internals
+});</code></pre>
+        <div class="callout"><span class="label">Why query by role</span>Finding the button by its accessible role and name (not a CSS class or test id) means the test passes only if the control is actually reachable &mdash; so your tests double as a light accessibility check. It also survives refactors: rename a class, restructure the markup, and the test still holds as long as the user-facing behavior is intact. That is the opposite of brittle snapshot tests.</div>
+
+        <h2>8. Scaffold for consistency</h2>
+        <p>Once a component has six prescribed files, creating them by hand is error-prone. Both starters ship a <strong>generator</strong> (<code>npm run generate</code>) that stamps out the folder, the barrel, and a passing test from a template. It is a small DX investment that makes the <em>right</em> structure the <em>easy</em> structure &mdash; the cheapest way to keep a growing codebase uniform.</p>
+
+        <div class="callout good"><span class="label">The mental model</span>Architecture (S9) decides the boundaries; these conventions decide the <strong>day-to-day texture</strong>. Extract logic into <strong>custom hooks</strong>, split <strong>view from view-model</strong>, <strong>co-locate</strong> what changes together, alias away brittle paths, and put <strong>lint + types + tests behind one gate</strong>. None of it is exotic &mdash; it's the same modularity, DI, and CI discipline you already practice on the backend, wearing front-end clothes. Apply them as you rebuild and the second app simply cannot become the first.</div>
+
+        <h3>Read these next (15 min each)</h3>
+        <ol>
+          <li>Skim <a href="https://github.com/luciancaetano/startercraft" target="_blank" rel="noopener">startercraft</a>'s folder layout and its <code>generate</code> script &mdash; see the co-location and view-model split in a real tree.</li>
+          <li>Skim <a href="https://github.com/RyomenDev/react-ts-base" target="_blank" rel="noopener">react-ts-base</a>'s <code>useReducer</code>, <code>useRef</code>, Context, and generic-component examples &mdash; the typed-React vocabulary, isolated.</li>
+          <li>In the rebuild, pick one feature and apply all eight: hook + view-model + co-located folder + alias + a test + a green <code>validate</code>. That one feature becomes your template.</li>
+        </ol>
+
+        <div class="callout good"><span class="label">The whole point</span>You shipped a rough thing, read its scars in S7, learned the three browser languages from real code in S3&ndash;S6, then rebuilt it deliberately &mdash; the server in S9, the client here &mdash; knowing exactly why each clean choice matters, because you felt the cost of its absence and reviewed every line that fixed it. That's the method: <strong>learn by doing, relearn by redoing, and review every diff.</strong> Now go build the second one &mdash; the real UI &mdash; and it simply cannot become the first.</div>
+      </article>
+
+      <nav class="slide-nav">
+        <a href="s9-clean-architecture.html"><div class="dir">Previous</div><div class="ttl">S9 &middot; The server: clean architecture</div></a>
+        <a class="next" href="index.html"><div class="dir">Back to</div><div class="ttl">Overview</div></a>
+      </nav>
+    </main>
+  </div>
+
+  <footer class="site-footer">Chronicle of <code>simple-scheduling-app</code> &middot; S10 of 10 &middot; learn by doing, relearn by redoing</footer>
+</body>
+</html>
