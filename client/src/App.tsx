@@ -11,6 +11,10 @@ import type {
 
 const priorityOrder: Record<Priority, number> = { High: 3, Medium: 2, Low: 1 };
 const taskGroupRenderLimit = 8;
+const scheduleStartHour = 8;
+const scheduleEndHour = 18;
+const scheduleSlotMinutes = 15;
+const scheduleSlotCount = ((scheduleEndHour - scheduleStartHour) * 60) / scheduleSlotMinutes;
 const resourceLevelOrder: Record<ResourceLevel, number> = {
   Junior: 1,
   Senior: 2,
@@ -56,6 +60,15 @@ function skillOvals(skills: string[]) {
 
 function formatTaskDate(iso: string) {
   return new Date(iso).toLocaleDateString([], { month: 'short', day: 'numeric' });
+}
+
+function minutesSinceMidnight(iso: string) {
+  const date = new Date(iso);
+  return date.getHours() * 60 + date.getMinutes();
+}
+
+function formatHourLabel(hour: number) {
+  return new Date(2000, 0, 1, hour).toLocaleTimeString([], { hour: 'numeric' });
 }
 
 function formatResourceRole(resource: Pick<Resource, 'level' | 'discipline'>) {
@@ -224,6 +237,39 @@ export function App() {
     data?.resources.forEach((resource) => map.set(resource.id, resource));
     return map;
   }, [data]);
+
+  const bookingsByResourceId = useMemo(() => {
+    const map = new Map<string, Booking[]>();
+    data?.bookings.forEach((booking) => {
+      const list = map.get(booking.resourceId) ?? [];
+      list.push(booking);
+      map.set(booking.resourceId, list);
+    });
+    return map;
+  }, [data]);
+
+  const scheduleSlots = useMemo(
+    () =>
+      Array.from({ length: scheduleSlotCount }, (_, index) => {
+        const totalMinutes = scheduleStartHour * 60 + index * scheduleSlotMinutes;
+        return {
+          index: index + 1,
+          label: totalMinutes % 60 === 0 ? formatHourLabel(totalMinutes / 60) : '',
+        };
+      }),
+    [],
+  );
+
+  const positionForBooking = (booking: Booking) => {
+    const rawStart = minutesSinceMidnight(booking.startTime);
+    const rawEnd = minutesSinceMidnight(booking.endTime);
+    const clampedStart = Math.max(scheduleStartHour * 60, rawStart);
+    const clampedEnd = Math.min(scheduleEndHour * 60, rawEnd);
+    const startSlot = Math.max(1, Math.floor((clampedStart - scheduleStartHour * 60) / scheduleSlotMinutes) + 1);
+    const span = Math.max(1, Math.ceil((clampedEnd - clampedStart) / scheduleSlotMinutes));
+
+    return { startSlot, span };
+  };
 
   const resourceWorkloads = useMemo(() => {
     if (!data) {
@@ -1590,39 +1636,22 @@ export function App() {
             </div>
           </div>
 
-          <div className="resource-grid">
-            {visibleResources.map((resource) => {
-              const bookings = data.bookings.filter((booking) => booking.resourceId === resource.id);
-              return (
-                <div
-                  key={resource.id}
-                  className={dropTarget?.kind === 'resource' && dropTarget.id === resource.id ? 'resource-row drop-target' : 'resource-row'}
-                  onDragOver={(event) => event.preventDefault()}
-                  onDragEnter={() => {
-                    if (draggingWorkItemId || draggingBookingId) {
-                      setDropTarget({ kind: 'resource', id: resource.id });
-                    }
-                  }}
-                  onDragLeave={() => {
-                    if (dropTarget?.kind === 'resource' && dropTarget.id === resource.id) {
-                      setDropTarget(null);
-                    }
-                  }}
-                  onDrop={() => {
-                    if (draggingBookingId) {
-                      const booking = data.bookings.find((entry) => entry.id === draggingBookingId);
-                      if (booking) {
-                        void patchWorkItem(booking.workItemId, { assigneeId: resource.id });
-                      }
-                      return;
-                    }
+          <div className="schedule-grid">
+            <div className="schedule-axis" aria-hidden="true">
+              <div className="schedule-axis-label">Team</div>
+              <div className="schedule-axis-track" style={{ gridTemplateColumns: `repeat(${scheduleSlotCount}, minmax(0, 1fr))` }}>
+                {scheduleSlots.map((slot) => (
+                  <div key={slot.index} className="schedule-axis-slot">
+                    {slot.label ? <span>{slot.label}</span> : null}
+                  </div>
+                ))}
+              </div>
+            </div>
 
-                    if (draggingWorkItemId) {
-                      void patchWorkItem(draggingWorkItemId, { assigneeId: resource.id });
-                    }
-                    setDropTarget(null);
-                  }}
-                >
+            {visibleResources.map((resource) => {
+              const bookings = bookingsByResourceId.get(resource.id) ?? [];
+              return (
+                <div key={resource.id} className="schedule-row">
                   <button
                     type="button"
                     className={selectedResourceId === resource.id ? 'resource-card selected' : 'resource-card'}
@@ -1637,26 +1666,66 @@ export function App() {
                     </div>
                     <div className="skill-ovals">{skillOvals(resource.skills)}</div>
                   </button>
-                  <div className="booking-strip">
+
+                  <div
+                    className={dropTarget?.kind === 'resource' && dropTarget.id === resource.id ? 'schedule-track drop-target' : 'schedule-track'}
+                    onDragOver={(event) => event.preventDefault()}
+                    onDragEnter={() => {
+                      if (draggingWorkItemId || draggingBookingId) {
+                        setDropTarget({ kind: 'resource', id: resource.id });
+                      }
+                    }}
+                    onDragLeave={() => {
+                      if (dropTarget?.kind === 'resource' && dropTarget.id === resource.id) {
+                        setDropTarget(null);
+                      }
+                    }}
+                    onDrop={() => {
+                      if (draggingBookingId) {
+                        const booking = data.bookings.find((entry) => entry.id === draggingBookingId);
+                        if (booking) {
+                          void patchWorkItem(booking.workItemId, { assigneeId: resource.id });
+                        }
+                        return;
+                      }
+
+                      if (draggingWorkItemId) {
+                        void patchWorkItem(draggingWorkItemId, { assigneeId: resource.id });
+                      }
+                      setDropTarget(null);
+                    }}
+                    style={{ gridTemplateColumns: `repeat(${scheduleSlotCount}, minmax(0, 1fr))` }}
+                  >
+                    {scheduleSlots.map((slot) => (
+                      <div key={slot.index} className={slot.label ? 'schedule-slot schedule-slot-hour' : 'schedule-slot'} aria-hidden="true">
+                        {slot.label ? <span>{slot.label}</span> : null}
+                      </div>
+                    ))}
+
                     {!bookings.length ? (
-                      <div className="empty-state empty-state-inline">
+                      <div className="empty-state empty-state-inline schedule-empty">
                         <strong>Open slot</strong>
                         <p>Drop work here to book {resource.name}.</p>
                       </div>
                     ) : null}
+
                     {bookings.map((booking) => {
                       const workItem = workItemLookup.get(booking.workItemId);
+                      const { startSlot, span } = positionForBooking(booking);
                       return (
                         <button
                           key={booking.id}
                           type="button"
-                          className={[
-                            'booking-card',
-                            draggingBookingId === booking.id ? 'dragging' : '',
-                          ]
+                          className={['booking-card', 'schedule-booking', draggingBookingId === booking.id ? 'dragging' : '']
                             .filter(Boolean)
                             .join(' ')}
-                          style={{ '--card-accent': resource.color } as CSSProperties}
+                          style={
+                            {
+                              '--card-accent': resource.color,
+                              gridColumn: `${startSlot} / span ${span}`,
+                              gridRow: 1,
+                            } as CSSProperties
+                          }
                           draggable
                           onDragStart={() => {
                             setDraggingWorkItemId(null);
@@ -1672,6 +1741,9 @@ export function App() {
                           }}
                         >
                           <strong>{workItem?.title ?? 'Booking'}</strong>
+                          <span className="booking-time">
+                            {formatClock(booking.startTime)} - {formatClock(booking.endTime)}
+                          </span>
                           <div className="skill-ovals">{skillOvals(workItem?.requiredSkills ?? [])}</div>
                         </button>
                       );
