@@ -979,7 +979,7 @@ export function App() {
 
             <div className="hero-actions">
               <button type="button" className="primary hero-cta" onClick={openCreateResource}>
-                New team member
+                Manage team
               </button>
               <button
                 type="button"
