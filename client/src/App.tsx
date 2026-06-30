@@ -18,7 +18,7 @@ const resourceLevelOrder: Record<ResourceLevel, number> = {
   Manager: 4,
 };
 type Theme = 'light' | 'dark';
-type AppPath = '/schedule' | '/tasks' | '/team' | '/create';
+type AppPath = '/schedule' | '/tasks' | '/team' | '/add';
 type TaskDimension = 'status' | 'priority' | 'skills';
 type TaskSort = 'priority' | 'date' | 'name' | 'duration';
 type TeamDimension = 'skill' | 'role';
@@ -28,7 +28,7 @@ type DetailField = {
   value: ReactNode;
 };
 
-const validPaths: AppPath[] = ['/schedule', '/tasks', '/team', '/create'];
+const validPaths: AppPath[] = ['/schedule', '/tasks', '/team', '/add'];
 
 function normalizePath(pathname: string) {
   return validPaths.includes(pathname as AppPath) ? (pathname as AppPath) : '/schedule';
@@ -101,6 +101,7 @@ export function App() {
   const [teamSort, setTeamSort] = useState<TeamSort>('name');
   const [theme, setTheme] = useState<Theme>(() => (localStorage.getItem('theme') as Theme) || 'light');
   const [activeCreatePanel, setActiveCreatePanel] = useState<'work-item' | 'resource'>('work-item');
+  const [postSubmitReveal, setPostSubmitReveal] = useState<{ path: '/tasks' | '/team'; id: string } | null>(null);
   const [dropTarget, setDropTarget] = useState<{ kind: 'queue' | 'resource'; id?: string } | null>(null);
   const blankForm = useMemo(
     () => ({
@@ -188,13 +189,29 @@ export function App() {
     setDropTarget(null);
     setDraggingWorkItemId(null);
     setDraggingBookingId(null);
-    if (pathname === '/create') {
+    if (pathname !== '/add' || (!editingWorkItemId && !editingResourceId)) {
       setEditingWorkItemId(null);
       setForm(blankForm);
       setEditingResourceId(null);
       setResourceForm(blankResourceForm);
     }
-  }, [pathname]);
+  }, [pathname, editingResourceId, editingWorkItemId, blankForm, blankResourceForm]);
+
+  useEffect(() => {
+    if (!postSubmitReveal || !data || pathname !== postSubmitReveal.path) {
+      return;
+    }
+
+    if (postSubmitReveal.path === '/tasks') {
+      setSelectedResourceId(null);
+      setSelectedWorkItemId(postSubmitReveal.id);
+    } else {
+      setSelectedWorkItemId(null);
+      setSelectedResourceId(postSubmitReveal.id);
+    }
+
+    setPostSubmitReveal(null);
+  }, [data, pathname, postSubmitReveal]);
 
   const workItemLookup = useMemo(() => {
     const map = new Map<string, WorkItem>();
@@ -502,7 +519,7 @@ export function App() {
     { label: 'Schedule', target: '/schedule' as AppPath },
     { label: 'Team', target: '/team' as AppPath },
     { label: 'Tasks', target: '/tasks' as AppPath },
-    { label: 'Create', target: '/create' as AppPath },
+    { label: 'Add', target: '/add' as AppPath },
   ];
 
   const submitWorkItem = async (event: FormEvent) => {
@@ -518,8 +535,12 @@ export function App() {
       return;
     }
 
+    const workItem = (await response.json()) as WorkItem;
     setForm(blankForm);
     setEditingWorkItemId(null);
+    setActiveCreatePanel('work-item');
+    setPostSubmitReveal({ path: '/tasks', id: workItem.id });
+    navigate('/tasks');
     await load();
   };
 
@@ -552,7 +573,7 @@ export function App() {
       targetDate: workItem.targetDate,
       requiredSkills: [...workItem.requiredSkills],
     });
-    navigate('/create');
+    navigate('/add');
   };
 
   const cancelEdit = () => {
@@ -573,8 +594,12 @@ export function App() {
       return;
     }
 
+    const resource = (await response.json()) as Resource;
     setResourceForm(blankResourceForm);
     setEditingResourceId(null);
+    setActiveCreatePanel('resource');
+    setPostSubmitReveal({ path: '/team', id: resource.id });
+    navigate('/team');
     await load();
   };
 
@@ -591,7 +616,7 @@ export function App() {
       workingHours: { ...resource.workingHours },
       skills: [...resource.skills],
     });
-    navigate('/create');
+    navigate('/add');
   };
 
   const cancelResourceEdit = () => {
@@ -673,9 +698,6 @@ export function App() {
   const createComposer = (
     <section className="composer card" id="composer">
       <div className="composer-header">
-        <div>
-          <h2>Create</h2>
-        </div>
         <div className="form-switcher" role="tablist" aria-label="Form selection">
           <button
             type="button"
@@ -684,7 +706,7 @@ export function App() {
             className={activeCreatePanel === 'work-item' ? 'secondary active' : 'secondary'}
             onClick={() => setActiveCreatePanel('work-item')}
           >
-            Work item
+            Work Item
           </button>
           <button
             type="button"
@@ -693,7 +715,7 @@ export function App() {
             className={activeCreatePanel === 'resource' ? 'secondary active' : 'secondary'}
             onClick={() => setActiveCreatePanel('resource')}
           >
-            Teammate
+            Team
           </button>
         </div>
       </div>
@@ -702,7 +724,7 @@ export function App() {
         <form onSubmit={submitWorkItem}>
           <div className="composer-header compact">
             <div>
-              <h3>{editingWorkItem ? editingWorkItem.title : 'New work item'}</h3>
+              <h3>{editingWorkItem ? editingWorkItem.title : 'Add work item'}</h3>
             </div>
             {editingWorkItem ? (
               <button type="button" className="secondary" onClick={cancelEdit}>
@@ -786,7 +808,7 @@ export function App() {
         <form onSubmit={submitResource}>
           <div className="composer-header compact">
             <div>
-              <h3>{editingResource ? editingResource.name : 'Add teammate'}</h3>
+              <h3>{editingResource ? editingResource.name : 'Onboard team member'}</h3>
             </div>
             {editingResource ? (
               <button type="button" className="secondary" onClick={cancelResourceEdit}>
@@ -889,13 +911,13 @@ export function App() {
   );
 
   if (pathname !== '/schedule') {
-    const pageTitle = pathname === '/tasks' ? 'Tasks' : pathname === '/team' ? 'Team' : 'Create';
+    const pageTitle = pathname === '/tasks' ? 'Tasks' : pathname === '/team' ? 'Team' : 'Add';
     if (pathname === '/team') {
       return (
         <main className="shell">
           <header className="hero card">
             <div className="hero-copy">
-              <p className="eyebrow eyebrow-hero">Simple scheduling app</p>
+              <p className="eyebrow eyebrow-hero">MVP</p>
               <h1>{pageTitle}</h1>
               <nav className="hero-nav" aria-label="Page sections">
                 {navItems.map((item) => (
@@ -956,7 +978,7 @@ export function App() {
                   ))}
                 </div>
 
-                <label className="task-sort-filter">
+                <label className="task-dimension-filter task-sort-filter">
                   <span>Sort</span>
                   <select value={teamSort} onChange={(event) => setTeamSort(event.target.value as TeamSort)}>
                     <option value="name">Name</option>
@@ -1181,7 +1203,7 @@ export function App() {
         <main className="shell">
           <header className="hero card">
             <div className="hero-copy">
-              <p className="eyebrow eyebrow-hero">Simple scheduling app</p>
+              <p className="eyebrow eyebrow-hero">MVP</p>
               <h1>{pageTitle}</h1>
               <nav className="hero-nav" aria-label="Page sections">
                 {navItems.map((item) => (
@@ -1475,7 +1497,7 @@ export function App() {
       <main className="shell">
         <header className="hero card">
           <div className="hero-copy">
-            <p className="eyebrow eyebrow-hero">Simple scheduling app</p>
+            <p className="eyebrow eyebrow-hero">MVP</p>
             <h1>{pageTitle}</h1>
             <nav className="hero-nav" aria-label="Page sections">
               {navItems.map((item) => (
@@ -1511,7 +1533,7 @@ export function App() {
     <main className="shell">
       <header className="hero card">
         <div className="hero-copy">
-          <p className="eyebrow eyebrow-hero">Simple scheduling app</p>
+          <p className="eyebrow eyebrow-hero">MVP</p>
           <h1>Assign work fast</h1>
           <nav className="hero-nav" aria-label="Page sections">
             {navItems.map((item) => (
