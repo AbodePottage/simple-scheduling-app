@@ -43,14 +43,20 @@
       <article class="body">
         <h2>The big picture</h2>
         <p>It's a classic <strong>single-page app (SPA)</strong> talking to a <strong>REST API</strong>. Two halves, one language:</p>
-        <pre><code>  Browser                              Node process
-┌──────────────────────────┐        ┌────────────────────────────┐
-│  React app (client/)      │  HTTP  │  Express server (server/)  │
-│  - renders the 4 routes   │ ─────▶ │  - GET /api/bootstrap      │
-│  - holds UI state         │  JSON  │  - GET /api/work-items     │
-│  - fetch() to the API     │ ◀───── │  - POST/PATCH mutations    │
-└──────────────────────────┘        │  - state = in-memory object│
-                                     └────────────────────────────┘</code></pre>
+        <figure class="diagram">
+          <pre class="mermaid">
+graph LR
+  subgraph BROWSER["Browser"]
+    C["React app (client/)&lt;br/&gt;renders the 4 routes&lt;br/&gt;holds UI state&lt;br/&gt;fetch() to the API"]
+  end
+  subgraph NODE["Node process"]
+    S["Express server (server/)&lt;br/&gt;GET /api/bootstrap&lt;br/&gt;GET /api/work-items&lt;br/&gt;POST / PATCH mutations&lt;br/&gt;state = in-memory object"]
+  end
+  C == "HTTP request" ==&gt; S
+  S -. "JSON response" .-&gt; C
+          </pre>
+          <figcaption>Two halves, one language: the browser SPA and the Node API talk over HTTP / JSON.</figcaption>
+        </figure>
         <p>As a backend engineer, the server half will feel like home: routes, handlers, JSON. The new muscle is the <em>client</em> half &mdash; a long-lived program running in the browser that keeps its own copy of the data and re-paints the screen when that copy changes.</p>
 
         <h2>Repo layout</h2>
@@ -120,11 +126,17 @@ function paginate&lt;T&gt;(items: T[], page: number, pageSize: number): Page&lt;
 
         <h2>The data-flow loop: how a click becomes a re-render</h2>
         <p>This is <em>the</em> mental shift from backend work. The app uses one simple, slightly blunt pattern: <strong>mutate on the server, then re-fetch everything.</strong></p>
-        <pre><code> 1. On load:  fetch('/api/bootstrap')  →  setData(state)   // React stores it
- 2. Render:   React paints the screen from `data`
- 3. User acts: drag a card → POST /api/bookings
- 4. Re-sync:  call load() again → setData(newState)
- 5. React diffs old vs new `data`, re-paints only what changed</code></pre>
+        <figure class="diagram">
+          <pre class="mermaid">
+graph TD
+  A["1 · On load&lt;br/&gt;fetch('/api/bootstrap') &amp;rarr; setData(state)"] --&gt; B["2 · Render&lt;br/&gt;React paints the screen from data"]
+  B --&gt; C["3 · User acts&lt;br/&gt;drag a card &amp;rarr; POST /api/bookings"]
+  C --&gt; D["4 · Re-sync&lt;br/&gt;load() again &amp;rarr; setData(newState)"]
+  D --&gt; E["5 · Diff &amp;amp; repaint&lt;br/&gt;React re-paints only what changed"]
+  E -. "next interaction" .-&gt; C
+          </pre>
+          <figcaption>Mutate on the server, then re-fetch everything. Blunt, but always consistent.</figcaption>
+        </figure>
         <pre><code>// App.tsx — the whole sync mechanism
 const load = async () => {
   const response = await fetch('/api/bootstrap');

@@ -109,12 +109,17 @@ const [data, setData] = useState&lt;BootstrapResponse | null&gt;(null);</code></
 
         <h2>Putting it together: one full interaction</h2>
         <p>Click "2" on the Tasks pager. Watch the equation turn:</p>
-        <pre><code>1. Click → Pagination calls onPageChange(2) → setTasksPageNum(2)   [useState]
-2. State changed → App re-renders
-3. taskQueryParams recomputes (page now 2)                        [useMemo]
-4. Its value changed → the fetch effect re-runs                   [useEffect]
-5. fetchWorkItems → GET /api/work-items?page=2 → setTasksPage(...)
-6. State changed → App re-renders → new rows + "Showing 11-20 of 60"</code></pre>
+        <figure class="diagram">
+          <pre class="mermaid">
+graph TD
+  A["Click '2'&lt;br/&gt;Pagination &amp;rarr; onPageChange(2) &amp;rarr; setTasksPageNum(2)&lt;br/&gt;&lt;b&gt;[useState]&lt;/b&gt;"] --&gt; B["State changed &amp;rarr; App re-renders"]
+  B --&gt; C["taskQueryParams recomputes (page now 2)&lt;br/&gt;&lt;b&gt;[useMemo]&lt;/b&gt;"]
+  C --&gt; D["Its value changed &amp;rarr; the fetch effect re-runs&lt;br/&gt;&lt;b&gt;[useEffect]&lt;/b&gt;"]
+  D --&gt; E["fetchWorkItems &amp;rarr; GET /api/work-items?page=2 &amp;rarr; setTasksPage(...)"]
+  E --&gt; F["State changed &amp;rarr; App re-renders&lt;br/&gt;new rows + 'Showing 11-20 of 60'"]
+          </pre>
+          <figcaption>One click, one state change; the screen follows. No DOM surgery anywhere.</figcaption>
+        </figure>
         <p>No DOM surgery anywhere. State changed; the screen followed. That is the entire game.</p>
 
         <h2>Where the monolith strains this model</h2>

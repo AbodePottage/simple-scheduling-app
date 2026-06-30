@@ -262,6 +262,36 @@ code, pre, kbd { font-family: var(--font-mono); }
 }
 .body pre code { background: none; color: inherit; padding: 0; }
 
+/* Mermaid diagrams (rendered from inline source via a pinned CDN) */
+figure.diagram { margin: 1.3rem 0; }
+.body pre.mermaid {
+  background: var(--surface);
+  color: var(--text);
+  border: 1px solid var(--border-strong);
+  border-radius: var(--radius);
+  padding: 1.4rem 1.2rem;
+  margin: 0;
+  text-align: center;
+  overflow-x: auto;
+  font-size: 1rem;
+  line-height: 1.5;
+}
+/* Fallback before the renderer loads (or if offline): show the source legibly */
+.body pre.mermaid:not([data-processed]) {
+  text-align: left;
+  white-space: pre-wrap;
+  font-family: var(--font-mono);
+  font-size: 0.78rem;
+  color: var(--faint);
+}
+.body pre.mermaid svg { max-width: 100%; height: auto; }
+figure.diagram figcaption {
+  margin-top: 0.55rem;
+  text-align: center;
+  font-size: 0.82rem;
+  color: var(--muted);
+}
+
 .body table {
   width: 100%;
   border-collapse: collapse;
