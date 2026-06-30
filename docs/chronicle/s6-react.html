@@ -1,0 +1,136 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>S6 &middot; React state &amp; effects</title>
+  <link rel="stylesheet" href="chronicle.css">
+  <script src="chronicle.js"></script>
+</head>
+<body>
+  <header class="topnav">
+    <div class="topnav-inner">
+      <a class="brand" href="index.html"><span class="mark">🗓️</span> Scheduling SPA Chronicle</a>
+      <button class="theme-toggle" type="button" aria-label="Toggle theme"><span class="icon-moon">🌙</span><span class="icon-sun">☀️</span></button>
+    </div>
+  </header>
+
+  <div class="layout">
+    <aside class="sidebar">
+      <div class="sidebar-eyebrow">The deck</div>
+      <ol>
+        <li><a href="index.html"><span class="sb-num">00</span><span>Overview</span></a></li>
+        <li><a href="s1-timeline.html"><span class="sb-num">S1</span><span>The build timeline</span></a></li>
+        <li><a href="s2-architecture.html"><span class="sb-num">S2</span><span>Architecture &amp; data flow</span></a></li>
+        <li><a href="s3-typescript.html"><span class="sb-num">S3</span><span>TypeScript</span></a></li>
+        <li><a href="s4-html-jsx.html"><span class="sb-num">S4</span><span>HTML &amp; JSX</span></a></li>
+        <li><a href="s5-css.html"><span class="sb-num">S5</span><span>CSS &amp; design system</span></a></li>
+        <li class="active"><a href="s6-react.html"><span class="sb-num">S6</span><span>React state &amp; effects</span></a></li>
+        <li><a href="s7-lessons.html"><span class="sb-num">S7</span><span>Redirects &amp; lessons</span></a></li>
+        <li><a href="s8-rebuild.html"><span class="sb-num">S8</span><span>Rebuild: clean + Docker</span></a></li>
+      </ol>
+    </aside>
+
+    <main class="content">
+      <header class="mission-header">
+        <a class="crumb" href="index.html">&larr; Overview</a>
+        <div class="badge-large">⚛️</div>
+        <div class="kicker">S6 &middot; crash course</div>
+        <h1>React state &amp; effects</h1>
+        <div class="meta-row"><span>UI = f(state)</span><span>the three hooks</span></div>
+      </header>
+
+      <article class="body">
+        <p>This is the slide that rewires a backend brain. The whole of React reduces to one equation:</p>
+        <pre><code>            UI = f(state)</code></pre>
+        <p>The screen is a <em>pure function of your data</em>. You never imperatively poke the DOM ("set this text", "hide that row"). You change <strong>state</strong>, and React re-runs your component functions to produce a new tree, then patches only the differences onto the page. Master that inversion and the rest is vocabulary.</p>
+
+        <h2>A component is a function: props in, tree out</h2>
+        <p><code>Pagination.tsx</code> is the app's cleanest component &mdash; the perfect specimen:</p>
+        <pre><code>interface PaginationProps {        // its inputs, fully typed
+  page: number;
+  total: number;
+  noun: string;
+  onPageChange: (page: number) =&gt; void;   // a callback prop
+}
+
+export function Pagination({ page, total, noun, onPageChange }: PaginationProps) {
+  if (total === 0) return null;            // render nothing
+  const lastPage = Math.max(1, Math.ceil(total / pageSize));
+  return ( &lt;div className="pagination"&gt; ...buttons... &lt;/div&gt; );
+}</code></pre>
+        <ul>
+          <li><strong>Props</strong> are the function's arguments &mdash; data flows <em>down</em> from parent to child.</li>
+          <li><strong>It owns no app state.</strong> Give it the same props, get the same markup. That's what makes it reusable on both the Tasks page and the two Team columns.</li>
+          <li><strong>Events flow up</strong> via callback props: the child doesn't know <em>what</em> changing the page means; it just calls <code>onPageChange(n)</code> and lets the parent decide.</li>
+        </ul>
+        <div class="callout"><span class="label">Data down, events up</span>This one-way flow is React's core discipline. Parents pass data down as props; children report events up as callbacks. The parent (<code>App</code>) passes <code>onPageChange={setTasksPageNum}</code> &mdash; so clicking "2" in the child calls the parent's state setter. (Everything routes through <code>App</code> here because the app is a monolith; the rebuild distributes it.)</p></div>
+
+        <h2>Hook 1 &mdash; <code>useState</code>: memory that triggers re-renders</h2>
+        <p>A component function runs from scratch on every render, so it can't use normal variables to remember things. <code>useState</code> is React-managed memory:</p>
+        <pre><code>const [tasksPageNum, setTasksPageNum] = useState&lt;number&gt;(1);
+const [theme, setTheme] = useState&lt;Theme&gt;(() =&gt; localStorage.getItem('theme') || 'light');
+const [data, setData] = useState&lt;BootstrapResponse | null&gt;(null);</code></pre>
+        <p>It returns the current value and a setter. <strong>Calling the setter is the <em>only</em> way to change the screen</strong> &mdash; <code>setTheme('dark')</code> both stores the new value and tells React to re-render. <span class="pill warn">⚠ different</span> You do not assign <code>theme = 'dark'</code>; that wouldn't repaint anything. The app holds ~20 such state slices in <code>App</code> &mdash; selection, editing, forms, drag state, and the pagination numbers.</p>
+
+        <h2>Hook 2 &mdash; <code>useMemo</code>: derive, don't duplicate</h2>
+        <p>Some values are computed <em>from</em> state. Recomputing them every render is wasteful, and you want them recalculated only when their inputs change. The pagination query params are a textbook case:</p>
+        <pre><code>const taskQueryParams = useMemo(() =&gt; {
+  const params = { page: tasksPageNum, pageSize: 10, sort: taskSort, status: 'all', ... };
+  if (taskDimension === 'status' &amp;&amp; ...) params.status = taskFilterValue;
+  else if (taskDimension === 'priority' &amp;&amp; ...) params.priority = taskFilterValue;
+  return params;
+}, [tasksPageNum, taskSort, taskDimension, taskFilterValue]);  // ← dependency array</code></pre>
+        <p>The array at the end lists the inputs. React reruns the function only when one of them changes; otherwise it hands back the cached value. Think of it as <strong>a derived column that recomputes on input change</strong> &mdash; a concept you already know from views and computed properties.</p>
+
+        <h2>Hook 3 &mdash; <code>useEffect</code>: sync with the outside world</h2>
+        <p>Rendering is pure, but real apps must do impure things: fetch data, read <code>localStorage</code>, set the document title. <code>useEffect</code> runs <em>after</em> render, and re-runs when its dependencies change. The initial bootstrap load:</p>
+        <pre><code>useEffect(() =&gt; { void load(); }, []);   // empty deps → run once, on mount</code></pre>
+        <p>And the heart of server-side pagination &mdash; refetch the Tasks slice whenever the query changes:</p>
+        <pre><code>useEffect(() =&gt; {
+  let cancelled = false;
+  void fetchWorkItems(taskQueryParams).then((result) =&gt; {
+    if (cancelled) return;                       // ignore a stale response
+    setTasksPage(result);
+    if (result.page !== tasksPageNum) setTasksPageNum(result.page);  // server clamped
+  });
+  return () =&gt; { cancelled = true; };            // cleanup runs before the next effect
+}, [taskQueryParams, data]);</code></pre>
+        <div class="callout"><span class="label">Three things this tiny effect teaches</span>
+        <strong>(1) Dependencies are a contract:</strong> the array <code>[taskQueryParams, data]</code> says "re-fetch when the filters change, <em>or</em> when the bootstrap reloads after a mutation." Get this list wrong and you get stale screens or infinite loops &mdash; the #1 React beginner bug.
+        <strong>(2) The <code>cancelled</code> flag</strong> guards against a race: if the user clicks fast, an older request must not overwrite a newer one. The returned cleanup function flips the flag.
+        <strong>(3) Trust the server:</strong> if the API clamped <code>?page=999</code> down to the real last page, the client syncs to the corrected number.</div>
+
+        <h2>Controlled inputs: the form <em>is</em> state</h2>
+        <p>In React, an input's value comes <em>from</em> state and changes <em>through</em> state &mdash; a round trip:</p>
+        <pre><code>&lt;input value={form.title}
+       onChange={(e) =&gt; setForm({ ...form, title: e.target.value })} /&gt;</code></pre>
+        <p>The input shows <code>form.title</code>; typing fires <code>onChange</code>, which sets new state, which re-renders the input with the new value. The screen and the data can never drift apart because the data <em>is</em> the source. <span class="pill warn">⚠ different</span> There's no "read the field on submit" &mdash; you already have the value in state the whole time.</p>
+
+        <h2>Putting it together: one full interaction</h2>
+        <p>Click "2" on the Tasks pager. Watch the equation turn:</p>
+        <pre><code>1. Click → Pagination calls onPageChange(2) → setTasksPageNum(2)   [useState]
+2. State changed → App re-renders
+3. taskQueryParams recomputes (page now 2)                        [useMemo]
+4. Its value changed → the fetch effect re-runs                   [useEffect]
+5. fetchWorkItems → GET /api/work-items?page=2 → setTasksPage(...)
+6. State changed → App re-renders → new rows + "Showing 11-20 of 60"</code></pre>
+        <p>No DOM surgery anywhere. State changed; the screen followed. That is the entire game.</p>
+
+        <h2>Where the monolith strains this model</h2>
+        <p>Because <em>all</em> ~20 state slices live in one <code>App</code> function, every keystroke in a form re-runs the whole component (React is fast enough that it doesn't matter here, but it's a smell). And state that should be local to a form or a page is hoisted to the top, tangling concerns.</p>
+        <div class="callout warn"><span class="label">Relearn by redoing</span>The fix is <strong>colocation</strong>: state lives in the smallest component that needs it. A <code>&lt;WorkItemForm&gt;</code> owns its own form state; a <code>&lt;TasksPage&gt;</code> owns its own pagination state. Data still flows down, events still flow up &mdash; but the blast radius of any change shrinks to one file. That's the central refactor of <a href="s8-rebuild.html">S8</a>, and you'll only appreciate <em>why</em> after having lived in the one-big-component version.</div>
+
+        <div class="callout good"><span class="label">The mental model</span><strong>UI = f(state).</strong> Hold the truth in <code>useState</code>; derive from it with <code>useMemo</code>; reach outside with <code>useEffect</code> (and mind the dependency array). Pass data down as props, send events up as callbacks. Never touch the DOM &mdash; change state and let React reconcile.</div>
+      </article>
+
+      <nav class="slide-nav">
+        <a href="s5-css.html"><div class="dir">Previous</div><div class="ttl">S5 &middot; CSS &amp; design system</div></a>
+        <a class="next" href="s7-lessons.html"><div class="dir">Next</div><div class="ttl">S7 &middot; Redirects &amp; lessons</div></a>
+      </nav>
+    </main>
+  </div>
+
+  <footer class="site-footer">Chronicle of <code>simple-scheduling-app</code> &middot; S6 of 8</footer>
+</body>
+</html>

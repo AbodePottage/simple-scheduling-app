@@ -1,0 +1,149 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Chronicle: building a scheduling SPA &middot; weekend frontend crash course</title>
+  <meta name="description" content="A commit-by-commit chronicle of building a React + Node scheduling SPA to v1, taught as a frontend crash course for backend engineers.">
+  <link rel="stylesheet" href="chronicle.css">
+  <script src="chronicle.js"></script>
+</head>
+<body>
+  <header class="topnav">
+    <div class="topnav-inner">
+      <a class="brand" href="index.html"><span class="mark">🗓️</span> Scheduling SPA Chronicle</a>
+      <button class="theme-toggle" type="button" aria-label="Toggle theme"><span class="icon-moon">🌙</span><span class="icon-sun">☀️</span></button>
+    </div>
+  </header>
+
+  <div class="layout">
+    <aside class="sidebar">
+      <div class="sidebar-eyebrow">The deck</div>
+      <ol>
+        <li class="active"><a href="index.html"><span class="sb-num">00</span><span>Overview</span></a></li>
+        <li><a href="s1-timeline.html"><span class="sb-num">S1</span><span>The build timeline</span></a></li>
+        <li><a href="s2-architecture.html"><span class="sb-num">S2</span><span>Architecture &amp; data flow</span></a></li>
+        <li><a href="s3-typescript.html"><span class="sb-num">S3</span><span>TypeScript</span></a></li>
+        <li><a href="s4-html-jsx.html"><span class="sb-num">S4</span><span>HTML &amp; JSX</span></a></li>
+        <li><a href="s5-css.html"><span class="sb-num">S5</span><span>CSS &amp; design system</span></a></li>
+        <li><a href="s6-react.html"><span class="sb-num">S6</span><span>React state &amp; effects</span></a></li>
+        <li><a href="s7-lessons.html"><span class="sb-num">S7</span><span>Redirects &amp; lessons</span></a></li>
+        <li><a href="s8-rebuild.html"><span class="sb-num">S8</span><span>Rebuild: clean + Docker</span></a></li>
+      </ol>
+    </aside>
+
+    <main class="content">
+      <section class="hero">
+        <div class="eyebrow">Field chronicle</div>
+        <h1>How a backend engineer built a frontend in a weekend</h1>
+        <p class="lede">A commit-by-commit autopsy of a real React&nbsp;+&nbsp;Node scheduling app &mdash; 35 commits, ~13 hours, from empty folder to a tagged <code>v1</code> &mdash; rebuilt here as a crash course in TypeScript, HTML, and CSS.</p>
+        <div class="meta-row">
+          <span>35 commits</span>
+          <span>~13 hours</span>
+          <span>React 19 + Express</span>
+          <span>Tagged v1</span>
+        </div>
+      </section>
+
+      <article class="body">
+        <h2>What this is</h2>
+        <p>This deck chronicles the actual construction of <code>simple-scheduling-app</code> &mdash; a small work-assignment tool inspired by Microsoft's Universal Resource Scheduling. It was built fast and a little messily, on purpose. The mess is the point: every reversal, every "temp" commit, every place the design wandered is a teaching moment.</p>
+        <p>You are a backend engineer. You read this to learn how the front of the house works &mdash; the three languages of the browser (<strong>HTML, CSS, TypeScript/JS</strong>), the React mental model, and how client concerns (state, layout, perceived speed) differ from the server concerns you already know. Then you hand the rebuild plan in <a href="s8-rebuild.html">S8</a> to a fresh agent and rebuild it <em>clean</em>, end-to-end, in a Docker container.</p>
+
+        <div class="callout warn">
+          <span class="label">An honest disclaimer</span>
+          This version of the scheduler was built <strong>fast, with AI agents, and with only a limited understanding of the code underneath</strong> &mdash; a "hastily, though marvelously built" POC. That is not a confession to apologize for; it is the <em>method</em>. The core goal of this chronicle is <strong>to learn by doing, and to relearn by redoing</strong>: ship a rough thing to see the whole shape, study every place it wobbled, then rebuild it deliberately the second time. The mistakes catalogued here aren't failures to hide &mdash; they're the curriculum. You only understand <em>why</em> a clean architecture matters after you've felt the weight of a messy one.
+        </div>
+
+        <div class="callout">
+          <span class="label">How to read this</span>
+          Slides <strong>S1&ndash;S2</strong> tell the story and map the architecture. Slides <strong>S3&ndash;S6</strong> are the crash course, each grounded in real code from this repo. Slide <strong>S7</strong> distills the mistakes. Slide <strong>S8</strong> is the rebuild brief you'll feed to a tutorial-generating agent.
+        </div>
+
+        <h2>The deck</h2>
+        <div class="deck-grid">
+          <a class="deck-card" href="s1-timeline.html">
+            <div class="num">S1 &middot; the story</div>
+            <h3>The build timeline</h3>
+            <div class="meta">All 35 commits grouped into 5 phases. Where it flowed, where it backtracked.</div>
+            <div class="emoji">🧭</div>
+          </a>
+          <a class="deck-card" href="s2-architecture.html">
+            <div class="num">S2 &middot; the map</div>
+            <h3>Architecture &amp; data flow</h3>
+            <div class="meta">The stack, the repo layout, and how a click becomes a re-render.</div>
+            <div class="emoji">🏗️</div>
+          </a>
+          <a class="deck-card" href="s3-typescript.html">
+            <div class="num">S3 &middot; crash course</div>
+            <h3>TypeScript in an hour</h3>
+            <div class="meta">Types, interfaces, unions, generics &mdash; for people who already know a typed language.</div>
+            <div class="emoji">🧩</div>
+          </a>
+          <a class="deck-card" href="s4-html-jsx.html">
+            <div class="num">S4 &middot; crash course</div>
+            <h3>HTML &amp; JSX</h3>
+            <div class="meta">The DOM, semantic markup, and how JSX is just functions returning trees.</div>
+            <div class="emoji">📄</div>
+          </a>
+          <a class="deck-card" href="s5-css.html">
+            <div class="num">S5 &middot; crash course</div>
+            <h3>CSS &amp; the design system</h3>
+            <div class="meta">Tokens, theming, flexbox, grid &mdash; read straight out of <code>styles.css</code>.</div>
+            <div class="emoji">🎨</div>
+          </a>
+          <a class="deck-card" href="s6-react.html">
+            <div class="num">S6 &middot; crash course</div>
+            <h3>React state &amp; effects</h3>
+            <div class="meta">Components, props, <code>useState</code>/<code>useMemo</code>/<code>useEffect</code>, and the fetch loop.</div>
+            <div class="emoji">⚛️</div>
+          </a>
+          <a class="deck-card" href="s7-lessons.html">
+            <div class="num">S7 &middot; the autopsy</div>
+            <h3>Redirects, mistakes, lessons</h3>
+            <div class="meta">The reversals and the client&rarr;server pagination pivot, and what they teach.</div>
+            <div class="emoji">🔁</div>
+          </a>
+          <a class="deck-card" href="s8-rebuild.html">
+            <div class="num">S8 &middot; the brief</div>
+            <h3>Rebuild: clean + Docker</h3>
+            <div class="meta">A target architecture and a weekend learning path. Hand this to an agent.</div>
+            <div class="emoji">📦</div>
+          </a>
+        </div>
+
+        <h2>The stack, at a glance</h2>
+        <table>
+          <thead><tr><th>Layer</th><th>Choice</th><th>Why it was picked (and the trade-off)</th></tr></thead>
+          <tbody>
+            <tr><td>Language</td><td>TypeScript everywhere</td><td>One language front and back. Types catch wiring mistakes the moment client and server disagree.</td></tr>
+            <tr><td>UI library</td><td>React 19</td><td>Industry default; component model maps cleanly to "render this data." Trade-off: a whole mental model to learn.</td></tr>
+            <tr><td>Build/dev</td><td>Vite</td><td>Instant dev server + fast builds. Note: <code>vite build</code> uses esbuild and does <em>not</em> type-check the client.</td></tr>
+            <tr><td>Backend</td><td>Express 4, in-memory state</td><td>Tiny API surface, zero database setup. Trade-off: data resets on restart &mdash; fine for a POC, not for real.</td></tr>
+            <tr><td>State</td><td>Local React state only</td><td>No Redux/Zustand. <code>useState</code> + <code>useMemo</code> + <code>useEffect</code>. Honest for this size; strained by the end.</td></tr>
+            <tr><td>Styling</td><td>Hand-written CSS + custom properties</td><td>No framework. One <code>styles.css</code> with design tokens and a dark theme.</td></tr>
+          </tbody>
+        </table>
+
+        <h2>What the app actually does</h2>
+        <ul>
+          <li><strong>Home</strong> &mdash; a dashboard: greeting, stat tiles, quick actions, jump-in links.</li>
+          <li><strong>Schedule</strong> &mdash; a board: drag unscheduled work items onto resources; a timeline grid of bookings.</li>
+          <li><strong>Team</strong> &mdash; two columns (Engineers / Data scientists) of equally-sized resource cards, paginated server-side.</li>
+          <li><strong>Tasks</strong> &mdash; a flat, server-paginated backlog with filter/sort controls.</li>
+        </ul>
+        <p>Four routes, one in-memory backend, eight seeded people and sixty seeded work items. Small enough to read in an afternoon, real enough to teach every core concept.</p>
+      </article>
+
+      <nav class="slide-nav">
+        <span></span>
+        <a class="next" href="s1-timeline.html"><div class="dir">Next</div><div class="ttl">S1 &middot; The build timeline</div></a>
+      </nav>
+    </main>
+  </div>
+
+  <footer class="site-footer">
+    Chronicle of <code>simple-scheduling-app</code> &middot; built with AI agents, documented for humans.
+  </footer>
+</body>
+</html>

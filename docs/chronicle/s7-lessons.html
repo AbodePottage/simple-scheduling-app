@@ -1,0 +1,119 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>S7 &middot; Redirects, mistakes, lessons</title>
+  <link rel="stylesheet" href="chronicle.css">
+  <script src="chronicle.js"></script>
+</head>
+<body>
+  <header class="topnav">
+    <div class="topnav-inner">
+      <a class="brand" href="index.html"><span class="mark">🗓️</span> Scheduling SPA Chronicle</a>
+      <button class="theme-toggle" type="button" aria-label="Toggle theme"><span class="icon-moon">🌙</span><span class="icon-sun">☀️</span></button>
+    </div>
+  </header>
+
+  <div class="layout">
+    <aside class="sidebar">
+      <div class="sidebar-eyebrow">The deck</div>
+      <ol>
+        <li><a href="index.html"><span class="sb-num">00</span><span>Overview</span></a></li>
+        <li><a href="s1-timeline.html"><span class="sb-num">S1</span><span>The build timeline</span></a></li>
+        <li><a href="s2-architecture.html"><span class="sb-num">S2</span><span>Architecture &amp; data flow</span></a></li>
+        <li><a href="s3-typescript.html"><span class="sb-num">S3</span><span>TypeScript</span></a></li>
+        <li><a href="s4-html-jsx.html"><span class="sb-num">S4</span><span>HTML &amp; JSX</span></a></li>
+        <li><a href="s5-css.html"><span class="sb-num">S5</span><span>CSS &amp; design system</span></a></li>
+        <li><a href="s6-react.html"><span class="sb-num">S6</span><span>React state &amp; effects</span></a></li>
+        <li class="active"><a href="s7-lessons.html"><span class="sb-num">S7</span><span>Redirects &amp; lessons</span></a></li>
+        <li><a href="s8-rebuild.html"><span class="sb-num">S8</span><span>Rebuild: clean + Docker</span></a></li>
+      </ol>
+    </aside>
+
+    <main class="content">
+      <header class="mission-header">
+        <a class="crumb" href="index.html">&larr; Overview</a>
+        <div class="badge-large">🔁</div>
+        <div class="kicker">S7 &middot; the autopsy</div>
+        <h1>Redirects, mistakes, lessons</h1>
+        <div class="meta-row"><span>learn by doing</span><span>relearn by redoing</span></div>
+      </header>
+
+      <article class="body">
+        <p>This is the most valuable slide, because it's where the "build it rough, then study it" method pays out. The app was assembled fast, with AI agents, by someone learning the front end as they went. Every wobble below was real. None of them are embarrassing &mdash; they're the syllabus. We catalogue each, name the lesson, and carry the fix into the rebuild.</p>
+
+        <h2>Redirect 1 &mdash; coloring everything, then pulling it back</h2>
+        <p><code>e7f2843</code> color-coded resource cards across the whole UI. The very next commit, <code>47464b8</code>, restricted it to the schedule board.</p>
+        <table>
+          <thead><tr><th>What happened</th><th>Why</th><th>Lesson</th></tr></thead>
+          <tbody><tr>
+            <td>A "nice" visual idea applied globally made the UI noisy, so it was scoped back one commit later.</td>
+            <td>You genuinely cannot judge "too much" until it's on screen. Color is information; spend it where it means something (the board), not everywhere.</td>
+            <td><strong>Visual decisions need eyes, not logic.</strong> Ship it, look at it, be willing to undo. Small isolated commits make undo cheap.</td>
+          </tr></tbody>
+        </table>
+
+        <h2>Redirect 2 &mdash; navigation took three tries</h2>
+        <p><code>641fd78</code> (hero table-of-contents) &rarr; <code>9c9993f</code> (chips become a section menu) &rarr; <code>162a4e8</code> (simplify). Three commits to settle how you move around the app.</p>
+        <div class="callout"><span class="label">Lesson</span>Navigation is one of the hardest UI problems &mdash; it encodes your whole mental model of the app. Expect to iterate. The mistake would have been to <em>not</em> commit between attempts and lose the ability to compare.</div>
+
+        <h2>Redirect 3 &mdash; the big-bang refactor</h2>
+        <p><code>22629fb</code> changed 6 files and 2,272 lines at once; <code>9bb5508</code> rewrote popups in a 365/398 churn. Both were effectively un-reviewable.</p>
+        <div class="callout bad"><span class="label">Root cause, not symptom</span>These giant diffs weren't carelessness &mdash; they were <em>forced</em> by the monolith. When team detail, layout, and routing all live in one 1,600-line file, you can't change one without a diff that touches everything. <strong>The big-bang commit is a downstream symptom of poor file decomposition.</strong> Fix the structure (S8) and giant diffs become impossible.</div>
+
+        <h2>Redirect 4 &mdash; a route became a popup</h2>
+        <p><code>3614a78</code> deleted the <code>/add</code> route and replaced it with an in-place create/edit modal.</p>
+        <div class="callout"><span class="label">Lesson</span>"Edit on a separate page" felt fine with two screens and wrong with four. <strong>UX truths are emergent</strong> &mdash; they only show up once the app is big enough to feel the friction. This is the strongest argument for the build-then-rebuild method: the first build <em>generates the information</em> the second build needs.</div>
+
+        <h2>Redirect 5 &mdash; the pagination pivot <span class="pill accent">the headline lesson</span></h2>
+        <p>Early Tasks rendered <em>all</em> items and faked pagination by slicing in the browser (<code>taskGroups</code>, <code>.slice(0, limit)</code>, "And 32 more"). The v1 finale tore that out for <strong>real server-side pagination</strong>: <code>doc (3f8b033) &rarr; server endpoints (7747162) &rarr; client (64c21a5)</code>.</p>
+        <div class="two-col">
+          <div class="card">
+            <strong class="pill bad">Before: client-side</strong>
+            <p>Server sends all 60 items on bootstrap; the browser slices a window and shows "And N more." Simple, but it ships the entire dataset to every client and the counts are guesses from whatever happened to be loaded.</p>
+          </div>
+          <div class="card">
+            <strong class="pill good">After: server-side</strong>
+            <p>Server filters, sorts, slices, and returns <code>{ items, total, page, pageSize }</code>. The client renders one page and trusts <code>total</code>. Scales to 60 or 60,000 the same way.</p>
+          </div>
+        </div>
+        <pre><code>// the contract that made it honest — total computed BEFORE slicing
+return { items: items.slice(start, start + pageSize), total, page: safePage, pageSize };</code></pre>
+        <div class="callout warn"><span class="label">The deep lesson for a backend engineer</span>Client-side pagination is a lie that scales to zero. <strong>Pagination, filtering, and sorting are server responsibilities</strong> &mdash; the place that owns the data owns the truth about how much there is. You already know this instinct from API design; the front end tempts you to forget it because slicing an array in the browser is so easy. Notice the discipline that made the redo clean: <em>a design doc first, then the server, then the client, verified at each layer.</em> That sequencing &mdash; not raw skill &mdash; is the difference between this feature and the big-bang refactor.</div>
+
+        <h2>Redirect 6 &mdash; copy and alignment churn</h2>
+        <p>Headers were rewritten to "action voice" (<code>d0263e8</code>: "Clear the backlog", "Meet the team"); the hero was centered site-wide on request; an "MVP" eyebrow was added and later <em>retired</em> (<code>7747162</code>); the Team CTA was renamed to "Manage team" across <em>two</em> commits because the first pass missed one spot.</p>
+        <div class="callout"><span class="label">Lesson</span>Words and alignment are part of the product, and they iterate like code. The "Manage team" rename needing a follow-up (<code>4137aa7 &rarr; dcee8c6</code>) is the classic <strong>"find-all-the-instances" miss</strong> &mdash; a duplicated string that should have been one constant. In the rebuild, label text lives in one place.</div>
+
+        <h2>The standing debts (known, not yet paid)</h2>
+        <table>
+          <thead><tr><th>Debt</th><th>Risk</th><th>Paid off in S8 by</th></tr></thead>
+          <tbody>
+            <tr><td>One 1,676-line <code>App.tsx</code></td><td>Un-reviewable diffs, tangled state, scary edits</td><td>Split into per-page / per-component files</td></tr>
+            <tr><td>Duplicated <code>domain.ts</code> &harr; <code>types.ts</code></td><td>Client and server types can silently drift</td><td>One shared types package, imported by both</td></tr>
+            <tr><td>Naive "re-fetch bootstrap on every change"</td><td>Over-fetches the whole world per mutation</td><td>Targeted queries / optimistic updates</td></tr>
+            <tr><td><code>x as T</code> on every <code>response.json()</code></td><td>Bad server data slips past the type system</td><td>Runtime validation (Zod) at the boundary</td></tr>
+            <tr><td><code>vite build</code> doesn't type-check the client</td><td>Type errors can ship green</td><td><code>typecheck</code> wired into CI</td></tr>
+            <tr><td>In-memory server state</td><td>Data vanishes on restart</td><td>Repository interface over SQLite</td></tr>
+            <tr><td>1,663-line single <code>styles.css</code></td><td>Cascade accidents across the app</td><td>Component-scoped CSS Modules</td></tr>
+            <tr><td>Mobile / loading / error states partial</td><td>Feels unfinished on real devices</td><td>Explicit state matrix per view</td></tr>
+          </tbody>
+        </table>
+
+        <h2>The meta-lesson: build to learn, rebuild to understand</h2>
+        <div class="callout good"><span class="label">Why the mess was the right first move</span>
+        Every redirect above produced <em>information that didn't exist before the code did</em>: that global color is noise, that a fourth screen makes modal editing necessary, that faked pagination collapses at scale. A spec couldn't have told you these &mdash; only a running, slightly-wrong app could. <strong>The first build's job is to generate that information cheaply. The rebuild's job is to bake the lessons into structure.</strong> You learned the front end by <em>doing</em>; you'll truly understand it by <em>redoing</em> &mdash; this time with the answers in hand.</div>
+        <p>Turn the page for the rebuild brief.</p>
+      </article>
+
+      <nav class="slide-nav">
+        <a href="s6-react.html"><div class="dir">Previous</div><div class="ttl">S6 &middot; React state &amp; effects</div></a>
+        <a class="next" href="s8-rebuild.html"><div class="dir">Next</div><div class="ttl">S8 &middot; Rebuild: clean + Docker</div></a>
+      </nav>
+    </main>
+  </div>
+
+  <footer class="site-footer">Chronicle of <code>simple-scheduling-app</code> &middot; S7 of 8</footer>
+</body>
+</html>

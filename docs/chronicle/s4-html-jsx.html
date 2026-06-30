@@ -1,0 +1,161 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>S4 &middot; HTML &amp; JSX</title>
+  <link rel="stylesheet" href="chronicle.css">
+  <script src="chronicle.js"></script>
+</head>
+<body>
+  <header class="topnav">
+    <div class="topnav-inner">
+      <a class="brand" href="index.html"><span class="mark">🗓️</span> Scheduling SPA Chronicle</a>
+      <button class="theme-toggle" type="button" aria-label="Toggle theme"><span class="icon-moon">🌙</span><span class="icon-sun">☀️</span></button>
+    </div>
+  </header>
+
+  <div class="layout">
+    <aside class="sidebar">
+      <div class="sidebar-eyebrow">The deck</div>
+      <ol>
+        <li><a href="index.html"><span class="sb-num">00</span><span>Overview</span></a></li>
+        <li><a href="s1-timeline.html"><span class="sb-num">S1</span><span>The build timeline</span></a></li>
+        <li><a href="s2-architecture.html"><span class="sb-num">S2</span><span>Architecture &amp; data flow</span></a></li>
+        <li><a href="s3-typescript.html"><span class="sb-num">S3</span><span>TypeScript</span></a></li>
+        <li class="active"><a href="s4-html-jsx.html"><span class="sb-num">S4</span><span>HTML &amp; JSX</span></a></li>
+        <li><a href="s5-css.html"><span class="sb-num">S5</span><span>CSS &amp; design system</span></a></li>
+        <li><a href="s6-react.html"><span class="sb-num">S6</span><span>React state &amp; effects</span></a></li>
+        <li><a href="s7-lessons.html"><span class="sb-num">S7</span><span>Redirects &amp; lessons</span></a></li>
+        <li><a href="s8-rebuild.html"><span class="sb-num">S8</span><span>Rebuild: clean + Docker</span></a></li>
+      </ol>
+    </aside>
+
+    <main class="content">
+      <header class="mission-header">
+        <a class="crumb" href="index.html">&larr; Overview</a>
+        <div class="badge-large">📄</div>
+        <div class="kicker">S4 &middot; crash course</div>
+        <h1>HTML &amp; JSX</h1>
+        <div class="meta-row"><span>the document is a tree</span><span>JSX is just functions</span></div>
+      </header>
+
+      <article class="body">
+        <p>HTML is the one browser language with no logic: it's a <strong>tree of elements</strong> describing structure and meaning. Everything you see is a node in that tree (the DOM). React's JSX is a thin skin over it &mdash; markup that compiles to function calls. Learn HTML's grain first, then JSX is a five-minute delta.</p>
+
+        <h2>The document is one big tree</h2>
+        <p>The SPA mounts into a single, almost-empty HTML file. Everything else is built by JavaScript at runtime:</p>
+        <pre><code>&lt;!-- client/index.html (the entire page the user first downloads) --&gt;
+&lt;body&gt;
+  &lt;div id="root"&gt;&lt;/div&gt;        &lt;!-- React fills this in --&gt;
+  &lt;script type="module" src="/src/main.tsx"&gt;&lt;/script&gt;
+&lt;/body&gt;</code></pre>
+        <pre><code>// main.tsx — mount the React tree into &lt;div id="root"&gt;
+import { createRoot } from 'react-dom/client';
+import { App } from './App';
+createRoot(document.getElementById('root')!).render(&lt;App /&gt;);</code></pre>
+        <div class="callout"><span class="label">⚠ "Single-page app"</span>There is exactly one HTML page. Navigating between Home/Schedule/Team/Tasks never loads a new document &mdash; JavaScript swaps what's rendered and rewrites the URL with the History API. That's what "SPA" means, and it's why <code>App.tsx</code> contains its own little router.</div>
+
+        <h2>Semantic elements: tags carry meaning</h2>
+        <p>Good HTML uses tags for what content <em>is</em>, not how it looks. The app mostly does this well &mdash; <code>&lt;header&gt;</code>, <code>&lt;nav&gt;</code>, <code>&lt;main&gt;</code>, <code>&lt;section&gt;</code>, <code>&lt;aside&gt;</code>, <code>&lt;button&gt;</code>:</p>
+        <pre><code>&lt;header className="hero card"&gt;
+  &lt;nav className="hero-nav" aria-label="Page sections"&gt; ... &lt;/nav&gt;
+&lt;/header&gt;
+&lt;aside className="team-detail-rail"&gt; ... &lt;/aside&gt;</code></pre>
+        <table>
+          <thead><tr><th>Use this</th><th>Not this</th><th>Because</th></tr></thead>
+          <tbody>
+            <tr><td><code>&lt;button&gt;</code></td><td><code>&lt;div onClick&gt;</code></td><td>Keyboard-focusable and announced as a button for free. The app correctly uses real <code>&lt;button&gt;</code>s for every card and action.</td></tr>
+            <tr><td><code>&lt;nav&gt;</code></td><td><code>&lt;div class="nav"&gt;</code></td><td>Assistive tech can jump to navigation landmarks.</td></tr>
+            <tr><td><code>&lt;dl&gt;/&lt;dt&gt;/&lt;dd&gt;</code></td><td>two <code>&lt;div&gt;</code>s</td><td>The <code>DetailTable</code> uses a real description list for label/value pairs &mdash; semantically a perfect fit.</td></tr>
+          </tbody>
+        </table>
+
+        <h2>Forms and inputs: the data-entry surface</h2>
+        <p>The create/edit popups are HTML forms. A few load-bearing attributes:</p>
+        <pre><code>&lt;label&gt;
+  &lt;span&gt;Title&lt;/span&gt;
+  &lt;input value={form.title} onChange={...} required /&gt;
+&lt;/label&gt;
+&lt;select value={form.priority} onChange={...}&gt;
+  &lt;option value="Low"&gt;Low&lt;/option&gt;
+  &lt;option value="Medium"&gt;Medium&lt;/option&gt;
+&lt;/select&gt;</code></pre>
+        <ul>
+          <li><strong>Wrapping the input in <code>&lt;label&gt;</code></strong> makes the text clickable and ties it to the field for screen readers.</li>
+          <li><strong><code>required</code>, <code>type="number"</code>, <code>min</code></strong> give you browser-native validation before any JS runs.</li>
+          <li><strong><code>&lt;select&gt;/&lt;option&gt;</code></strong> is the native dropdown &mdash; the app uses it for priority and sort instead of building a custom widget. Less code, more accessible.</li>
+        </ul>
+
+        <h2>Now the JSX delta</h2>
+        <p>JSX <em>looks</em> like HTML inside TypeScript, but it's syntactic sugar: each tag compiles to a function call that returns a plain object describing the node. Five rules cover 95% of it.</p>
+
+        <h3>1. It's expressions, not a template language</h3>
+        <pre><code>&lt;strong&gt;{selectedWorkItem.title}&lt;/strong&gt;
+&lt;span&gt;{item.durationMinutes}m&lt;/span&gt;
+&lt;span&gt;Showing {from}-{to} of {total} {noun}&lt;/span&gt;</code></pre>
+        <p>Curly braces drop you back into TypeScript. Anything that evaluates to a value can go there &mdash; variables, calls, ternaries.</p>
+
+        <h3>2. <code>className</code>, not <code>class</code> (and camelCase attrs) <span class="pill warn">⚠ different</span></h3>
+        <pre><code>&lt;div className="pagination-controls" aria-label="Pagination"&gt;</code></pre>
+        <p><code>class</code> is a reserved word in JS, so JSX uses <code>className</code>. Most attributes become camelCase (<code>onClick</code>, <code>onChange</code>, <code>tabIndex</code>). ARIA and <code>data-*</code> attributes keep their dashes.</p>
+
+        <h3>3. Lists are <code>.map()</code>, and every item needs a <code>key</code></h3>
+        <pre><code>{tasksPage.items.map((item) =&gt; (
+  &lt;button key={item.id} className="task-item" onClick={() =&gt; toggle(item.id)}&gt;
+    &lt;strong&gt;{item.title}&lt;/strong&gt;
+  &lt;/button&gt;
+))}</code></pre>
+        <div class="callout"><span class="label">Why keys matter</span>The <code>key</code> is a stable identity React uses to tell "the same item moved" from "a different item appeared," so it can re-paint the minimum. Use the data's <code>id</code> &mdash; never the array index. This pattern (map rows to elements) <em>is</em> how every list, column, and chip in the app is rendered.</div>
+
+        <h3>4. Conditional rendering with <code>?</code> and <code>&amp;&amp;</code></h3>
+        <pre><code>{tasksPage.total === 0 ? (
+  &lt;div className="empty-state"&gt;&lt;strong&gt;No work items match.&lt;/strong&gt;&lt;/div&gt;
+) : null}
+
+{lastPage &gt; 1 ? ( &lt;div className="pagination-controls"&gt; ... &lt;/div&gt; ) : null}</code></pre>
+        <p>There's no <code>if</code> inside JSX, so you use ternaries (and short-circuit <code>&amp;&amp;</code>). The empty-state and the pagination controls both appear/disappear this way. Handling the empty case in markup is a small thing the app mostly gets right &mdash; and exactly the kind of "state" backend devs forget (see <a href="s7-lessons.html">S7</a>).</p>
+
+        <h3>5. One parent, and components return a tree</h3>
+        <pre><code>export function Pagination({ page, total, ... }: PaginationProps): ReactNode {
+  if (total === 0) return null;            // a component can render nothing
+  return (
+    &lt;div className="pagination"&gt;          // exactly one root element
+      &lt;span className="pagination-count"&gt; ... &lt;/span&gt;
+      {/* ...controls... */}
+    &lt;/div&gt;
+  );
+}</code></pre>
+        <p>JSX must return a single root (or a <code>&lt;&gt;...&lt;/&gt;</code> fragment). A component is just a function: data in (props), tree out. <code>Pagination.tsx</code> is the app's one clean example &mdash; we dissect it as a component in <a href="s6-react.html">S6</a>.</p>
+
+        <h2>Accessibility: small attributes, big payoff</h2>
+        <p>The app threads ARIA through the markup, and it costs almost nothing:</p>
+        <pre><code>&lt;button aria-label={theme === 'light' ? 'Switch to dark mode' : 'Switch to light mode'}&gt;🌙&lt;/button&gt;
+&lt;button aria-current={value === page ? 'page' : undefined}&gt;{value}&lt;/button&gt;
+&lt;nav aria-label="Pagination"&gt;</code></pre>
+        <ul>
+          <li><strong><code>aria-label</code></strong> gives an icon-only button a spoken name.</li>
+          <li><strong><code>aria-current="page"</code></strong> tells assistive tech which pagination number is active &mdash; matching the blue highlight visually.</li>
+          <li>Using real <code>&lt;button&gt;</code>s means keyboard users get focus and Enter/Space activation with zero extra code.</li>
+        </ul>
+
+        <div class="callout good"><span class="label">The mental model</span>HTML is a <strong>tree of meaningful nodes</strong>; the browser turns that tree into pixels and an accessibility tree at once. JSX lets you build that tree with the full power of TypeScript &mdash; loops, conditionals, variables &mdash; but the output is still just HTML. Write the semantic tree first; reach for <code>&lt;div&gt;</code> only when no meaningful tag fits.</div>
+
+        <h3>Hands-on (10 min)</h3>
+        <ol>
+          <li>In the browser devtools, open the Elements panel on the Tasks page. Find the <code>&lt;button class="task-item"&gt;</code> nodes &mdash; that's the <code>.map()</code> output, live.</li>
+          <li>Tab through the page with the keyboard only. Every card and control should highlight. That works <em>because</em> they're real buttons.</li>
+          <li>This was built with limited HTML fluency &mdash; spot one <code>&lt;div&gt;</code> that could be a more meaningful tag, and note it for the rebuild. Relearn by redoing.</li>
+        </ol>
+      </article>
+
+      <nav class="slide-nav">
+        <a href="s3-typescript.html"><div class="dir">Previous</div><div class="ttl">S3 &middot; TypeScript</div></a>
+        <a class="next" href="s5-css.html"><div class="dir">Next</div><div class="ttl">S5 &middot; CSS &amp; design system</div></a>
+      </nav>
+    </main>
+  </div>
+
+  <footer class="site-footer">Chronicle of <code>simple-scheduling-app</code> &middot; S4 of 8</footer>
+</body>
+</html>

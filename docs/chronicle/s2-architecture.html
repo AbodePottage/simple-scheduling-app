@@ -1,0 +1,177 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>S2 &middot; Architecture &amp; data flow</title>
+  <link rel="stylesheet" href="chronicle.css">
+  <script src="chronicle.js"></script>
+</head>
+<body>
+  <header class="topnav">
+    <div class="topnav-inner">
+      <a class="brand" href="index.html"><span class="mark">🗓️</span> Scheduling SPA Chronicle</a>
+      <button class="theme-toggle" type="button" aria-label="Toggle theme"><span class="icon-moon">🌙</span><span class="icon-sun">☀️</span></button>
+    </div>
+  </header>
+
+  <div class="layout">
+    <aside class="sidebar">
+      <div class="sidebar-eyebrow">The deck</div>
+      <ol>
+        <li><a href="index.html"><span class="sb-num">00</span><span>Overview</span></a></li>
+        <li><a href="s1-timeline.html"><span class="sb-num">S1</span><span>The build timeline</span></a></li>
+        <li class="active"><a href="s2-architecture.html"><span class="sb-num">S2</span><span>Architecture &amp; data flow</span></a></li>
+        <li><a href="s3-typescript.html"><span class="sb-num">S3</span><span>TypeScript</span></a></li>
+        <li><a href="s4-html-jsx.html"><span class="sb-num">S4</span><span>HTML &amp; JSX</span></a></li>
+        <li><a href="s5-css.html"><span class="sb-num">S5</span><span>CSS &amp; design system</span></a></li>
+        <li><a href="s6-react.html"><span class="sb-num">S6</span><span>React state &amp; effects</span></a></li>
+        <li><a href="s7-lessons.html"><span class="sb-num">S7</span><span>Redirects &amp; lessons</span></a></li>
+        <li><a href="s8-rebuild.html"><span class="sb-num">S8</span><span>Rebuild: clean + Docker</span></a></li>
+      </ol>
+    </aside>
+
+    <main class="content">
+      <header class="mission-header">
+        <a class="crumb" href="index.html">&larr; Overview</a>
+        <div class="badge-large">🏗️</div>
+        <div class="kicker">S2</div>
+        <h1>Architecture &amp; data flow</h1>
+        <div class="meta-row"><span>monorepo</span><span>SPA + REST</span><span>in-memory state</span></div>
+      </header>
+
+      <article class="body">
+        <h2>The big picture</h2>
+        <p>It's a classic <strong>single-page app (SPA)</strong> talking to a <strong>REST API</strong>. Two halves, one language:</p>
+        <pre><code>  Browser                              Node process
+┌──────────────────────────┐        ┌────────────────────────────┐
+│  React app (client/)      │  HTTP  │  Express server (server/)  │
+│  - renders the 4 routes   │ ─────▶ │  - GET /api/bootstrap      │
+│  - holds UI state         │  JSON  │  - GET /api/work-items     │
+│  - fetch() to the API     │ ◀───── │  - POST/PATCH mutations    │
+└──────────────────────────┘        │  - state = in-memory object│
+                                     └────────────────────────────┘</code></pre>
+        <p>As a backend engineer, the server half will feel like home: routes, handlers, JSON. The new muscle is the <em>client</em> half &mdash; a long-lived program running in the browser that keeps its own copy of the data and re-paints the screen when that copy changes.</p>
+
+        <h2>Repo layout</h2>
+        <pre><code>simple-scheduling-app/
+├── package.json          # scripts: dev, build, typecheck (npm workspaces-ish)
+├── client/
+│   ├── index.html        # the single HTML page the SPA mounts into
+│   ├── vite.config.ts    # dev server + /api proxy to :3001
+│   └── src/
+│       ├── main.tsx      # entry: ReactDOM.createRoot(...).render(&lt;App/&gt;)
+│       ├── App.tsx       # 1,676 lines — the whole UI (see "the monolith")
+│       ├── api.ts        # typed fetch helpers + Page&lt;T&gt; envelope
+│       ├── Pagination.tsx# the one extracted component
+│       ├── types.ts      # client-side mirror of the domain types
+│       └── styles.css    # 1,663 lines — the entire design system
+└── server/
+    └── src/
+        ├── domain.ts     # the shared data model (Resource, WorkItem, Booking)
+        ├── scheduling.ts # state + business logic + query/paginate
+        └── index.ts      # Express routes, validation, static hosting</code></pre>
+
+        <h2>The data model is the contract</h2>
+        <p>Everything starts from <code>server/src/domain.ts</code>. These types are the single source of truth that both halves agree on:</p>
+        <pre><code>export interface WorkItem {
+  id: string;
+  title: string;
+  description: string;
+  priority: Priority;            // 'Low' | 'Medium' | 'High'
+  durationMinutes: number;
+  requiredSkills: string[];
+  targetDate: string;            // ISO date
+  status: WorkItemStatus;        // 'unscheduled' | 'scheduled' | ...
+  assigneeId?: string;           // optional → only when booked
+}</code></pre>
+        <p>The client keeps a near-identical copy in <code>client/src/types.ts</code>. That duplication is a smell &mdash; <a href="s8-rebuild.html">S8</a> shares one package instead &mdash; but it shows the principle: <strong>the types are the API contract.</strong> When the client expects <code>assigneeId</code> and the server stops sending it, TypeScript complains before the user ever sees a bug.</p>
+
+        <h2>The backend: in-memory state</h2>
+        <p>There is no database. <code>scheduling.ts</code> holds a module-level object and mutates it:</p>
+        <pre><code>// scheduling.ts (shape)
+export const state: AppState = {
+  resources: [...seeds],   // 8 people
+  workItems: [...seeds],   // 60 work items
+  bookings: [],
+  skills: [...],
+};
+
+export function createWorkItem(input) { state.workItems.push(...); return item; }
+export function bookWorkItem(workItemId, resourceId) { /* mutate state */ }</code></pre>
+        <div class="callout warn"><span class="label">Trade-off</span>In-memory state means <strong>zero setup</strong> and <strong>data resets on every restart</strong>. Perfect to learn on; unacceptable for anything real. The rebuild swaps this one module for a repository interface backed by SQLite &mdash; the routes don't change.</div>
+
+        <h2>Query, filter, paginate &mdash; on the server</h2>
+        <p>The interesting backend logic is <code>queryWorkItems</code>: it filters, sorts, then slices a page. The key safety move is <strong>clamping</strong> &mdash; never trust the page number in the URL:</p>
+        <pre><code>function clampInt(value, fallback, min, max) {
+  const n = Number(value);
+  if (!Number.isFinite(n)) return fallback;
+  return Math.min(max, Math.max(min, Math.trunc(n)));
+}
+
+function paginate&lt;T&gt;(items: T[], page: number, pageSize: number): Page&lt;T&gt; {
+  const total = items.length;
+  const lastPage = Math.max(1, Math.ceil(total / pageSize));
+  const safePage = Math.min(page, lastPage);          // ?page=999 → last page
+  const start = (safePage - 1) * pageSize;
+  return { items: items.slice(start, start + pageSize), total, page: safePage, pageSize };
+}</code></pre>
+        <p><code>total</code> is computed <em>before</em> slicing, so it always reflects the full filtered set &mdash; that's what powers "Showing 11&ndash;20 of 40". The server returns the corrected <code>page</code>, and the client trusts it. (This is the heart of the pagination pivot in <a href="s7-lessons.html">S7</a>.)</p>
+
+        <h2>The data-flow loop: how a click becomes a re-render</h2>
+        <p>This is <em>the</em> mental shift from backend work. The app uses one simple, slightly blunt pattern: <strong>mutate on the server, then re-fetch everything.</strong></p>
+        <pre><code> 1. On load:  fetch('/api/bootstrap')  →  setData(state)   // React stores it
+ 2. Render:   React paints the screen from `data`
+ 3. User acts: drag a card → POST /api/bookings
+ 4. Re-sync:  call load() again → setData(newState)
+ 5. React diffs old vs new `data`, re-paints only what changed</code></pre>
+        <pre><code>// App.tsx — the whole sync mechanism
+const load = async () => {
+  const response = await fetch('/api/bootstrap');
+  setData((await response.json()) as BootstrapResponse);
+};
+useEffect(() => { void load(); }, []);   // run once on mount</code></pre>
+        <div class="callout"><span class="label">Server brain vs client brain</span>On the server, a request handler runs, returns, and forgets. In the browser, the app <em>stays alive</em>. <code>data</code> is a long-lived variable; calling <code>setData(...)</code> is what tells React "the world changed, re-draw." You don't touch the DOM yourself &mdash; you change state and React reconciles the screen.</div>
+        <p>"Re-fetch the whole bootstrap after every change" is deliberately naive. It keeps the client trivially correct (no clever cache to get wrong) at the cost of over-fetching. Pagination later broke from this &mdash; the Tasks and Team pages fetch <em>their own slice</em> instead. Knowing when to leave the simple pattern is a judgment call you'll meet again in <a href="s6-react.html">S6</a>.</p>
+
+        <h2>The dev setup: two servers, one origin</h2>
+        <p><code>npm run dev</code> runs both halves at once (via <code>concurrently</code>): Vite on <code>:5173</code> and the API on <code>:3001</code>. Vite proxies <code>/api/*</code> to the backend so the browser thinks everything is one origin (no CORS pain in dev):</p>
+        <pre><code>// vite.config.ts
+server: { proxy: { '/api': 'http://localhost:3001' } }</code></pre>
+        <table>
+          <thead><tr><th>Script</th><th>Does</th></tr></thead>
+          <tbody>
+            <tr><td><code>npm run dev</code></td><td>Vite (client, hot reload) + <code>tsx watch</code> (server, auto-restart)</td></tr>
+            <tr><td><code>npm run build</code></td><td><code>vite build</code> (bundles client) then <code>tsc</code> (type-checks + compiles server)</td></tr>
+            <tr><td><code>npm run typecheck</code></td><td>type-checks <em>both</em> halves &mdash; the only thing that checks the client's types</td></tr>
+          </tbody>
+        </table>
+        <div class="callout warn"><span class="label">Gotcha that bit this build</span><code>vite build</code> uses esbuild, which strips types <em>without checking them</em>. So a client type error can ship a green build. Always run <code>npm run typecheck</code> &mdash; it's the only client type gate. The rebuild wires this into CI.</div>
+
+        <h2>The monolith: one 1,676-line component</h2>
+        <p>The whole UI lives in a single <code>App.tsx</code>: routing, all four pages, every popup, every form, every handler. It grew organically &mdash; and it's the app's biggest structural debt.</p>
+        <div class="two-col">
+          <div class="card">
+            <strong>Why it happened</strong>
+            <p>Each feature was "just one more block in the file I'm already in." No single commit felt big enough to justify splitting. That's how monoliths are born &mdash; one reasonable decision at a time.</p>
+          </div>
+          <div class="card">
+            <strong>Why it hurts</strong>
+            <p>It's why <code>22629fb</code> was a 1,692-line diff: unrelated concerns share a file, so changes can't stay small. Merge conflicts, hard reviews, scary edits.</p>
+          </div>
+        </div>
+        <p>Only <strong>one</strong> component was ever extracted &mdash; <code>Pagination.tsx</code> &mdash; and notice how clean it is: it takes props, returns markup, owns no app state. That's the template the rebuild applies to everything: <code>HomePage</code>, <code>TaskList</code>, <code>TeamColumn</code>, <code>WorkItemForm</code>, each in its own file.</p>
+
+        <div class="callout good"><span class="label">Takeaway</span>The architecture is sound in the large (SPA + REST + shared types) and messy in the small (one giant component, duplicated types, naive re-fetch). That split &mdash; right shape, wrong granularity &mdash; is the single most common state of a fast POC, and exactly what a clean rebuild fixes.</div>
+      </article>
+
+      <nav class="slide-nav">
+        <a href="s1-timeline.html"><div class="dir">Previous</div><div class="ttl">S1 &middot; The build timeline</div></a>
+        <a class="next" href="s3-typescript.html"><div class="dir">Next</div><div class="ttl">S3 &middot; TypeScript</div></a>
+      </nav>
+    </main>
+  </div>
+
+  <footer class="site-footer">Chronicle of <code>simple-scheduling-app</code> &middot; S2 of 8</footer>
+</body>
+</html>

@@ -1,0 +1,147 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>S1 &middot; The build timeline</title>
+  <meta name="description" content="All 35 commits of the scheduling app, grouped into five phases, with the redirects called out.">
+  <link rel="stylesheet" href="chronicle.css">
+  <script src="chronicle.js"></script>
+</head>
+<body>
+  <header class="topnav">
+    <div class="topnav-inner">
+      <a class="brand" href="index.html"><span class="mark">🗓️</span> Scheduling SPA Chronicle</a>
+      <button class="theme-toggle" type="button" aria-label="Toggle theme"><span class="icon-moon">🌙</span><span class="icon-sun">☀️</span></button>
+    </div>
+  </header>
+
+  <div class="layout">
+    <aside class="sidebar">
+      <div class="sidebar-eyebrow">The deck</div>
+      <ol>
+        <li><a href="index.html"><span class="sb-num">00</span><span>Overview</span></a></li>
+        <li class="active"><a href="s1-timeline.html"><span class="sb-num">S1</span><span>The build timeline</span></a></li>
+        <li><a href="s2-architecture.html"><span class="sb-num">S2</span><span>Architecture &amp; data flow</span></a></li>
+        <li><a href="s3-typescript.html"><span class="sb-num">S3</span><span>TypeScript</span></a></li>
+        <li><a href="s4-html-jsx.html"><span class="sb-num">S4</span><span>HTML &amp; JSX</span></a></li>
+        <li><a href="s5-css.html"><span class="sb-num">S5</span><span>CSS &amp; design system</span></a></li>
+        <li><a href="s6-react.html"><span class="sb-num">S6</span><span>React state &amp; effects</span></a></li>
+        <li><a href="s7-lessons.html"><span class="sb-num">S7</span><span>Redirects &amp; lessons</span></a></li>
+        <li><a href="s8-rebuild.html"><span class="sb-num">S8</span><span>Rebuild: clean + Docker</span></a></li>
+      </ol>
+    </aside>
+
+    <main class="content">
+      <header class="mission-header">
+        <a class="crumb" href="index.html">&larr; Overview</a>
+        <div class="badge-large">🧭</div>
+        <div class="kicker">S1</div>
+        <h1>The build timeline</h1>
+        <div class="meta-row"><span>35 commits</span><span>5 phases</span><span>b4ae659 &rarr; dcee8c6 (v1)</span></div>
+      </header>
+
+      <article class="body">
+        <p>The whole app is 35 commits over about thirteen hours. Read in order, the log tells a story that no finished codebase can: where the build flowed, and where it doubled back. Below it's grouped into five phases. The <span class="pill bad">reversal</span> and <span class="pill warn">churn</span> tags mark the teaching moments &mdash; the spots where the design changed its mind.</p>
+
+        <h2>Phase 1 &middot; Scaffold and first contact <span class="pill">6 commits &middot; 11:31&ndash;13:19</span></h2>
+        <p>Get something on the screen. A monorepo skeleton (client + server), seed data, and the first rounds of polish. The very first commit is 4,345 lines &mdash; the entire scaffold landed at once.</p>
+        <table>
+          <thead><tr><th>Commit</th><th>What changed</th><th>Size</th></tr></thead>
+          <tbody>
+            <tr><td><code>b4ae659</code></td><td>Initial scheduling app scaffold &mdash; client, server, domain types, seeds, endpoints</td><td>+4345</td></tr>
+            <tr><td><code>9c0487a</code></td><td>Polish step 1 &mdash; first real styling pass</td><td>+732 / -51</td></tr>
+            <tr><td><code>6573e07</code></td><td><code>nit</code> &mdash; a two-line tweak</td><td>+2 / -2</td></tr>
+            <tr><td><code>60e404f</code></td><td>Add theme toggle (light/dark) &mdash; the design-token system pays off early</td><td>+110 / -54</td></tr>
+            <tr><td><code>3347634</code></td><td>Polish layout</td><td>+134 / -8</td></tr>
+            <tr><td><code>1a122b8</code></td><td>Polish interaction states (hover, focus, selected)</td><td>+161 / -38</td></tr>
+          </tbody>
+        </table>
+        <div class="callout"><span class="label">Lesson</span>The dark-mode toggle worked on commit 4 because the very first CSS used <strong>custom properties</strong> for every color. Theming was almost free. Design-token discipline up front buys you a feature later. (More in <a href="s5-css.html">S5</a>.)</div>
+
+        <h2>Phase 2 &middot; Visual identity and the first reversal <span class="pill">13 commits &middot; 13:47&ndash;15:03</span></h2>
+        <p>The longest, twitchiest phase &mdash; lots of small commits chasing the right look and the right navigation. This is where you see the design <em>think out loud</em>.</p>
+        <table>
+          <thead><tr><th>Commit</th><th>What changed</th><th>Tag</th></tr></thead>
+          <tbody>
+            <tr><td><code>2a6264f</code></td><td>Simplify scheduling layout (+326 / -246 &mdash; a real rework)</td><td></td></tr>
+            <tr><td><code>e7f2843</code></td><td>Color-code resource work cards <em>everywhere</em></td><td><span class="pill warn">decision</span></td></tr>
+            <tr><td><code>47464b8</code></td><td>Limit color coding to the board only</td><td><span class="pill bad">reversal</span></td></tr>
+            <tr><td><code>36846ca</code></td><td>Expand the unscheduled backlog</td><td></td></tr>
+            <tr><td><code>ad4583b</code></td><td>Simplify resource drawer cards (1 line)</td><td></td></tr>
+            <tr><td><code>3fdf1e3</code></td><td>Polish visuals</td><td></td></tr>
+            <tr><td><code>4d74d38</code></td><td>Humanize UI labels (e.g. "senior software engineer", not "Senior/Engineer")</td><td></td></tr>
+            <tr><td><code>0d4d79a</code></td><td>Jump straight to the edit form on intent</td><td></td></tr>
+            <tr><td><code>9859924</code></td><td>Polish hero controls</td><td></td></tr>
+            <tr><td><code>faf32ef</code></td><td>Toggle selection on click (click a selected card to deselect)</td><td></td></tr>
+            <tr><td><code>641fd78</code></td><td>Add a hero "table of contents" navigation</td><td rowspan="3" style="vertical-align:middle"><span class="pill warn">churn</span><br>3 commits to land nav</td></tr>
+            <tr><td><code>9c9993f</code></td><td>Replace hero chips with a section menu</td></tr>
+            <tr><td><code>162a4e8</code></td><td>Simplify section navigation (settles it)</td></tr>
+          </tbody>
+        </table>
+        <div class="callout warn"><span class="label">The reversal</span>Commit <code>e7f2843</code> colored work cards across the whole UI; the very next commit <code>47464b8</code> pulled that back to the schedule board only. Coloring everything turned the UI into confetti. <strong>This is normal.</strong> You cannot always see that an idea is too much until it's on the screen. The fix was cheap because the change was small and isolated &mdash; a 17/19-line diff.</div>
+        <div class="callout warn"><span class="label">The churn</span>Navigation took three commits (<code>641fd78 &rarr; 9c9993f &rarr; 162a4e8</code>) to find its final shape: chips &rarr; section menu &rarr; simplified. UI navigation is genuinely hard to get right on the first try. Small commits made the wandering safe.</div>
+
+        <h2>Phase 3 &middot; The app split and the big refactors <span class="pill">9 commits &middot; 15:42&ndash;22:42</span></h2>
+        <p>The single-page board grows into a four-route app (Home / Schedule / Team / Tasks). Note the two <code>temp:</code> commits &mdash; honest "work in progress" markers &mdash; later absorbed by a <strong>1,692-line</strong> mega-refactor.</p>
+        <table>
+          <thead><tr><th>Commit</th><th>What changed</th><th>Size / tag</th></tr></thead>
+          <tbody>
+            <tr><td><code>da67098</code></td><td>Polish copy and seed data (+410 / -298)</td><td></td></tr>
+            <tr><td><code>b759a39</code></td><td>Route skeleton for the app split</td><td><span class="pill">temp:</span></td></tr>
+            <tr><td><code>96303fa</code></td><td>Tasks page with group / filter / sort</td><td><span class="pill">temp:</span> +488</td></tr>
+            <tr><td><code>22629fb</code></td><td>Refine team detail and scheduling layout</td><td><span class="pill bad">+1692 / -580</span></td></tr>
+            <tr><td><code>fe2a028</code></td><td>Refine add and filter routing</td><td></td></tr>
+            <tr><td><code>816973d</code></td><td>Refine schedule board layout (net <em>negative</em>: +57 / -111)</td><td></td></tr>
+            <tr><td><code>b819dc2</code></td><td>Add the schedule timeline grid</td><td>+187 / -47</td></tr>
+            <tr><td><code>27458fe</code></td><td>Refine backlog and details</td><td></td></tr>
+            <tr><td><code>9bb5508</code></td><td>Fix detail popups and refine cards</td><td><span class="pill bad">+365 / -398</span></td></tr>
+          </tbody>
+        </table>
+        <div class="callout bad"><span class="label">Anti-pattern: the big-bang commit</span><code>22629fb</code> changed 6 files and 2,272 lines in one commit. It's effectively un-reviewable &mdash; nobody can reason about a diff that big. It happened because several concerns (team detail, layout, routing) were entangled in one file. <strong>The rebuild in <a href="s8-rebuild.html">S8</a> splits the UI into small files precisely so changes stay small.</strong></div>
+        <div class="callout good"><span class="label">Healthy signal</span><code>816973d</code> and <code>9bb5508</code> are <em>net-negative or net-neutral</em> &mdash; they delete almost as much as they add. Code that shrinks while improving is a sign the design is converging, not sprawling.</div>
+
+        <h2>Phase 4 &middot; Popups, dashboard, voice <span class="pill">3 commits &middot; 23:49&ndash;00:04</span></h2>
+        <table>
+          <thead><tr><th>Commit</th><th>What changed</th><th>Note</th></tr></thead>
+          <tbody>
+            <tr><td><code>3614a78</code></td><td>Replace the <code>/add</code> route with a popup create/edit modal; add the <code>/home</code> dashboard</td><td><span class="pill warn">structural redirect</span></td></tr>
+            <tr><td><code>3f8b033</code></td><td>Add the server-side pagination <em>design doc</em> &mdash; before any code</td><td><span class="pill good">design first</span></td></tr>
+            <tr><td><code>d0263e8</code></td><td>Refresh page headers to "action voice" (e.g. "Clear the backlog")</td><td></td></tr>
+          </tbody>
+        </table>
+        <div class="callout"><span class="label">Redirect</span>A whole route (<code>/add</code>) became a modal. Forms-as-pages vs forms-as-popups is a classic UX fork; the app changed its mind once it had enough screens to feel the friction of full-page navigation for a quick edit.</div>
+
+        <h2>Phase 5 &middot; Real pagination and v1 <span class="pill">4 commits &middot; 00:10&ndash;00:27</span></h2>
+        <p>The disciplined finale: a design doc, then the <em>server</em>, then the <em>client</em>, verified at each step, then two tiny label fixes and the <code>v1</code> tag.</p>
+        <table>
+          <thead><tr><th>Commit</th><th>What changed</th><th>Note</th></tr></thead>
+          <tbody>
+            <tr><td><code>7747162</code></td><td>Paginated <code>/api/work-items</code> and <code>/api/resources</code> endpoints; retire the "MVP" eyebrow</td><td>server first</td></tr>
+            <tr><td><code>64c21a5</code></td><td>Client pagination &mdash; <code>api.ts</code>, <code>Pagination.tsx</code>, flat Tasks list, per-column Team</td><td>+311 / -154</td></tr>
+            <tr><td><code>4137aa7</code></td><td>Rename Team CTA &rarr; "Manage team"</td><td>1 line</td></tr>
+            <tr><td><code>dcee8c6</code></td><td>Use "Manage team" on the home quick action too &mdash; <strong>tagged <code>v1</code></strong></td><td><span class="pill accent">v1</span></td></tr>
+          </tbody>
+        </table>
+        <div class="callout good"><span class="label">The good arc</span>Pagination is the model to copy: <strong>doc &rarr; server &rarr; client</strong>, each layer landed and verified before the next. Contrast with the Phase-3 big bang. Same engineer, same day &mdash; the difference is sequencing. (Full autopsy in <a href="s7-lessons.html">S7</a>.)</div>
+
+        <h2>The shape of the work</h2>
+        <p>Read the commit <em>sizes</em> and a pattern appears:</p>
+        <ul>
+          <li><strong>Two giant commits</strong> (the scaffold, the mega-refactor) carry most of the risk.</li>
+          <li><strong>A long tail of tiny commits</strong> (<code>nit</code>, 1-line tweaks, label fixes) is where taste gets dialed in.</li>
+          <li><strong>The best-sequenced feature</strong> (pagination) came last &mdash; after the engineer had felt enough pain to slow down and plan.</li>
+        </ul>
+        <p>That arc &mdash; sprint, sprawl, then plan &mdash; is exactly what we'll straighten out in the rebuild.</p>
+      </article>
+
+      <nav class="slide-nav">
+        <a href="index.html"><div class="dir">Previous</div><div class="ttl">Overview</div></a>
+        <a class="next" href="s2-architecture.html"><div class="dir">Next</div><div class="ttl">S2 &middot; Architecture &amp; data flow</div></a>
+      </nav>
+    </main>
+  </div>
+
+  <footer class="site-footer">Chronicle of <code>simple-scheduling-app</code> &middot; S1 of 8</footer>
+</body>
+</html>

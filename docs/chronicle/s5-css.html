@@ -1,0 +1,144 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>S5 &middot; CSS &amp; the design system</title>
+  <link rel="stylesheet" href="chronicle.css">
+  <script src="chronicle.js"></script>
+</head>
+<body>
+  <header class="topnav">
+    <div class="topnav-inner">
+      <a class="brand" href="index.html"><span class="mark">🗓️</span> Scheduling SPA Chronicle</a>
+      <button class="theme-toggle" type="button" aria-label="Toggle theme"><span class="icon-moon">🌙</span><span class="icon-sun">☀️</span></button>
+    </div>
+  </header>
+
+  <div class="layout">
+    <aside class="sidebar">
+      <div class="sidebar-eyebrow">The deck</div>
+      <ol>
+        <li><a href="index.html"><span class="sb-num">00</span><span>Overview</span></a></li>
+        <li><a href="s1-timeline.html"><span class="sb-num">S1</span><span>The build timeline</span></a></li>
+        <li><a href="s2-architecture.html"><span class="sb-num">S2</span><span>Architecture &amp; data flow</span></a></li>
+        <li><a href="s3-typescript.html"><span class="sb-num">S3</span><span>TypeScript</span></a></li>
+        <li><a href="s4-html-jsx.html"><span class="sb-num">S4</span><span>HTML &amp; JSX</span></a></li>
+        <li class="active"><a href="s5-css.html"><span class="sb-num">S5</span><span>CSS &amp; design system</span></a></li>
+        <li><a href="s6-react.html"><span class="sb-num">S6</span><span>React state &amp; effects</span></a></li>
+        <li><a href="s7-lessons.html"><span class="sb-num">S7</span><span>Redirects &amp; lessons</span></a></li>
+        <li><a href="s8-rebuild.html"><span class="sb-num">S8</span><span>Rebuild: clean + Docker</span></a></li>
+      </ol>
+    </aside>
+
+    <main class="content">
+      <header class="mission-header">
+        <a class="crumb" href="index.html">&larr; Overview</a>
+        <div class="badge-large">🎨</div>
+        <div class="kicker">S5 &middot; crash course</div>
+        <h1>CSS &amp; the design system</h1>
+        <div class="meta-row"><span>1,663 lines, one file</span><span>tokens · flex · grid</span></div>
+      </header>
+
+      <article class="body">
+        <p>CSS is how the element tree becomes a <em>look</em>. It intimidates backend engineers because it's declarative and spatial rather than procedural &mdash; you describe rules, the browser lays things out. But the app's <code>styles.css</code> is built on four ideas that, once you see them, demystify the whole thing: <strong>tokens, the box, flexbox, and grid.</strong> Even this chronicle deck you're reading uses the same four.</p>
+
+        <h2>1. A rule is a selector + declarations</h2>
+        <pre><code>.task-item {              /* selector: elements with class="task-item" */
+  min-height: 76px;       /* declaration: property: value; */
+  border: 1px solid var(--border);
+}</code></pre>
+        <p>You match elements (by class, mostly) and set properties. The app is "class-based": almost every style hangs off a <code>className</code> from the JSX, which keeps specificity flat and predictable.</p>
+
+        <h2>2. Design tokens: custom properties are the system <span class="pill good">the app's best idea</span></h2>
+        <p>The first 50 lines of <code>styles.css</code> define the entire visual language as CSS variables on <code>:root</code>. Every later rule references these &mdash; no hard-coded colors scattered around:</p>
+        <pre><code>:root {
+  --text: #1f2937;
+  --surface: #ffffff;
+  --border: #e5e7eb;
+  --accent: #1d4ed8;
+  --shadow: 0 18px 45px rgba(15, 23, 42, 0.08);
+  --radius: 16px;
+}</code></pre>
+        <p>This is why the <strong>dark theme landed on commit 4 almost for free</strong> (S1, Phase 1). Dark mode is just a second set of values, applied when a <code>data-theme</code> attribute is on the root:</p>
+        <pre><code>[data-theme='dark'] {
+  --text: #e5e7eb;
+  --surface: #111827;
+  --border: #243041;
+  --accent: #60a5fa;
+}</code></pre>
+        <pre><code>// the toggle is one line of JS:
+document.documentElement.dataset.theme = theme;   // 'light' | 'dark'</code></pre>
+        <div class="callout good"><span class="label">Why this works</span>Components never name a color &mdash; they say <code>color: var(--text)</code>. Flip the tokens at the root and the entire app (hundreds of rules) re-themes instantly. <strong>Tokens are to CSS what constants are to code:</strong> name the value once, change it in one place. This is the single highest-leverage habit to carry into the rebuild.</div>
+
+        <h2>3. The box model: everything is a box</h2>
+        <p>Every element is a rectangle: content, then <code>padding</code>, then <code>border</code>, then <code>margin</code>. The app sets the sane default that makes widths predictable:</p>
+        <pre><code>* { box-sizing: border-box; }   /* width includes padding + border */</code></pre>
+        <p>Without this, adding padding makes an element <em>wider</em> than the width you set &mdash; the classic "why is my layout off by 32px" beginner trap. <code>border-box</code> makes <code>width</code> mean what you expect.</p>
+
+        <h2>4. Flexbox: one-dimensional rows and columns</h2>
+        <p>Flexbox arranges children along a line and handles spacing/alignment. The centered hero &mdash; a thing the user explicitly asked for site-wide &mdash; is pure flex:</p>
+        <pre><code>.hero {
+  display: flex;
+  flex-direction: column;   /* stack children vertically */
+  align-items: center;      /* center across the line (horizontally here) */
+  text-align: center;
+}
+.pagination {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;             /* space between children, no margin hacks */
+}</code></pre>
+        <p>Reach for flex when you're laying out <em>along one axis</em>: a toolbar, a row of chips, a stack of cards. <code>gap</code> replaced the old margin-juggling era of CSS &mdash; use it.</p>
+
+        <h2>5. Grid: two-dimensional layout</h2>
+        <p>Grid places things in rows <em>and</em> columns at once. The Team page's two equal columns and the equi-sized resource cards (both explicit user requests) are grid:</p>
+        <pre><code>.team-columns {
+  display: grid;
+  grid-template-columns: 1fr 1fr;   /* two equal columns */
+  gap: 1.5rem;
+}
+.team-column .task-list {
+  display: grid;
+  grid-auto-rows: 76px;             /* every card the same height */
+  align-content: start;
+}</code></pre>
+        <div class="callout"><span class="label">flex vs grid, decided</span>One axis of stuff that should flow and wrap → <strong>flexbox</strong>. A real two-axis layout, or "make these all the same size" → <strong>grid</strong>. The <code>1fr 1fr</code> means "two columns, split the space in equal fractions." <code>minmax()</code> + <code>auto-fill</code> (used in this deck's card grids) makes them responsive without media queries.</div>
+
+        <h2>6. Responsive: adapt at breakpoints</h2>
+        <pre><code>@media (max-width: 880px) {
+  .layout { grid-template-columns: 1fr; }   /* sidebar stacks under content */
+}</code></pre>
+        <p>A media query applies rules only when a condition holds (here, narrow screens). The two-column layout collapses to one. The app does some of this; doing it <em>thoroughly</em> is a known gap (mobile polish was a backlog item, not a finished feature).</p>
+
+        <h2>7. State styling: hover, focus, selected</h2>
+        <p>A UI has to react to the pointer and keyboard. Commit <code>1a122b8</code> ("Polish interaction states") was entirely this:</p>
+        <pre><code>button:focus-visible { outline: 2px solid var(--accent); }   /* keyboard ring */
+.task-item.selected { border-color: var(--accent); }        /* selected state */
+.pagination-page.active { background: var(--accent); color: #fff; }</code></pre>
+        <p><code>:focus-visible</code> shows the ring for keyboard users but not mouse clicks &mdash; a small, thoughtful accessibility detail. <span class="pill warn">⚠ different</span> Backend code has no concept of "hover" or "focus"; the front end is full of these in-between states, and forgetting them is what makes a UI feel cheap.</p>
+
+        <h2>How the cascade actually bit this build</h2>
+        <p>"CSS" = <em>Cascading</em> Style Sheets. When rules conflict, the winner is decided by <strong>specificity</strong> (how targeted the selector is) and source order. In a 1,663-line single file, that's a real hazard &mdash; a later, more-specific rule can silently override an earlier one. The colored-cards reversal (<code>e7f2843 → 47464b8</code>) was partly a cascade story: a broad rule colored too much, and the fix was to make the coloring rule <em>more specific</em> (board only).</p>
+        <div class="callout warn"><span class="label">The honest take</span>This CSS was written with limited fluency, fast. It works and it's tokenized well, but 1,663 lines in one file is hard to navigate and easy to break by accident. The rebuild scopes styles per component (CSS Modules) so a rule can only ever hit the component it belongs to &mdash; no accidental cascade across the app.</div>
+
+        <div class="callout good"><span class="label">The mental model</span>Style with <strong>tokens</strong> so values live in one place; remember <strong>every element is a box</strong>; use <strong>flex for a line, grid for a plane</strong>; and never forget the <strong>in-between states</strong> (hover/focus/empty/disabled). That's 90% of real-world CSS, and it's all visible in this app's history.</div>
+
+        <h3>Hands-on (15 min)</h3>
+        <ol>
+          <li>Open <code>styles.css</code> and change <code>--accent</code> at <code>:root</code> to <code>#9333ea</code>. Reload &mdash; watch buttons, links, and active states all shift together. That's tokens.</li>
+          <li>In devtools, select a <code>.task-item</code> and toggle <code>box-sizing</code> between <code>content-box</code> and <code>border-box</code>. Watch the width jump.</li>
+          <li>Resize the window past 880px and back. Watch this deck's sidebar drop below the content &mdash; that's the media query firing.</li>
+        </ol>
+      </article>
+
+      <nav class="slide-nav">
+        <a href="s4-html-jsx.html"><div class="dir">Previous</div><div class="ttl">S4 &middot; HTML &amp; JSX</div></a>
+        <a class="next" href="s6-react.html"><div class="dir">Next</div><div class="ttl">S6 &middot; React state &amp; effects</div></a>
+      </nav>
+    </main>
+  </div>
+
+  <footer class="site-footer">Chronicle of <code>simple-scheduling-app</code> &middot; S5 of 8</footer>
+</body>
+</html>

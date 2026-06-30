@@ -1,0 +1,155 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>S8 &middot; Rebuild: clean + Docker</title>
+  <link rel="stylesheet" href="chronicle.css">
+  <script src="chronicle.js"></script>
+</head>
+<body>
+  <header class="topnav">
+    <div class="topnav-inner">
+      <a class="brand" href="index.html"><span class="mark">🗓️</span> Scheduling SPA Chronicle</a>
+      <button class="theme-toggle" type="button" aria-label="Toggle theme"><span class="icon-moon">🌙</span><span class="icon-sun">☀️</span></button>
+    </div>
+  </header>
+
+  <div class="layout">
+    <aside class="sidebar">
+      <div class="sidebar-eyebrow">The deck</div>
+      <ol>
+        <li><a href="index.html"><span class="sb-num">00</span><span>Overview</span></a></li>
+        <li><a href="s1-timeline.html"><span class="sb-num">S1</span><span>The build timeline</span></a></li>
+        <li><a href="s2-architecture.html"><span class="sb-num">S2</span><span>Architecture &amp; data flow</span></a></li>
+        <li><a href="s3-typescript.html"><span class="sb-num">S3</span><span>TypeScript</span></a></li>
+        <li><a href="s4-html-jsx.html"><span class="sb-num">S4</span><span>HTML &amp; JSX</span></a></li>
+        <li><a href="s5-css.html"><span class="sb-num">S5</span><span>CSS &amp; design system</span></a></li>
+        <li><a href="s6-react.html"><span class="sb-num">S6</span><span>React state &amp; effects</span></a></li>
+        <li><a href="s7-lessons.html"><span class="sb-num">S7</span><span>Redirects &amp; lessons</span></a></li>
+        <li class="active"><a href="s8-rebuild.html"><span class="sb-num">S8</span><span>Rebuild: clean + Docker</span></a></li>
+      </ol>
+    </aside>
+
+    <main class="content">
+      <header class="mission-header">
+        <a class="crumb" href="index.html">&larr; Overview</a>
+        <div class="badge-large">📦</div>
+        <div class="kicker">S8 &middot; the brief</div>
+        <h1>Rebuild: clean + Docker</h1>
+        <div class="meta-row"><span>the redo</span><span>E2E in one container</span><span>a weekend</span></div>
+      </header>
+
+      <article class="body">
+        <p>Now you relearn by redoing. Same app, same features, same data model &mdash; but built deliberately, with every S7 lesson baked into the structure, and shipped as one self-contained Docker container. This slide is both a <strong>target architecture</strong> and a <strong>brief you can hand to an agent</strong> (or work through yourself over two days).</p>
+
+        <h2>Guiding principles (each answers a S7 debt)</h2>
+        <table>
+          <thead><tr><th>Principle</th><th>Replaces</th></tr></thead>
+          <tbody>
+            <tr><td><strong>One component, one file, one job.</strong></td><td>The 1,676-line <code>App.tsx</code></td></tr>
+            <tr><td><strong>Share the contract.</strong> A <code>shared/</code> types package, imported by client and server.</td><td>Duplicated <code>domain.ts</code> / <code>types.ts</code></td></tr>
+            <tr><td><strong>Validate at the boundary.</strong> Parse every request and response with a schema.</td><td><code>x as T</code> blind casts</td></tr>
+            <tr><td><strong>The server owns the data truth.</strong> Query/filter/sort/paginate server-side, always.</td><td>Client-side faked pagination</td></tr>
+            <tr><td><strong>Persist behind an interface.</strong> A <code>Repository</code> backed by SQLite.</td><td>In-memory global <code>state</code></td></tr>
+            <tr><td><strong>Scope styles.</strong> CSS Modules per component; keep the tokens file.</td><td>One 1,663-line <code>styles.css</code></td></tr>
+            <tr><td><strong>Type-check + test in CI.</strong> Green build means green types.</td><td><code>vite build</code> skipping client types</td></tr>
+          </tbody>
+        </table>
+
+        <h2>Target repo layout</h2>
+        <pre><code>scheduling/
+├── docker-compose.yml          # one command to run the whole thing
+├── Dockerfile                  # multi-stage: build client → run server
+├── shared/
+│   └── src/domain.ts           # the ONE source of types + Zod schemas
+├── server/
+│   └── src/
+│       ├── index.ts            # express app wiring only
+│       ├── routes/             # workItems.ts, resources.ts, bookings.ts
+│       ├── services/           # scheduling logic (suggest, book)
+│       ├── repository/         # Repository interface + sqlite impl + seed
+│       └── http/paginate.ts    # clampInt + paginate&lt;T&gt; (kept as-is, it's good)
+└── client/
+    └── src/
+        ├── main.tsx
+        ├── app/App.tsx         # router + layout shell ONLY (~80 lines)
+        ├── api/               # fetch helpers + Page&lt;T&gt; (kept)
+        ├── components/         # Pagination, Hero, ThemeToggle, DetailTable...
+        ├── features/
+        │   ├── home/HomePage.tsx
+        │   ├── schedule/SchedulePage.tsx
+        │   ├── team/TeamPage.tsx + TeamColumn.tsx
+        │   └── tasks/TasksPage.tsx + WorkItemForm.tsx
+        └── styles/tokens.css    # the :root variables — the one global file</code></pre>
+        <div class="callout good"><span class="label">Keep what was already good</span>Three pieces from the POC graduate unchanged: the <strong>design-token system</strong> (S5), the <strong><code>paginate&lt;T&gt;()</code> + clamp logic</strong> (S2), and the <strong><code>Pagination</code> component + <code>Page&lt;T&gt;</code> envelope</strong> (S6). A rebuild isn't a rewrite of everything &mdash; it's keeping the good bones and fixing the structure around them.</p></div>
+
+        <h2>The E2E Docker container</h2>
+        <p>One image: build the client to static files, then let the Express server host both the API <em>and</em> those files (the POC already does this with <code>express.static(clientDist)</code> &mdash; reuse it). A multi-stage build keeps the final image small:</p>
+        <pre><code># Dockerfile — multi-stage
+FROM node:20-alpine AS build
+WORKDIR /app
+COPY package*.json ./
+RUN npm ci
+COPY . .
+RUN npm run build              # vite build (client) + tsc (server) + typecheck
+
+FROM node:20-alpine AS run
+WORKDIR /app
+ENV NODE_ENV=production
+COPY --from=build /app/server/dist ./server/dist
+COPY --from=build /app/client/dist ./client/dist
+COPY --from=build /app/node_modules ./node_modules
+EXPOSE 3001
+CMD ["node", "server/dist/index.js"]   # serves API + static client on one port</code></pre>
+        <pre><code># docker-compose.yml — the whole app in one command
+services:
+  app:
+    build: .
+    ports: ["3001:3001"]
+    volumes: ["./data:/app/data"]      # SQLite file persists across restarts</code></pre>
+        <pre><code>docker compose up --build      # → open http://localhost:3001</code></pre>
+        <div class="callout"><span class="label">Why this is the right shape</span>One container, one port, both halves inside. No CORS in production (same origin). The SQLite file lives on a mounted volume so data survives <code>docker compose down</code> &mdash; the exact debt the in-memory POC couldn't pay. This is "self-contained" in the truest sense: <code>git clone</code> + <code>docker compose up</code> and a stranger has your app running.</div>
+
+        <h2>A weekend plan</h2>
+        <h3>Saturday &mdash; backend &amp; contract (the home turf)</h3>
+        <ul>
+          <li><strong>AM:</strong> Stand up <code>shared/domain.ts</code> with types <em>and</em> Zod schemas. Scaffold the server with <code>routes/</code> + <code>services/</code> + a <code>Repository</code> interface. Port <code>paginate.ts</code> verbatim.</li>
+          <li><strong>PM:</strong> Implement the SQLite repository + seed. Wire the routes, validating input with the schemas. Write a few endpoint tests. You're using S3 (types) and S2 (data flow) the whole time.</li>
+        </ul>
+        <h3>Sunday &mdash; frontend (the new turf)</h3>
+        <ul>
+          <li><strong>AM:</strong> One feature folder end to end &mdash; <code>TasksPage</code>: fetch a page, render the flat list, drop in the kept <code>Pagination</code>. This exercises S4 (JSX lists), S5 (a CSS Module), and S6 (the fetch effect) at once.</li>
+          <li><strong>PM:</strong> Repeat the pattern for Home, Team, Schedule. Extract shared bits (<code>Hero</code>, <code>ThemeToggle</code>) as you notice them. Dockerize. <code>docker compose up</code>. Click through. Done.</li>
+        </ul>
+        <div class="callout"><span class="label">Order matters</span>Backend first, on Saturday, on purpose: start where you're strong, lock the contract, then the frontend has a stable thing to talk to. It mirrors the one disciplined arc from the POC &mdash; <em>doc &rarr; server &rarr; client</em> &mdash; that produced its cleanest feature.</div>
+
+        <h2>Definition of done</h2>
+        <ul>
+          <li><code>docker compose up --build</code> serves the working app on one port.</li>
+          <li>Data survives a restart (SQLite on a volume).</li>
+          <li><code>npm run typecheck</code> and tests run in CI; a red type = a red build.</li>
+          <li>No file over ~250 lines; no component owns state it doesn't use.</li>
+          <li>One <code>shared/</code> type definition; zero blind <code>as</code> on network data.</li>
+          <li>Every list view handles loading, empty, and error states explicitly.</li>
+        </ul>
+
+        <h2>Brief to hand a rebuild agent</h2>
+        <div class="callout">
+          <span class="label">Copy-paste starting prompt</span>
+          "Rebuild the <code>simple-scheduling-app</code> with the same features and data model (see <code>docs/chronicle/</code>), but in a clean architecture: a <code>shared/</code> types+Zod package; an Express server split into <code>routes/services/repository</code> with a SQLite-backed <code>Repository</code> interface and the existing <code>paginate&lt;T&gt;()</code> kept; a React client split into per-feature folders (<code>home/schedule/team/tasks</code>) with CSS Modules and a single <code>tokens.css</code>; keep the <code>Pagination</code> component and <code>Page&lt;T&gt;</code> envelope. Pagination/filtering/sorting are server-side only. Ship it as one multi-stage Docker image that serves API + static client on port 3001, with <code>docker compose up</code> and a persisted SQLite volume. Wire <code>typecheck</code> + tests into CI. Build backend first, then frontend, verifying each layer."
+        </div>
+
+        <div class="callout good"><span class="label">The whole point</span>You shipped a rough thing, read its scars, and learned the three browser languages from real code. Now you rebuild it knowing exactly why each clean choice matters &mdash; because you felt the cost of its absence. That's the method: <strong>learn by doing, relearn by redoing.</strong> Go build the second one.</div>
+      </article>
+
+      <nav class="slide-nav">
+        <a href="s7-lessons.html"><div class="dir">Previous</div><div class="ttl">S7 &middot; Redirects &amp; lessons</div></a>
+        <a class="next" href="index.html"><div class="dir">Back to</div><div class="ttl">Overview</div></a>
+      </nav>
+    </main>
+  </div>
+
+  <footer class="site-footer">Chronicle of <code>simple-scheduling-app</code> &middot; S8 of 8 &middot; learn by doing, relearn by redoing</footer>
+</body>
+</html>
