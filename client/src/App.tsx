@@ -11,27 +11,19 @@ import type {
 
 const priorityOrder: Record<Priority, number> = { High: 3, Medium: 2, Low: 1 };
 const taskGroupRenderLimit = 8;
-const resourceLevelOrder: Record<ResourceLevel, number> = {
-  Junior: 1,
-  Senior: 2,
-  Principal: 3,
-  Manager: 4,
-};
 type Theme = 'light' | 'dark';
-type AppPath = '/schedule' | '/tasks' | '/team' | '/add';
+type AppPath = '/home' | '/schedule' | '/tasks' | '/team';
 type TaskDimension = 'status' | 'priority' | 'skills';
 type TaskSort = 'priority' | 'date' | 'name' | 'duration';
-type TeamDimension = 'skill' | 'role';
-type TeamSort = 'name' | 'role';
 type DetailField = {
   label: string;
   value: ReactNode;
 };
 
-const validPaths: AppPath[] = ['/schedule', '/tasks', '/team', '/add'];
+const validPaths: AppPath[] = ['/home', '/schedule', '/tasks', '/team'];
 
 function normalizePath(pathname: string) {
-  return validPaths.includes(pathname as AppPath) ? (pathname as AppPath) : '/schedule';
+  return validPaths.includes(pathname as AppPath) ? (pathname as AppPath) : '/home';
 }
 
 function formatClock(iso: string) {
@@ -117,12 +109,8 @@ export function App() {
   const [taskDimension, setTaskDimension] = useState<TaskDimension>('status');
   const [taskFilterValue, setTaskFilterValue] = useState<string>('all');
   const [taskSort, setTaskSort] = useState<TaskSort>('priority');
-  const [teamDimension, setTeamDimension] = useState<TeamDimension>('role');
-  const [teamFilterValue, setTeamFilterValue] = useState<string>('all');
-  const [teamSort, setTeamSort] = useState<TeamSort>('name');
   const [theme, setTheme] = useState<Theme>(() => (localStorage.getItem('theme') as Theme) || 'light');
-  const [activeCreatePanel, setActiveCreatePanel] = useState<'work-item' | 'resource'>('work-item');
-  const [postSubmitReveal, setPostSubmitReveal] = useState<{ path: '/tasks' | '/team'; id: string } | null>(null);
+  const [creating, setCreating] = useState<'work-item' | 'resource' | null>(null);
   const [dropTarget, setDropTarget] = useState<{ kind: 'queue' | 'resource'; id?: string } | null>(null);
   const blankForm = useMemo(
     () => ({
@@ -185,8 +173,8 @@ export function App() {
 
   useEffect(() => {
     if (window.location.pathname === '/') {
-      window.history.replaceState({}, '', '/schedule');
-      setPathname('/schedule');
+      window.history.replaceState({}, '', '/home');
+      setPathname('/home');
     }
   }, []);
 
@@ -197,12 +185,12 @@ export function App() {
   }, [theme]);
 
   useEffect(() => {
-    document.body.classList.toggle('detail-open', Boolean(selectedWorkItemId || selectedResourceId));
+    document.body.classList.toggle('detail-open', Boolean(selectedWorkItemId || selectedResourceId || creating));
 
     return () => {
       document.body.classList.remove('detail-open');
     };
-  }, [selectedResourceId, selectedWorkItemId]);
+  }, [selectedResourceId, selectedWorkItemId, creating]);
 
   useEffect(() => {
     setSelectedWorkItemId(null);
@@ -210,29 +198,12 @@ export function App() {
     setDropTarget(null);
     setDraggingWorkItemId(null);
     setDraggingBookingId(null);
-    if (pathname !== '/add' || (!editingWorkItemId && !editingResourceId)) {
-      setEditingWorkItemId(null);
-      setForm(blankForm);
-      setEditingResourceId(null);
-      setResourceForm(blankResourceForm);
-    }
-  }, [pathname, editingResourceId, editingWorkItemId, blankForm, blankResourceForm]);
-
-  useEffect(() => {
-    if (!postSubmitReveal || !data || pathname !== postSubmitReveal.path) {
-      return;
-    }
-
-    if (postSubmitReveal.path === '/tasks') {
-      setSelectedResourceId(null);
-      setSelectedWorkItemId(postSubmitReveal.id);
-    } else {
-      setSelectedWorkItemId(null);
-      setSelectedResourceId(postSubmitReveal.id);
-    }
-
-    setPostSubmitReveal(null);
-  }, [data, pathname, postSubmitReveal]);
+    setCreating(null);
+    setEditingWorkItemId(null);
+    setForm(blankForm);
+    setEditingResourceId(null);
+    setResourceForm(blankResourceForm);
+  }, [pathname, blankForm, blankResourceForm]);
 
   const workItemLookup = useMemo(() => {
     const map = new Map<string, WorkItem>();
@@ -463,100 +434,20 @@ export function App() {
     return entries.sort((a, b) => order.indexOf(a.label) - order.indexOf(b.label));
   }, [groupLabelFor, sortTaskItems, taskDimension, taskItems]);
 
-  const teamDimensionOptions = useMemo(
-    () => [
-      { value: 'skill' as TeamDimension, label: 'Skill' },
-      { value: 'role' as TeamDimension, label: 'Role' },
-    ],
-    [],
-  );
-
-  const teamValueOptions = useMemo(() => {
-    if (!data) {
-      return [];
-    }
-
-    if (teamDimension === 'role') {
-      return [
-        { value: 'all', label: 'All' },
-        ...(['Junior', 'Senior', 'Principal', 'Manager'] as ResourceLevel[]).map((level) => ({ value: level, label: level })),
-      ];
-    }
-
+  const teamColumns = useMemo(() => {
+    const byName = (a: (typeof resourceWorkloads)[number], b: (typeof resourceWorkloads)[number]) =>
+      a.resource.name.localeCompare(b.resource.name);
     return [
-      { value: 'all', label: 'All' },
-      ...Array.from(new Set(data.resources.flatMap((resource) => resource.skills)))
-        .sort((a, b) => a.localeCompare(b))
-        .map((skill) => ({ value: skill, label: skill })),
+      {
+        label: 'Engineers',
+        items: resourceWorkloads.filter((entry) => entry.resource.discipline === 'Engineer').sort(byName),
+      },
+      {
+        label: 'Data scientists',
+        items: resourceWorkloads.filter((entry) => entry.resource.discipline === 'Data scientist').sort(byName),
+      },
     ];
-  }, [data, teamDimension]);
-
-  const sortTeamItems = (items: typeof resourceWorkloads) => {
-    return [...items].sort((a, b) => {
-      switch (teamSort) {
-        case 'name':
-          return a.resource.name.localeCompare(b.resource.name);
-        case 'role':
-          return (
-            resourceLevelOrder[a.resource.level] - resourceLevelOrder[b.resource.level] ||
-            a.resource.name.localeCompare(b.resource.name)
-          );
-      }
-    });
-  };
-
-  const teamGroupLabelFor = (entry: (typeof resourceWorkloads)[number]) => {
-    if (teamDimension === 'role') {
-      return entry.resource.level;
-    }
-
-    return entry.resource.skills.length ? entry.resource.skills[0] : 'No skills';
-  };
-
-  const teamItems = useMemo(() => {
-    if (!data) {
-      return [];
-    }
-
-    return resourceWorkloads.filter((entry) => {
-      if (teamDimension === 'role' && teamFilterValue !== 'all' && entry.resource.level !== teamFilterValue) {
-        return false;
-      }
-
-      if (teamDimension === 'skill' && teamFilterValue !== 'all' && !entry.resource.skills.includes(teamFilterValue)) {
-        return false;
-      }
-
-      return true;
-    });
-  }, [data, resourceWorkloads, teamDimension, teamFilterValue]);
-
-  const teamGroups = useMemo(() => {
-    const grouped = new Map<string, typeof resourceWorkloads>();
-
-    teamItems.forEach((entry) => {
-      const groupKey = teamGroupLabelFor(entry);
-      const list = grouped.get(groupKey) ?? [];
-      list.push(entry);
-      grouped.set(groupKey, list);
-    });
-
-    const order =
-      teamDimension === 'role'
-        ? ['Junior', 'Senior', 'Principal', 'Manager']
-        : undefined;
-
-    const entries = Array.from(grouped.entries()).map(([label, items]) => ({
-      label,
-      items: sortTeamItems(items),
-    }));
-
-    if (!order) {
-      return entries.sort((a, b) => a.label.localeCompare(b.label));
-    }
-
-    return entries.sort((a, b) => order.indexOf(a.label) - order.indexOf(b.label));
-  }, [resourceWorkloads, sortTeamItems, teamDimension, teamGroupLabelFor, teamItems]);
+  }, [resourceWorkloads]);
 
   const unscheduledWorkItems = useMemo(
       () => visibleWorkItems.filter((item) => item.status === 'unscheduled'),
@@ -584,15 +475,16 @@ export function App() {
   const hasScheduleDetails = Boolean(selectedResource || selectedWorkItem);
 
   const navItems = [
+    { label: 'Home', target: '/home' as AppPath },
     { label: 'Schedule', target: '/schedule' as AppPath },
     { label: 'Team', target: '/team' as AppPath },
     { label: 'Tasks', target: '/tasks' as AppPath },
-    { label: 'Add', target: '/add' as AppPath },
   ];
 
   const submitWorkItem = async (event: FormEvent) => {
     event.preventDefault();
 
+    const wasEditing = Boolean(editingWorkItemId);
     const response = await fetch(editingWorkItemId ? `/api/work-items/${editingWorkItemId}` : '/api/work-items', {
       method: editingWorkItemId ? 'PATCH' : 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -605,11 +497,19 @@ export function App() {
 
     const workItem = (await response.json()) as WorkItem;
     setForm(blankForm);
-    setEditingWorkItemId(null);
-    setActiveCreatePanel('work-item');
-    setPostSubmitReveal({ path: '/tasks', id: workItem.id });
-    navigate('/tasks');
     await load();
+
+    if (wasEditing) {
+      setEditingWorkItemId(null);
+      setSelectedResourceId(null);
+      setSelectedWorkItemId(workItem.id);
+    } else {
+      setCreating(null);
+      if (pathname === '/tasks' || pathname === '/schedule') {
+        setSelectedResourceId(null);
+        setSelectedWorkItemId(workItem.id);
+      }
+    }
   };
 
   const patchWorkItem = async (workItemId: string, body: Record<string, unknown>) => {
@@ -628,11 +528,20 @@ export function App() {
     await load();
   };
 
-  const beginEditWorkItem = (workItem: WorkItem) => {
-    setSelectedResourceId(null);
+  const openCreateWorkItem = () => {
     setSelectedWorkItemId(null);
+    setSelectedResourceId(null);
+    setEditingWorkItemId(null);
+    setEditingResourceId(null);
+    setForm(blankForm);
+    setCreating('work-item');
+  };
+
+  const beginEditWorkItem = (workItem: WorkItem) => {
+    setCreating(null);
+    setSelectedResourceId(null);
+    setSelectedWorkItemId(workItem.id);
     setEditingWorkItemId(workItem.id);
-    setActiveCreatePanel('work-item');
     setForm({
       title: workItem.title,
       description: workItem.description,
@@ -641,7 +550,6 @@ export function App() {
       targetDate: workItem.targetDate,
       requiredSkills: [...workItem.requiredSkills],
     });
-    navigate('/add');
   };
 
   const cancelEdit = () => {
@@ -649,9 +557,18 @@ export function App() {
     setForm(blankForm);
   };
 
+  const dismissWorkItemForm = () => {
+    if (creating === 'work-item') {
+      setCreating(null);
+    }
+    setEditingWorkItemId(null);
+    setForm(blankForm);
+  };
+
   const submitResource = async (event: FormEvent) => {
     event.preventDefault();
 
+    const wasEditing = Boolean(editingResourceId);
     const response = await fetch(editingResourceId ? `/api/resources/${editingResourceId}` : '/api/resources', {
       method: editingResourceId ? 'PATCH' : 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -664,18 +581,35 @@ export function App() {
 
     const resource = (await response.json()) as Resource;
     setResourceForm(blankResourceForm);
-    setEditingResourceId(null);
-    setActiveCreatePanel('resource');
-    setPostSubmitReveal({ path: '/team', id: resource.id });
-    navigate('/team');
     await load();
+
+    if (wasEditing) {
+      setEditingResourceId(null);
+      setSelectedWorkItemId(null);
+      setSelectedResourceId(resource.id);
+    } else {
+      setCreating(null);
+      if (pathname === '/team' || pathname === '/schedule') {
+        setSelectedWorkItemId(null);
+        setSelectedResourceId(resource.id);
+      }
+    }
+  };
+
+  const openCreateResource = () => {
+    setSelectedWorkItemId(null);
+    setSelectedResourceId(null);
+    setEditingWorkItemId(null);
+    setEditingResourceId(null);
+    setResourceForm(blankResourceForm);
+    setCreating('resource');
   };
 
   const beginEditResource = (resource: Resource) => {
+    setCreating(null);
     setSelectedWorkItemId(null);
     setSelectedResourceId(resource.id);
     setEditingResourceId(resource.id);
-    setActiveCreatePanel('resource');
     setResourceForm({
       name: resource.name,
       discipline: resource.discipline,
@@ -684,10 +618,17 @@ export function App() {
       workingHours: { ...resource.workingHours },
       skills: [...resource.skills],
     });
-    navigate('/add');
   };
 
   const cancelResourceEdit = () => {
+    setEditingResourceId(null);
+    setResourceForm(blankResourceForm);
+  };
+
+  const dismissResourceForm = () => {
+    if (creating === 'resource') {
+      setCreating(null);
+    }
     setEditingResourceId(null);
     setResourceForm(blankResourceForm);
   };
@@ -782,44 +723,8 @@ export function App() {
     return <main className="shell">Loading scheduling board...</main>;
   }
 
-  const createComposer = (
-    <section className="composer card" id="composer">
-      <div className="composer-header">
-        <div className="form-switcher" role="tablist" aria-label="Form selection">
-          <button
-            type="button"
-            role="tab"
-            aria-selected={activeCreatePanel === 'work-item'}
-            className={activeCreatePanel === 'work-item' ? 'secondary active' : 'secondary'}
-            onClick={() => setActiveCreatePanel('work-item')}
-          >
-            Work Item
-          </button>
-          <button
-            type="button"
-            role="tab"
-            aria-selected={activeCreatePanel === 'resource'}
-            className={activeCreatePanel === 'resource' ? 'secondary active' : 'secondary'}
-            onClick={() => setActiveCreatePanel('resource')}
-          >
-            Team
-          </button>
-        </div>
-      </div>
-
-      {activeCreatePanel === 'work-item' ? (
-        <form onSubmit={submitWorkItem}>
-          <div className="composer-header compact">
-            <div>
-              <h3>{editingWorkItem ? editingWorkItem.title : 'Add work item'}</h3>
-            </div>
-            {editingWorkItem ? (
-              <button type="button" className="secondary" onClick={cancelEdit}>
-                Cancel edit
-              </button>
-            ) : null}
-          </div>
-
+  const workItemFormCard = (
+    <form onSubmit={submitWorkItem} className="task-edit-form">
           <div className="grid">
             <label>
               Title
@@ -887,23 +792,19 @@ export function App() {
             </div>
           </div>
 
-          <button className="primary" type="submit">
-            {editingWorkItem ? 'Update work item' : 'Add work item'}
-          </button>
-        </form>
-      ) : (
-        <form onSubmit={submitResource}>
-          <div className="composer-header compact">
-            <div>
-              <h3>{editingResource ? editingResource.name : 'Onboard team member'}</h3>
-            </div>
-            {editingResource ? (
-              <button type="button" className="secondary" onClick={cancelResourceEdit}>
-                Cancel edit
-              </button>
-            ) : null}
+          <div className="task-detail-actions">
+            <button className="primary" type="submit">
+              {editingWorkItem ? 'Save changes' : 'Add work item'}
+            </button>
+            <button type="button" className="secondary" onClick={dismissWorkItemForm}>
+              {editingWorkItem ? 'Cancel edit' : 'Cancel'}
+            </button>
           </div>
+    </form>
+  );
 
+  const resourceFormCard = (
+    <form onSubmit={submitResource} className="task-edit-form">
           <div className="grid">
             <label>
               Name
@@ -966,12 +867,11 @@ export function App() {
                 }
               />
             </label>
+            <label>
+              Color
+              <input type="color" value={resourceForm.color} onChange={(event) => setResourceForm({ ...resourceForm, color: event.target.value })} />
+            </label>
           </div>
-
-          <label>
-            Color
-            <input type="color" value={resourceForm.color} onChange={(event) => setResourceForm({ ...resourceForm, color: event.target.value })} />
-          </label>
 
           <div className="skills">
             <span>Skills</span>
@@ -989,16 +889,103 @@ export function App() {
             </div>
           </div>
 
-          <button className="primary" type="submit">
-            {editingResource ? 'Update teammate' : 'Add teammate'}
+          <div className="task-detail-actions">
+            <button className="primary" type="submit">
+              {editingResource ? 'Save changes' : 'Add teammate'}
+            </button>
+            <button type="button" className="secondary" onClick={dismissResourceForm}>
+              {editingResource ? 'Cancel edit' : 'Cancel'}
+            </button>
+          </div>
+    </form>
+  );
+
+  const composerRail = creating ? (
+    <aside className="task-detail-rail" onClick={() => setCreating(null)}>
+      <section
+        className="task-detail"
+        aria-label={creating === 'work-item' ? 'New work item' : 'New teammate'}
+        onClick={(event) => event.stopPropagation()}
+      >
+        <div className="task-detail-card card">{creating === 'work-item' ? workItemFormCard : resourceFormCard}</div>
+      </section>
+    </aside>
+  ) : null;
+
+  const today = new Date().toISOString().slice(0, 10);
+  const openWorkItems = data.workItems.filter((item) => item.status === 'unscheduled').length;
+  const assignedWorkItems = data.workItems.length - openWorkItems;
+  const todaysBookings = data.bookings.filter(
+    (booking) => booking.status !== 'canceled' && booking.startTime.slice(0, 10) === today,
+  ).length;
+  const homeStats = [
+    { label: 'Open work items', value: openWorkItems, target: '/tasks' as AppPath, icon: '📋', accent: '#d97706' },
+    { label: 'Assigned work items', value: assignedWorkItems, target: '/tasks' as AppPath, icon: '✅', accent: '#16a34a' },
+    { label: 'Teammates', value: data.resources.length, target: '/team' as AppPath, icon: '👥', accent: '#2563eb' },
+    { label: "Today's bookings", value: todaysBookings, target: '/schedule' as AppPath, icon: '📅', accent: '#7c3aed' },
+  ];
+  const hour = new Date().getHours();
+  const greeting = hour < 12 ? 'Good morning' : hour < 18 ? 'Good afternoon' : 'Good evening';
+
+  const homeDashboard = (
+    <section className="home-dashboard">
+      <div className="home-welcome card">
+        <p className="home-greeting">{greeting} 👋</p>
+        <h2>Welcome back!</h2>
+        <p className="home-welcome-text">Pick up where you left off</p>
+      </div>
+
+      <div className="home-stats">
+        {homeStats.map((stat) => (
+          <button
+            key={stat.label}
+            type="button"
+            className="home-stat card"
+            style={{ '--stat-accent': stat.accent } as CSSProperties}
+            onClick={() => navigate(stat.target)}
+          >
+            <span className="home-stat-icon" aria-hidden="true">{stat.icon}</span>
+            <span className="home-stat-value">{stat.value}</span>
+            <span className="home-stat-label">{stat.label}</span>
           </button>
-        </form>
-      )}
+        ))}
+      </div>
+
+      <div className="home-panels">
+        <div className="home-actions card">
+          <h2>Quick actions</h2>
+          <p className="home-card-sub">Create a new work item or onboard someone to the team.</p>
+          <div className="home-action-buttons">
+            <button type="button" className="secondary" onClick={openCreateWorkItem}>
+              New work item
+            </button>
+            <button type="button" className="secondary" onClick={openCreateResource}>
+              New team member
+            </button>
+          </div>
+        </div>
+
+        <div className="home-links card">
+          <h2>Jump in</h2>
+          <p className="home-card-sub">Head straight to the workspace you need.</p>
+          <div className="home-link-buttons">
+            <button type="button" className="secondary" onClick={() => navigate('/schedule')}>
+              Open Schedule
+            </button>
+            <button type="button" className="secondary" onClick={() => navigate('/team')}>
+              View Team
+            </button>
+            <button type="button" className="secondary" onClick={() => navigate('/tasks')}>
+              View Tasks
+            </button>
+          </div>
+        </div>
+      </div>
     </section>
   );
 
   if (pathname !== '/schedule') {
-    const pageTitle = pathname === '/tasks' ? 'Tasks' : pathname === '/team' ? 'Team' : 'Add';
+    const pageTitle = pathname === '/tasks' ? 'Tasks' : pathname === '/team' ? 'Team' : 'Home';
     if (pathname === '/team') {
       return (
         <main className="shell">
@@ -1021,6 +1008,9 @@ export function App() {
             </div>
 
             <div className="hero-actions">
+              <button type="button" className="primary hero-cta" onClick={openCreateResource}>
+                New team member
+              </button>
               <button
                 type="button"
                 className="secondary theme-toggle"
@@ -1033,54 +1023,13 @@ export function App() {
           </header>
 
           <section className="card team-page">
-            <div className="team-toolbar">
-              <div className="task-filters" aria-label="Team filters">
-                <label className="task-dimension-filter">
-                  <span>Dimension</span>
-                  <select
-                    value={teamDimension}
-                    onChange={(event) => {
-                      setTeamDimension(event.target.value as TeamDimension);
-                      setTeamFilterValue('all');
-                    }}
-                  >
-                    {teamDimensionOptions.map((option) => (
-                      <option key={option.value} value={option.value}>
-                        {option.label}
-                      </option>
-                    ))}
-                  </select>
-                </label>
-
-                <div className="task-value-group" role="group" aria-label="Team filter values">
-                  {teamValueOptions.map((option) => (
-                    <button
-                      key={option.value}
-                      type="button"
-                      className={teamFilterValue === option.value ? 'task-filter-chip active' : 'task-filter-chip'}
-                      onClick={() => setTeamFilterValue(option.value)}
-                    >
-                      {option.label}
-                    </button>
-                  ))}
-                </div>
-
-                <label className="task-dimension-filter task-sort-filter">
-                  <span>Sort</span>
-                  <select value={teamSort} onChange={(event) => setTeamSort(event.target.value as TeamSort)}>
-                    <option value="name">Name</option>
-                    <option value="role">Role</option>
-                  </select>
-                </label>
-              </div>
-            </div>
-
             <div className="team-layout">
-              <div className="task-groups team-layout-main">
-                {teamGroups.map(({ label, items }) => (
-                  <section key={label} className="task-group">
+              <div className="team-columns team-layout-main">
+                {teamColumns.map(({ label, items }) => (
+                  <section key={label} className="task-group team-column">
                     <div className="task-group-heading">
                       <h3>{label}</h3>
+                      <span className="team-column-count">{items.length}</span>
                     </div>
 
                     <div className="task-list">
@@ -1112,110 +1061,8 @@ export function App() {
                   }}
                 >
                   <section className="task-detail card team-detail" aria-label="Selected teammate" onClick={(event) => event.stopPropagation()}>
-                    {editingResourceId === selectedResource.id && editingResource ? (
-                      <form onSubmit={submitResource} className="task-edit-form">
-                        <div className="team-card-title-row">
-                          <strong>Edit teammate</strong>
-                          <span className="task-chip task-chip-neutral">{formatResourceRole(editingResource)}</span>
-                        </div>
-
-                        <div className="grid">
-                          <label>
-                            Name
-                            <input
-                              value={resourceForm.name}
-                              onChange={(event) => setResourceForm({ ...resourceForm, name: event.target.value })}
-                              required
-                            />
-                          </label>
-                          <label>
-                            Discipline
-                            <select
-                              value={resourceForm.discipline}
-                              onChange={(event) =>
-                                setResourceForm({ ...resourceForm, discipline: event.target.value as ResourceDiscipline })
-                              }
-                            >
-                              <option value="Engineer">Engineer</option>
-                              <option value="Data scientist">Data scientist</option>
-                            </select>
-                          </label>
-                          <label>
-                            Level
-                            <select
-                              value={resourceForm.level}
-                              onChange={(event) =>
-                                setResourceForm({ ...resourceForm, level: event.target.value as ResourceLevel })
-                              }
-                            >
-                              <option value="Junior">Junior</option>
-                              <option value="Senior">Senior</option>
-                              <option value="Principal">Principal</option>
-                              <option value="Manager">Manager</option>
-                            </select>
-                          </label>
-                          <label>
-                            Start
-                            <input
-                              type="number"
-                              min={0}
-                              max={23}
-                              value={resourceForm.workingHours.start}
-                              onChange={(event) =>
-                                setResourceForm({
-                                  ...resourceForm,
-                                  workingHours: { ...resourceForm.workingHours, start: Number(event.target.value) },
-                                })
-                              }
-                            />
-                          </label>
-                          <label>
-                            End
-                            <input
-                              type="number"
-                              min={1}
-                              max={24}
-                              value={resourceForm.workingHours.end}
-                              onChange={(event) =>
-                                setResourceForm({
-                                  ...resourceForm,
-                                  workingHours: { ...resourceForm.workingHours, end: Number(event.target.value) },
-                                })
-                              }
-                            />
-                          </label>
-                        </div>
-
-                        <label>
-                          Color
-                          <input type="color" value={resourceForm.color} onChange={(event) => setResourceForm({ ...resourceForm, color: event.target.value })} />
-                        </label>
-
-                        <div className="skills">
-                          <span>Skills</span>
-                          <div>
-                            {data.skills.map((skill) => (
-                              <button
-                                key={skill}
-                                type="button"
-                                className={resourceForm.skills.includes(skill) ? 'chip active' : 'chip'}
-                                onClick={() => toggleResourceSkill(skill)}
-                              >
-                                {skill}
-                              </button>
-                            ))}
-                          </div>
-                        </div>
-
-                        <div className="task-detail-actions">
-                          <button type="submit" className="primary">
-                            Save changes
-                          </button>
-                          <button type="button" className="secondary" onClick={cancelResourceEdit}>
-                            Cancel edit
-                          </button>
-                        </div>
-                      </form>
+                    {editingResourceId === selectedResource.id ? (
+                      resourceFormCard
                     ) : (
                       <>
                         <div className="team-card-title-row">
@@ -1261,6 +1108,7 @@ export function App() {
               ) : null}
             </div>
           </section>
+          {composerRail}
         </main>
       );
     }
@@ -1287,6 +1135,9 @@ export function App() {
             </div>
 
             <div className="hero-actions">
+              <button type="button" className="primary hero-cta" onClick={openCreateWorkItem}>
+                New work item
+              </button>
               <button
                 type="button"
                 className="secondary theme-toggle"
@@ -1407,89 +1258,8 @@ export function App() {
                 >
                   <section className="task-detail" aria-label="Selected task" onClick={(event) => event.stopPropagation()}>
                     <div className="task-detail-card card">
-                      {editingWorkItemId === selectedWorkItem.id && editingWorkItem ? (
-                        <form onSubmit={submitWorkItem} className="task-edit-form">
-                          <div className="team-card-title-row">
-                            <strong>Edit work item</strong>
-                            <span className="task-chip task-chip-state" data-state={editingWorkItem.status === 'unscheduled' ? 'open' : 'assigned'}>
-                              {editingWorkItem.status === 'unscheduled' ? 'Open' : 'Assigned'}
-                            </span>
-                          </div>
-
-                          <div className="grid">
-                            <label>
-                              Title
-                              <input
-                                value={form.title}
-                                onChange={(event) => setForm({ ...form, title: event.target.value })}
-                                required
-                              />
-                            </label>
-                            <label>
-                              Priority
-                              <select value={form.priority} onChange={(event) => setForm({ ...form, priority: event.target.value as Priority })}>
-                                <option value="Low">Low</option>
-                                <option value="Medium">Medium</option>
-                                <option value="High">High</option>
-                              </select>
-                            </label>
-                            <label>
-                              Duration
-                              <select
-                                value={form.durationMinutes}
-                                onChange={(event) => setForm({ ...form, durationMinutes: Number(event.target.value) })}
-                              >
-                                <option value={30}>30 minutes</option>
-                                <option value={60}>60 minutes</option>
-                                <option value={90}>90 minutes</option>
-                                <option value={120}>120 minutes</option>
-                              </select>
-                            </label>
-                            <label>
-                              Target date
-                              <input
-                                type="date"
-                                value={form.targetDate}
-                                onChange={(event) => setForm({ ...form, targetDate: event.target.value })}
-                                required
-                              />
-                            </label>
-                          </div>
-
-                          <label>
-                            Description
-                            <textarea
-                              value={form.description}
-                              onChange={(event) => setForm({ ...form, description: event.target.value })}
-                              rows={3}
-                            />
-                          </label>
-
-                          <div className="skills">
-                            <span>Required skills</span>
-                            <div>
-                              {data.skills.map((skill) => (
-                                <button
-                                  key={skill}
-                                  type="button"
-                                  className={form.requiredSkills.includes(skill) ? 'chip active' : 'chip'}
-                                  onClick={() => toggleSkill(skill)}
-                                >
-                                  {skill}
-                                </button>
-                              ))}
-                            </div>
-                          </div>
-
-                          <div className="task-detail-actions">
-                            <button type="submit" className="primary">
-                              Save changes
-                            </button>
-                            <button type="button" className="secondary" onClick={cancelEdit}>
-                              Cancel edit
-                            </button>
-                          </div>
-                        </form>
+                      {editingWorkItemId === selectedWorkItem.id ? (
+                        workItemFormCard
                       ) : (
                         <>
                           <div className="team-card-title-row">
@@ -1533,6 +1303,7 @@ export function App() {
               ) : null}
             </div>
           </section>
+          {composerRail}
         </main>
       );
     }
@@ -1568,7 +1339,8 @@ export function App() {
             </button>
           </div>
         </header>
-        {createComposer}
+        {homeDashboard}
+        {composerRail}
       </main>
     );
   }
@@ -1623,6 +1395,9 @@ export function App() {
             <span>
               Showing {visibleBacklogItems.length} out of {backlogItems.length} work items
             </span>
+            <button type="button" className="primary backlog-new-btn" onClick={openCreateWorkItem}>
+              New work item
+            </button>
           </div>
           <label className="backlog-search">
             <div className="search-shell">
@@ -1800,6 +1575,10 @@ export function App() {
               }}
             >
               <section className="task-detail card team-detail" aria-label="Selected teammate" onClick={(event) => event.stopPropagation()}>
+                {editingResourceId === selectedResource.id ? (
+                  resourceFormCard
+                ) : (
+                <>
                 <div className="team-card-title-row">
                   <strong>{selectedResource.name}</strong>
                   <button type="button" className="secondary task-detail-action-inline" onClick={() => beginEditResource(selectedResource)}>
@@ -1839,6 +1618,8 @@ export function App() {
                     <p className="help-text">No work assigned yet.</p>
                   )}
                 </div>
+                </>
+                )}
               </section>
             </aside>
           ) : selectedWorkItem ? (
@@ -1851,6 +1632,10 @@ export function App() {
             >
               <section className="task-detail" aria-label="Selected task" onClick={(event) => event.stopPropagation()}>
                 <div className="task-detail-card card">
+                {editingWorkItemId === selectedWorkItem.id ? (
+                  workItemFormCard
+                ) : (
+                <>
                 <div className="team-card-title-row">
                   <strong>{selectedWorkItem.title}</strong>
                   <div className="task-detail-title-actions">
@@ -1884,13 +1669,15 @@ export function App() {
                   ]}
                 />
 
+                </>
+                )}
                 </div>
               </section>
             </aside>
           ) : null
         ) : null}
       </section>
-
+      {composerRail}
     </main>
   );
 }
