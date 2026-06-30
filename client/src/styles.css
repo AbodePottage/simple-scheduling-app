@@ -364,23 +364,15 @@ label {
 
 .workspace {
   display: grid;
-  grid-template-columns: 320px minmax(0, 1fr) 360px;
+  grid-template-columns: minmax(0, 1fr) 360px;
   gap: 18px;
 }
 
-.rail {
-  display: grid;
-  gap: 20px;
-  align-content: start;
-}
-
-.queue,
 .inspector,
 .board {
   min-height: 500px;
 }
 
-.queue,
 .inspector {
   display: grid;
   gap: 12px;
@@ -836,6 +828,12 @@ body.detail-open .composer:hover {
 .task-item-copy strong,
 .task-item-copy p {
   margin: 0;
+}
+
+.task-detail-chip-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
 }
 
 .task-item .row strong {

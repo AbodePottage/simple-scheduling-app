@@ -1583,89 +1583,6 @@ export function App() {
       </section>
 
       <section className="workspace">
-        <div className="rail" id="people-queue">
-          <aside
-            className={dropTarget?.kind === 'queue' ? 'card queue drop-target' : 'card queue'}
-            id="queue"
-            onDragOver={(event) => event.preventDefault()}
-            onDragEnter={() => {
-              if (draggingWorkItemId || draggingBookingId) {
-                setDropTarget({ kind: 'queue' });
-              }
-            }}
-            onDragLeave={() => {
-              if (dropTarget?.kind === 'queue') {
-                setDropTarget(null);
-              }
-            }}
-            onDrop={() => {
-              void handleQueueDrop();
-            }}
-          >
-            <div className="section-heading">
-              <h2>Tasks</h2>
-            </div>
-            {displayedWorkItems.length ? (
-              displayedWorkItems.map((item) => (
-                <article
-                  key={item.id}
-                  className={[
-                    'work-item',
-                    selectedWorkItemId === item.id ? 'selected' : '',
-                    draggingWorkItemId === item.id ? 'dragging' : '',
-                  ]
-                    .filter(Boolean)
-                    .join(' ')}
-                  draggable
-                  onDragStart={() => {
-                    setDraggingBookingId(null);
-                    setDraggingWorkItemId(item.id);
-                  }}
-                  onDragEnd={() => {
-                    setDraggingWorkItemId(null);
-                    setDraggingBookingId(null);
-                    setDropTarget(null);
-                  }}
-                  onClick={() => {
-                    toggleWorkItemSelection(item.id);
-                  }}
-                >
-                  <div className="row">
-                    <strong>{item.title}</strong>
-                    <span className={`priority ${item.priority.toLowerCase()}`}>{item.priority}</span>
-                  </div>
-                  <p>{item.description}</p>
-                  <small>{item.durationMinutes} min - {skillLabel(item.requiredSkills)}</small>
-                </article>
-              ))
-            ) : (
-              <div className="empty-state">
-                <strong>Nothing is waiting.</strong>
-                <p>Every work item is scheduled. Drag something back here to unassign it.</p>
-              </div>
-            )}
-          </aside>
-
-          <aside className="card resource-list-panel" id="people">
-            <div className="section-heading">
-              <h2>Team</h2>
-            </div>
-            <div className="resource-list">
-              {data.resources.map((resource) => (
-                <button key={resource.id} type="button" className="resource-list-item" onClick={() => toggleResourceSelection(resource.id)}>
-                  <div className="resource-list-item-top">
-                    <span className="color-swatch" style={{ backgroundColor: resource.color }} />
-                    <div>
-                      <strong>{resource.name}</strong>
-                      <span className="resource-role">{formatResourceRole(resource)}</span>
-                    </div>
-                  </div>
-                </button>
-              ))}
-            </div>
-          </aside>
-        </div>
-
         <section className="board" id="board">
           <div className="board-header">
             <div>
@@ -1773,10 +1690,27 @@ export function App() {
           {selectedResource ? (
             <>
               <h3>{selectedResource.name}</h3>
-              <div className="detail-pills">
-                <span className="detail-pill">{formatResourceRole(selectedResource)}</span>
-                <span className="detail-pill">{skillLabel(selectedResource.skills)}</span>
-              </div>
+              <DetailTable
+                fields={[
+                  { label: 'Role', value: formatResourceRole(selectedResource) },
+                  {
+                    label: 'Skills',
+                    value: (
+                      <div className="task-detail-chip-row">
+                        {selectedResource.skills.length ? (
+                          selectedResource.skills.map((skill) => (
+                            <span key={skill} className="task-chip task-chip-skill">
+                              {skill}
+                            </span>
+                          ))
+                        ) : (
+                          <span className="task-chip task-chip-neutral">No skills</span>
+                        )}
+                      </div>
+                    ),
+                  },
+                ]}
+              />
               <button type="button" className="secondary" onClick={() => beginEditResource(selectedResource)}>
                 Edit teammate
               </button>
@@ -1796,14 +1730,37 @@ export function App() {
             </>
           ) : selectedWorkItem ? (
             <>
-              <p className="section-copy">Priority is {selectedWorkItem.priority.toLowerCase()}.</p>
               <h3>{selectedWorkItem.title}</h3>
               <p>{selectedWorkItem.description}</p>
-              <div className="detail-pills">
-                <span className="detail-pill">{selectedWorkItem.durationMinutes} min</span>
-                <span className="detail-pill">{selectedWorkItem.status}</span>
-                <span className="detail-pill">{skillLabel(selectedWorkItem.requiredSkills)}</span>
-              </div>
+              <DetailTable
+                fields={[
+                  { label: 'Priority', value: selectedWorkItem.priority },
+                  { label: 'Duration', value: `${selectedWorkItem.durationMinutes}m` },
+                  { label: 'Due date', value: formatTaskDate(selectedWorkItem.targetDate) },
+                  {
+                    label: 'Booked',
+                    value: selectedItemBooking
+                      ? `${resourceLookup.get(selectedItemBooking.resourceId)?.name ?? 'Unknown'} - ${formatClock(selectedItemBooking.startTime)} to ${formatClock(selectedItemBooking.endTime)}`
+                      : 'Not yet scheduled',
+                  },
+                  {
+                    label: 'Skills',
+                    value: (
+                      <div className="task-detail-chip-row">
+                        {selectedWorkItem.requiredSkills.length ? (
+                          selectedWorkItem.requiredSkills.map((skill) => (
+                            <span key={skill} className="task-chip task-chip-skill">
+                              {skill}
+                            </span>
+                          ))
+                        ) : (
+                          <span className="task-chip task-chip-neutral">No skills</span>
+                        )}
+                      </div>
+                    ),
+                  },
+                ]}
+              />
 
               {selectedWorkItem.status === 'unscheduled' ? (
                 <button type="button" className="secondary" onClick={() => beginEditWorkItem(selectedWorkItem)}>
@@ -1820,15 +1777,6 @@ export function App() {
                     Unassign work item
                   </button>
                 </>
-              )}
-
-              {selectedItemBooking ? (
-                <p>
-                  <strong>Booked:</strong> {resourceLookup.get(selectedItemBooking.resourceId)?.name ?? 'Unknown'} -{' '}
-                  {formatClock(selectedItemBooking.startTime)} to {formatClock(selectedItemBooking.endTime)}
-                </p>
-              ) : (
-                <p><strong>Booked:</strong> Not yet scheduled</p>
               )}
 
             </>
