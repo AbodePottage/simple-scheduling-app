@@ -2,6 +2,7 @@ import cors from 'cors';
 import express from 'express';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
+import type { ResourceDiscipline, ResourceLevel } from './domain.js';
 import {
   bookWorkItem,
   createResource,
@@ -17,6 +18,20 @@ const app = express();
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const port = Number(process.env.PORT ?? 3001);
 const clientDist = path.resolve(__dirname, '../../client/dist');
+const resourceDisciplines: ResourceDiscipline[] = ['Engineer', 'Data scientist'];
+const resourceLevels: ResourceLevel[] = ['Junior', 'Senior', 'Principal', 'Manager'];
+
+function parseResourceDiscipline(value: unknown): ResourceDiscipline | null {
+  return typeof value === 'string' && resourceDisciplines.includes(value as ResourceDiscipline)
+    ? (value as ResourceDiscipline)
+    : null;
+}
+
+function parseResourceLevel(value: unknown): ResourceLevel | null {
+  return typeof value === 'string' && resourceLevels.includes(value as ResourceLevel)
+    ? (value as ResourceLevel)
+    : null;
+}
 
 app.use(cors());
 app.use(express.json());
@@ -56,9 +71,11 @@ app.post('/api/work-items', (request, response) => {
 });
 
 app.post('/api/resources', (request, response) => {
-  const { name, role, skills, color, workingHours } = request.body ?? {};
+  const { name, discipline, level, skills, color, workingHours } = request.body ?? {};
+  const parsedDiscipline = parseResourceDiscipline(discipline);
+  const parsedLevel = parseResourceLevel(level);
 
-  if (!name || !role || !color || !workingHours) {
+  if (!name || !parsedDiscipline || !parsedLevel || !color || !workingHours) {
     response.status(400).json({ error: 'Missing required fields.' });
     return;
   }
@@ -66,7 +83,8 @@ app.post('/api/resources', (request, response) => {
   const resource = createResource({
     id: `resource-${Math.random().toString(36).slice(2, 9)}`,
     name: String(name),
-    role: String(role),
+    discipline: parsedDiscipline,
+    level: parsedLevel,
     skills: Array.isArray(skills) ? skills.map(String) : [],
     color: String(color),
     workingHours: {
@@ -79,9 +97,11 @@ app.post('/api/resources', (request, response) => {
 });
 
 app.patch('/api/resources/:resourceId', (request, response) => {
-  const { name, role, skills, color, workingHours } = request.body ?? {};
+  const { name, discipline, level, skills, color, workingHours } = request.body ?? {};
+  const parsedDiscipline = parseResourceDiscipline(discipline);
+  const parsedLevel = parseResourceLevel(level);
 
-  if (!name || !role || !color || !workingHours) {
+  if (!name || !parsedDiscipline || !parsedLevel || !color || !workingHours) {
     response.status(400).json({ error: 'Missing required fields.' });
     return;
   }
@@ -89,7 +109,8 @@ app.patch('/api/resources/:resourceId', (request, response) => {
   try {
     const resource = updateResource(request.params.resourceId, {
       name: String(name),
-      role: String(role),
+      discipline: parsedDiscipline,
+      level: parsedLevel,
       skills: Array.isArray(skills) ? skills.map(String) : [],
       color: String(color),
       workingHours: {

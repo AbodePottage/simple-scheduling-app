@@ -1,12 +1,32 @@
-import { useEffect, useMemo, useRef, useState, type CSSProperties, type FormEvent } from 'react';
-import type { BootstrapResponse, Booking, Resource, Suggestion, WorkItem, Priority } from './types';
+import { useEffect, useMemo, useState, type CSSProperties, type FormEvent, type ReactNode } from 'react';
+import type {
+  BootstrapResponse,
+  Booking,
+  Priority,
+  Resource,
+  ResourceDiscipline,
+  ResourceLevel,
+  WorkItem,
+} from './types';
 
 const priorityOrder: Record<Priority, number> = { High: 3, Medium: 2, Low: 1 };
+const taskGroupRenderLimit = 8;
+const resourceLevelOrder: Record<ResourceLevel, number> = {
+  Junior: 1,
+  Senior: 2,
+  Principal: 3,
+  Manager: 4,
+};
 type Theme = 'light' | 'dark';
-type FormPanel = 'work-item' | 'resource';
 type AppPath = '/schedule' | '/tasks' | '/team' | '/create';
 type TaskDimension = 'status' | 'priority' | 'skills';
 type TaskSort = 'priority' | 'date' | 'name' | 'duration';
+type TeamDimension = 'skill' | 'role';
+type TeamSort = 'name' | 'role';
+type DetailField = {
+  label: string;
+  value: ReactNode;
+};
 
 const validPaths: AppPath[] = ['/schedule', '/tasks', '/team', '/create'];
 
@@ -38,8 +58,34 @@ function formatTaskDate(iso: string) {
   return new Date(iso).toLocaleDateString([], { month: 'short', day: 'numeric' });
 }
 
+function formatResourceRole(resource: Pick<Resource, 'level' | 'discipline'>) {
+  const baseRole = resource.discipline === 'Engineer' ? 'software engineer' : 'data scientist';
+
+  if (resource.level === 'Junior') {
+    return baseRole;
+  }
+
+  if (resource.level === 'Manager') {
+    return `${baseRole} manager`;
+  }
+
+  return `${resource.level.toLowerCase()} ${baseRole}`;
+}
+
+function DetailTable({ fields, compact = false }: { fields: DetailField[]; compact?: boolean }) {
+  return (
+    <dl className={compact ? 'detail-table detail-table-compact' : 'detail-table'}>
+      {fields.map((field) => (
+        <div key={field.label} className="detail-row">
+          <dt className="detail-label">{field.label}</dt>
+          <dd className="detail-value">{field.value}</dd>
+        </div>
+      ))}
+    </dl>
+  );
+}
+
 export function App() {
-  const composerRef = useRef<HTMLElement | null>(null);
   const [pathname, setPathname] = useState<AppPath>(() => normalizePath(window.location.pathname));
   const [data, setData] = useState<BootstrapResponse | null>(null);
   const [selectedWorkItemId, setSelectedWorkItemId] = useState<string | null>(null);
@@ -50,10 +96,12 @@ export function App() {
   const [taskDimension, setTaskDimension] = useState<TaskDimension>('status');
   const [taskFilterValue, setTaskFilterValue] = useState<string>('all');
   const [taskSort, setTaskSort] = useState<TaskSort>('priority');
+  const [teamDimension, setTeamDimension] = useState<TeamDimension>('role');
+  const [teamFilterValue, setTeamFilterValue] = useState<string>('all');
+  const [teamSort, setTeamSort] = useState<TeamSort>('name');
   const [theme, setTheme] = useState<Theme>(() => (localStorage.getItem('theme') as Theme) || 'light');
-  const [activeFormPanel, setActiveFormPanel] = useState<FormPanel>('work-item');
+  const [activeCreatePanel, setActiveCreatePanel] = useState<'work-item' | 'resource'>('work-item');
   const [dropTarget, setDropTarget] = useState<{ kind: 'queue' | 'resource'; id?: string } | null>(null);
-  const [suggestions, setSuggestions] = useState<Suggestion[]>([]);
   const blankForm = useMemo(
     () => ({
       title: '',
@@ -71,7 +119,8 @@ export function App() {
   const blankResourceForm = useMemo(
     () => ({
       name: '',
-      role: '',
+      discipline: 'Engineer' as ResourceDiscipline,
+      level: 'Junior' as ResourceLevel,
       color: '#1d4ed8',
       workingHours: { start: 9, end: 17 },
       skills: [] as string[],
@@ -126,22 +175,26 @@ export function App() {
   }, [theme]);
 
   useEffect(() => {
-    if (!selectedWorkItemId) {
-      setSuggestions([]);
-      return;
-    }
+    document.body.classList.toggle('detail-open', Boolean(selectedWorkItemId || selectedResourceId));
 
-    void (async () => {
-      const response = await fetch(`/api/suggestions/${selectedWorkItemId}`);
-      setSuggestions((await response.json()) as Suggestion[]);
-    })();
-  }, [selectedWorkItemId]);
+    return () => {
+      document.body.classList.remove('detail-open');
+    };
+  }, [selectedResourceId, selectedWorkItemId]);
 
   useEffect(() => {
-    if (editingWorkItemId || editingResourceId) {
-      composerRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    setSelectedWorkItemId(null);
+    setSelectedResourceId(null);
+    setDropTarget(null);
+    setDraggingWorkItemId(null);
+    setDraggingBookingId(null);
+    if (pathname === '/create') {
+      setEditingWorkItemId(null);
+      setForm(blankForm);
+      setEditingResourceId(null);
+      setResourceForm(blankResourceForm);
     }
-  }, [editingWorkItemId, editingResourceId, activeFormPanel]);
+  }, [pathname]);
 
   const workItemLookup = useMemo(() => {
     const map = new Map<string, WorkItem>();
@@ -153,6 +206,23 @@ export function App() {
     const map = new Map<string, Resource>();
     data?.resources.forEach((resource) => map.set(resource.id, resource));
     return map;
+  }, [data]);
+
+  const resourceWorkloads = useMemo(() => {
+    if (!data) {
+      return [];
+    }
+
+    return data.resources
+      .map((resource) => {
+        const bookings = data.bookings.filter((booking) => booking.resourceId === resource.id);
+
+        return {
+          resource,
+          bookings,
+        };
+      })
+      .sort((a, b) => a.resource.name.localeCompare(b.resource.name));
   }, [data]);
 
   const skillOptions = useMemo(() => ['All', ...(data?.skills ?? [])], [data]);
@@ -223,9 +293,13 @@ export function App() {
     return [...items].sort((a, b) => {
       switch (taskSort) {
         case 'priority':
-          return priorityOrder[b.priority] - priorityOrder[a.priority] || a.title.localeCompare(b.title);
+          return (
+            priorityOrder[b.priority] - priorityOrder[a.priority] ||
+            a.targetDate.localeCompare(b.targetDate) ||
+            a.title.localeCompare(b.title)
+          );
         case 'date':
-          return a.targetDate.localeCompare(b.targetDate) || a.title.localeCompare(b.title);
+          return priorityOrder[b.priority] - priorityOrder[a.priority] || a.targetDate.localeCompare(b.targetDate) || a.title.localeCompare(b.title);
         case 'name':
           return a.title.localeCompare(b.title);
         case 'duration':
@@ -305,6 +379,101 @@ export function App() {
     return entries.sort((a, b) => order.indexOf(a.label) - order.indexOf(b.label));
   }, [groupLabelFor, sortTaskItems, taskDimension, taskItems]);
 
+  const teamDimensionOptions = useMemo(
+    () => [
+      { value: 'skill' as TeamDimension, label: 'Skill' },
+      { value: 'role' as TeamDimension, label: 'Role' },
+    ],
+    [],
+  );
+
+  const teamValueOptions = useMemo(() => {
+    if (!data) {
+      return [];
+    }
+
+    if (teamDimension === 'role') {
+      return [
+        { value: 'all', label: 'All' },
+        ...(['Junior', 'Senior', 'Principal', 'Manager'] as ResourceLevel[]).map((level) => ({ value: level, label: level })),
+      ];
+    }
+
+    return [
+      { value: 'all', label: 'All' },
+      ...Array.from(new Set(data.resources.flatMap((resource) => resource.skills)))
+        .sort((a, b) => a.localeCompare(b))
+        .map((skill) => ({ value: skill, label: skill })),
+    ];
+  }, [data, teamDimension]);
+
+  const sortTeamItems = (items: typeof resourceWorkloads) => {
+    return [...items].sort((a, b) => {
+      switch (teamSort) {
+        case 'name':
+          return a.resource.name.localeCompare(b.resource.name);
+        case 'role':
+          return (
+            resourceLevelOrder[a.resource.level] - resourceLevelOrder[b.resource.level] ||
+            a.resource.name.localeCompare(b.resource.name)
+          );
+      }
+    });
+  };
+
+  const teamGroupLabelFor = (entry: (typeof resourceWorkloads)[number]) => {
+    if (teamDimension === 'role') {
+      return entry.resource.level;
+    }
+
+    return entry.resource.skills.length ? entry.resource.skills[0] : 'No skills';
+  };
+
+  const teamItems = useMemo(() => {
+    if (!data) {
+      return [];
+    }
+
+    return resourceWorkloads.filter((entry) => {
+      if (teamDimension === 'role' && teamFilterValue !== 'all' && entry.resource.level !== teamFilterValue) {
+        return false;
+      }
+
+      if (teamDimension === 'skill' && teamFilterValue !== 'all' && !entry.resource.skills.includes(teamFilterValue)) {
+        return false;
+      }
+
+      return true;
+    });
+  }, [data, resourceWorkloads, teamDimension, teamFilterValue]);
+
+  const teamGroups = useMemo(() => {
+    const grouped = new Map<string, typeof resourceWorkloads>();
+
+    teamItems.forEach((entry) => {
+      const groupKey = teamGroupLabelFor(entry);
+      const list = grouped.get(groupKey) ?? [];
+      list.push(entry);
+      grouped.set(groupKey, list);
+    });
+
+    const order =
+      teamDimension === 'role'
+        ? ['Junior', 'Senior', 'Principal', 'Manager']
+        : undefined;
+
+    const entries = Array.from(grouped.entries()).map(([label, items]) => ({
+      label,
+      items: sortTeamItems(items),
+    }));
+
+    if (!order) {
+      return entries.sort((a, b) => a.label.localeCompare(b.label));
+    }
+
+    return entries.sort((a, b) => order.indexOf(a.label) - order.indexOf(b.label));
+  }, [resourceWorkloads, sortTeamItems, teamDimension, teamGroupLabelFor, teamItems]);
+
   const unscheduledWorkItems = useMemo(
       () => visibleWorkItems.filter((item) => item.status === 'unscheduled'),
       [visibleWorkItems],
@@ -314,16 +483,18 @@ export function App() {
 
   const metrics = useMemo(() => {
     const unscheduled = visibleWorkItems.filter((item) => item.status === 'unscheduled').length;
-    const booked = data ? data.workItems.length - unscheduled : 0;
     return [
-      { label: 'Team', value: data?.resources.length ?? 0, detail: 'Available people' },
-      { label: 'Booked', value: booked, detail: 'Assigned tasks' },
+      { label: 'Team', value: data?.resources.length ?? 0, detail: 'Team members' },
       { label: 'Waiting', value: unscheduled, detail: 'Needs coverage' },
     ];
   }, [data, visibleWorkItems]);
 
   const selectedWorkItem = selectedWorkItemId ? workItemLookup.get(selectedWorkItemId) ?? null : null;
   const selectedResource = selectedResourceId ? resourceLookup.get(selectedResourceId) ?? null : null;
+  const selectedResourceWorkload = useMemo(
+    () => (selectedResourceId ? resourceWorkloads.find((entry) => entry.resource.id === selectedResourceId) ?? null : null),
+    [resourceWorkloads, selectedResourceId],
+  );
   const editingWorkItem = editingWorkItemId ? workItemLookup.get(editingWorkItemId) ?? null : null;
   const editingResource = editingResourceId ? resourceLookup.get(editingResourceId) ?? null : null;
 
@@ -369,9 +540,10 @@ export function App() {
   };
 
   const beginEditWorkItem = (workItem: WorkItem) => {
-    setActiveFormPanel('work-item');
     setSelectedResourceId(null);
+    setSelectedWorkItemId(null);
     setEditingWorkItemId(workItem.id);
+    setActiveCreatePanel('work-item');
     setForm({
       title: workItem.title,
       description: workItem.description,
@@ -380,6 +552,7 @@ export function App() {
       targetDate: workItem.targetDate,
       requiredSkills: [...workItem.requiredSkills],
     });
+    navigate('/create');
   };
 
   const cancelEdit = () => {
@@ -406,17 +579,19 @@ export function App() {
   };
 
   const beginEditResource = (resource: Resource) => {
-    setActiveFormPanel('resource');
     setSelectedWorkItemId(null);
     setSelectedResourceId(resource.id);
     setEditingResourceId(resource.id);
+    setActiveCreatePanel('resource');
     setResourceForm({
       name: resource.name,
-      role: resource.role,
+      discipline: resource.discipline,
+      level: resource.level,
       color: resource.color,
       workingHours: { ...resource.workingHours },
       skills: [...resource.skills],
     });
+    navigate('/create');
   };
 
   const cancelResourceEdit = () => {
@@ -429,7 +604,6 @@ export function App() {
     setSelectedResourceId(null);
     setEditingWorkItemId(null);
     setEditingResourceId(null);
-    setActiveFormPanel('work-item');
     setForm(blankForm);
     setResourceForm(blankResourceForm);
   };
@@ -496,8 +670,512 @@ export function App() {
     return <main className="shell">Loading scheduling board...</main>;
   }
 
+  const createComposer = (
+    <section className="composer card" id="composer">
+      <div className="composer-header">
+        <div>
+          <h2>Create</h2>
+        </div>
+        <div className="form-switcher" role="tablist" aria-label="Form selection">
+          <button
+            type="button"
+            role="tab"
+            aria-selected={activeCreatePanel === 'work-item'}
+            className={activeCreatePanel === 'work-item' ? 'secondary active' : 'secondary'}
+            onClick={() => setActiveCreatePanel('work-item')}
+          >
+            Work item
+          </button>
+          <button
+            type="button"
+            role="tab"
+            aria-selected={activeCreatePanel === 'resource'}
+            className={activeCreatePanel === 'resource' ? 'secondary active' : 'secondary'}
+            onClick={() => setActiveCreatePanel('resource')}
+          >
+            Teammate
+          </button>
+        </div>
+      </div>
+
+      {activeCreatePanel === 'work-item' ? (
+        <form onSubmit={submitWorkItem}>
+          <div className="composer-header compact">
+            <div>
+              <h3>{editingWorkItem ? editingWorkItem.title : 'New work item'}</h3>
+            </div>
+            {editingWorkItem ? (
+              <button type="button" className="secondary" onClick={cancelEdit}>
+                Cancel edit
+              </button>
+            ) : null}
+          </div>
+
+          <div className="grid">
+            <label>
+              Title
+              <input
+                value={form.title}
+                onChange={(event) => setForm({ ...form, title: event.target.value })}
+                placeholder="Prepare release notes"
+                required
+              />
+            </label>
+            <label>
+              Priority
+              <select value={form.priority} onChange={(event) => setForm({ ...form, priority: event.target.value as Priority })}>
+                <option value="Low">Low</option>
+                <option value="Medium">Medium</option>
+                <option value="High">High</option>
+              </select>
+            </label>
+            <label>
+              Duration
+              <select
+                value={form.durationMinutes}
+                onChange={(event) => setForm({ ...form, durationMinutes: Number(event.target.value) })}
+              >
+                <option value={30}>30 minutes</option>
+                <option value={60}>60 minutes</option>
+                <option value={90}>90 minutes</option>
+                <option value={120}>120 minutes</option>
+              </select>
+            </label>
+            <label>
+              Target date
+              <input
+                type="date"
+                value={form.targetDate}
+                onChange={(event) => setForm({ ...form, targetDate: event.target.value })}
+                required
+              />
+            </label>
+          </div>
+
+          <label>
+            Description
+            <textarea
+              value={form.description}
+              onChange={(event) => setForm({ ...form, description: event.target.value })}
+              rows={2}
+              placeholder="Short description of the work."
+            />
+          </label>
+
+          <div className="skills">
+            <span>Required skills</span>
+            <div>
+              {data.skills.map((skill) => (
+                <button
+                  key={skill}
+                  type="button"
+                  className={form.requiredSkills.includes(skill) ? 'chip active' : 'chip'}
+                  onClick={() => toggleSkill(skill)}
+                >
+                  {skill}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          <button className="primary" type="submit">
+            {editingWorkItem ? 'Update work item' : 'Add work item'}
+          </button>
+        </form>
+      ) : (
+        <form onSubmit={submitResource}>
+          <div className="composer-header compact">
+            <div>
+              <h3>{editingResource ? editingResource.name : 'Add teammate'}</h3>
+            </div>
+            {editingResource ? (
+              <button type="button" className="secondary" onClick={cancelResourceEdit}>
+                Cancel edit
+              </button>
+            ) : null}
+          </div>
+
+          <div className="grid">
+            <label>
+              Name
+              <input
+                value={resourceForm.name}
+                onChange={(event) => setResourceForm({ ...resourceForm, name: event.target.value })}
+                placeholder="Avery Chen"
+                required
+              />
+            </label>
+            <label>
+              Discipline
+              <select
+                value={resourceForm.discipline}
+                onChange={(event) => setResourceForm({ ...resourceForm, discipline: event.target.value as ResourceDiscipline })}
+              >
+                <option value="Engineer">Engineer</option>
+                <option value="Data scientist">Data scientist</option>
+              </select>
+            </label>
+            <label>
+              Level
+              <select
+                value={resourceForm.level}
+                onChange={(event) => setResourceForm({ ...resourceForm, level: event.target.value as ResourceLevel })}
+              >
+                <option value="Junior">Junior</option>
+                <option value="Senior">Senior</option>
+                <option value="Principal">Principal</option>
+                <option value="Manager">Manager</option>
+              </select>
+            </label>
+            <label>
+              Start
+              <input
+                type="number"
+                min={0}
+                max={23}
+                value={resourceForm.workingHours.start}
+                onChange={(event) =>
+                  setResourceForm({
+                    ...resourceForm,
+                    workingHours: { ...resourceForm.workingHours, start: Number(event.target.value) },
+                  })
+                }
+              />
+            </label>
+            <label>
+              End
+              <input
+                type="number"
+                min={1}
+                max={24}
+                value={resourceForm.workingHours.end}
+                onChange={(event) =>
+                  setResourceForm({
+                    ...resourceForm,
+                    workingHours: { ...resourceForm.workingHours, end: Number(event.target.value) },
+                  })
+                }
+              />
+            </label>
+          </div>
+
+          <label>
+            Color
+            <input type="color" value={resourceForm.color} onChange={(event) => setResourceForm({ ...resourceForm, color: event.target.value })} />
+          </label>
+
+          <div className="skills">
+            <span>Skills</span>
+            <div>
+              {data.skills.map((skill) => (
+                <button
+                  key={skill}
+                  type="button"
+                  className={resourceForm.skills.includes(skill) ? 'chip active' : 'chip'}
+                  onClick={() => toggleResourceSkill(skill)}
+                >
+                  {skill}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          <button className="primary" type="submit">
+            {editingResource ? 'Update teammate' : 'Add teammate'}
+          </button>
+        </form>
+      )}
+    </section>
+  );
+
   if (pathname !== '/schedule') {
     const pageTitle = pathname === '/tasks' ? 'Tasks' : pathname === '/team' ? 'Team' : 'Create';
+    if (pathname === '/team') {
+      return (
+        <main className="shell">
+          <header className="hero card">
+            <div className="hero-copy">
+              <p className="eyebrow eyebrow-hero">Simple scheduling app</p>
+              <h1>{pageTitle}</h1>
+              <nav className="hero-nav" aria-label="Page sections">
+                {navItems.map((item) => (
+                  <button
+                    key={item.target}
+                    type="button"
+                    className={item.target === pathname ? 'hero-nav-pill active' : 'hero-nav-pill'}
+                    onClick={() => navigate(item.target)}
+                  >
+                    {item.label}
+                  </button>
+                ))}
+              </nav>
+            </div>
+
+            <div className="hero-actions">
+              <button
+                type="button"
+                className="secondary theme-toggle"
+                aria-label={theme === 'light' ? 'Switch to dark mode' : 'Switch to light mode'}
+                onClick={() => setTheme(theme === 'light' ? 'dark' : 'light')}
+              >
+                <span aria-hidden="true">{theme === 'light' ? '🌙' : '☀️'}</span>
+              </button>
+            </div>
+          </header>
+
+          <section className="card team-page">
+            <div className="team-toolbar">
+              <div className="task-filters" aria-label="Team filters">
+                <label className="task-dimension-filter">
+                  <span>Dimension</span>
+                  <select
+                    value={teamDimension}
+                    onChange={(event) => {
+                      setTeamDimension(event.target.value as TeamDimension);
+                      setTeamFilterValue('all');
+                    }}
+                  >
+                    {teamDimensionOptions.map((option) => (
+                      <option key={option.value} value={option.value}>
+                        {option.label}
+                      </option>
+                    ))}
+                  </select>
+                </label>
+
+                <div className="task-value-group" role="group" aria-label="Team filter values">
+                  {teamValueOptions.map((option) => (
+                    <button
+                      key={option.value}
+                      type="button"
+                      className={teamFilterValue === option.value ? 'task-filter-chip active' : 'task-filter-chip'}
+                      onClick={() => setTeamFilterValue(option.value)}
+                    >
+                      {option.label}
+                    </button>
+                  ))}
+                </div>
+
+                <label className="task-sort-filter">
+                  <span>Sort</span>
+                  <select value={teamSort} onChange={(event) => setTeamSort(event.target.value as TeamSort)}>
+                    <option value="name">Name</option>
+                    <option value="role">Role</option>
+                  </select>
+                </label>
+              </div>
+            </div>
+
+            <div className="team-layout">
+              <div className="task-groups team-layout-main">
+                {teamGroups.map(({ label, items }) => (
+                  <section key={label} className="task-group">
+                    <div className="task-group-heading">
+                      <h3>{label}</h3>
+                    </div>
+
+                    <div className="task-list">
+                      {items.map(({ resource }) => (
+                        <button
+                          key={resource.id}
+                          type="button"
+                          className={selectedResourceId === resource.id ? 'work-item task-item selected' : 'work-item task-item'}
+                          style={{ '--card-accent': resource.color } as CSSProperties}
+                          onClick={() => toggleResourceSelection(resource.id)}
+                        >
+                          <div className="task-item-copy">
+                            <strong>{resource.name}</strong>
+                            <p>{formatResourceRole(resource)}</p>
+                          </div>
+
+                          <div className="task-item-chips">
+                            {skillOvals(resource.skills)}
+                          </div>
+                        </button>
+                      ))}
+                    </div>
+                  </section>
+                ))}
+              </div>
+
+              {selectedResource && selectedResourceWorkload ? (
+                <aside
+                  className="team-detail-rail"
+                  onClick={() => {
+                    cancelResourceEdit();
+                    setSelectedResourceId(null);
+                  }}
+                >
+                  <section className="task-detail card team-detail" aria-label="Selected teammate" onClick={(event) => event.stopPropagation()}>
+                    {editingResourceId === selectedResource.id && editingResource ? (
+                      <form onSubmit={submitResource} className="task-edit-form">
+                        <div className="team-card-title-row">
+                          <strong>Edit teammate</strong>
+                          <span className="task-chip task-chip-neutral">{formatResourceRole(editingResource)}</span>
+                        </div>
+
+                        <div className="grid">
+                          <label>
+                            Name
+                            <input
+                              value={resourceForm.name}
+                              onChange={(event) => setResourceForm({ ...resourceForm, name: event.target.value })}
+                              required
+                            />
+                          </label>
+                          <label>
+                            Discipline
+                            <select
+                              value={resourceForm.discipline}
+                              onChange={(event) =>
+                                setResourceForm({ ...resourceForm, discipline: event.target.value as ResourceDiscipline })
+                              }
+                            >
+                              <option value="Engineer">Engineer</option>
+                              <option value="Data scientist">Data scientist</option>
+                            </select>
+                          </label>
+                          <label>
+                            Level
+                            <select
+                              value={resourceForm.level}
+                              onChange={(event) =>
+                                setResourceForm({ ...resourceForm, level: event.target.value as ResourceLevel })
+                              }
+                            >
+                              <option value="Junior">Junior</option>
+                              <option value="Senior">Senior</option>
+                              <option value="Principal">Principal</option>
+                              <option value="Manager">Manager</option>
+                            </select>
+                          </label>
+                          <label>
+                            Start
+                            <input
+                              type="number"
+                              min={0}
+                              max={23}
+                              value={resourceForm.workingHours.start}
+                              onChange={(event) =>
+                                setResourceForm({
+                                  ...resourceForm,
+                                  workingHours: { ...resourceForm.workingHours, start: Number(event.target.value) },
+                                })
+                              }
+                            />
+                          </label>
+                          <label>
+                            End
+                            <input
+                              type="number"
+                              min={1}
+                              max={24}
+                              value={resourceForm.workingHours.end}
+                              onChange={(event) =>
+                                setResourceForm({
+                                  ...resourceForm,
+                                  workingHours: { ...resourceForm.workingHours, end: Number(event.target.value) },
+                                })
+                              }
+                            />
+                          </label>
+                        </div>
+
+                        <label>
+                          Color
+                          <input type="color" value={resourceForm.color} onChange={(event) => setResourceForm({ ...resourceForm, color: event.target.value })} />
+                        </label>
+
+                        <div className="skills">
+                          <span>Skills</span>
+                          <div>
+                            {data.skills.map((skill) => (
+                              <button
+                                key={skill}
+                                type="button"
+                                className={resourceForm.skills.includes(skill) ? 'chip active' : 'chip'}
+                                onClick={() => toggleResourceSkill(skill)}
+                              >
+                                {skill}
+                              </button>
+                            ))}
+                          </div>
+                        </div>
+
+                        <div className="task-detail-actions">
+                          <button type="submit" className="primary">
+                            Save changes
+                          </button>
+                          <button type="button" className="secondary" onClick={cancelResourceEdit}>
+                            Cancel edit
+                          </button>
+                        </div>
+                      </form>
+                    ) : (
+                      <>
+                        <div className="team-card-title-row">
+                          <strong>{selectedResource.name}</strong>
+                          <button type="button" className="secondary task-detail-action-inline" onClick={() => beginEditResource(selectedResource)}>
+                            Edit teammate
+                          </button>
+                        </div>
+                        <DetailTable
+                          fields={[
+                            { label: 'Role', value: formatResourceRole(selectedResource) },
+                            {
+                              label: 'Skills',
+                              value: (
+                                <div className="task-detail-chip-row">
+                                  {selectedResource.skills.length ? (
+                                    selectedResource.skills.map((skill) => (
+                                      <span key={skill} className="task-chip task-chip-skill">
+                                        {skill}
+                                      </span>
+                                    ))
+                                  ) : (
+                                    <span className="task-chip task-chip-neutral">No skills</span>
+                                  )}
+                                </div>
+                              ),
+                            },
+                          ]}
+                        />
+
+                        {selectedResourceWorkload.bookings.length ? (
+                          <div className="team-bookings">
+                            <div className="team-bookings-header">
+                              <strong>Booked tasks</strong>
+                              <span>{selectedResourceWorkload.bookings.length}</span>
+                            </div>
+                            {selectedResourceWorkload.bookings.map((booking) => {
+                              const workItem = workItemLookup.get(booking.workItemId);
+                              return (
+                                <div key={booking.id} className="booking-summary">
+                                  <strong>{workItem?.title ?? 'Booking'}</strong>
+                                  <p>{workItem?.description ?? 'No description available.'}</p>
+                                </div>
+                              );
+                            })}
+                          </div>
+                        ) : (
+                          <div className="empty-state empty-state-inline">
+                            <strong>No bookings yet.</strong>
+                            <p>This teammate is clear for now.</p>
+                          </div>
+                        )}
+
+                        <div className="task-detail-actions" />
+                      </>
+                    )}
+                  </section>
+                </aside>
+              ) : null}
+            </div>
+          </section>
+        </main>
+      );
+    }
+
     if (pathname === '/tasks') {
       return (
         <main className="shell">
@@ -578,54 +1256,215 @@ export function App() {
               </div>
             </div>
 
-            <div className="task-groups">
-              {taskGroups.map(({ label, items }) => (
-                <section key={label} className="task-group">
-                  <div className="task-group-heading">
-                    <h3>{label}</h3>
-                    <span>{items.length}</span>
-                  </div>
+            <div className="task-layout">
+              <div className="task-groups task-layout-main">
+                {taskGroups.map(({ label, items }) => (
+                  <section key={label} className="task-group">
+                    <div className="task-group-heading">
+                      <h3>{label}</h3>
+                    </div>
 
-                  <div className="task-list">
-                    {items.map((item) => (
-                      <button
-                        key={item.id}
-                        type="button"
-                        className="work-item task-item"
-                        onClick={() => {
-                          toggleWorkItemSelection(item.id);
-                          navigate('/schedule');
-                        }}
-                      >
-                        <div className="task-item-copy">
-                          <strong>{item.title}</strong>
-                          <p>{item.description}</p>
-                        </div>
+                    <div className="task-list">
+                      {items.slice(0, taskGroupRenderLimit).map((item) => (
+                        <button
+                          key={item.id}
+                          type="button"
+                          className={selectedWorkItemId === item.id ? 'work-item task-item selected' : 'work-item task-item'}
+                          onClick={() => {
+                            toggleWorkItemSelection(item.id);
+                          }}
+                        >
+                          <div className="task-item-copy">
+                            <strong>{item.title}</strong>
+                            <p>{item.description}</p>
+                          </div>
 
-                        <div className="task-item-chips">
-                          <span className="task-chip task-chip-state" data-state={item.status === 'unscheduled' ? 'open' : 'assigned'}>
-                            {item.status === 'unscheduled' ? 'Open' : 'Assigned'}
-                          </span>
-                          <span className="task-chip task-chip-priority" data-priority={item.priority}>
-                            {item.priority}
-                          </span>
-                          <span className="task-chip task-chip-neutral">{item.durationMinutes}m</span>
-                          <span className="task-chip task-chip-neutral">{formatTaskDate(item.targetDate)}</span>
-                          {item.requiredSkills.length ? (
-                            item.requiredSkills.map((skill) => (
-                              <span key={skill} className="task-chip task-chip-skill">
-                                {skill}
+                          <div className="task-item-chips">
+                            <span className="task-chip task-chip-state" data-state={item.status === 'unscheduled' ? 'open' : 'assigned'}>
+                              {item.status === 'unscheduled' ? 'Open' : 'Assigned'}
+                            </span>
+                            <span className="task-chip task-chip-priority" data-priority={item.priority}>
+                              {item.priority}
+                            </span>
+                            <span className="task-chip task-chip-neutral">{item.durationMinutes}m</span>
+                            <span className="task-chip task-chip-neutral">{formatTaskDate(item.targetDate)}</span>
+                            {item.requiredSkills.length ? (
+                              item.requiredSkills.map((skill) => (
+                                <span key={skill} className="task-chip task-chip-skill">
+                                  {skill}
+                                </span>
+                              ))
+                            ) : (
+                              <span className="task-chip task-chip-neutral">No skills</span>
+                            )}
+                          </div>
+                        </button>
+                      ))}
+                      {items.length > taskGroupRenderLimit ? (
+                        <div className="task-group-more">And {items.length - taskGroupRenderLimit} more.</div>
+                      ) : null}
+                    </div>
+                  </section>
+                ))}
+              </div>
+
+              {selectedWorkItem ? (
+                <aside
+                  className="task-detail-rail"
+                  onClick={() => {
+                    cancelEdit();
+                    setSelectedWorkItemId(null);
+                  }}
+                >
+                  <section className="task-detail" aria-label="Selected task" onClick={(event) => event.stopPropagation()}>
+                    <div className="task-detail-card card">
+                      {editingWorkItemId === selectedWorkItem.id && editingWorkItem ? (
+                        <form onSubmit={submitWorkItem} className="task-edit-form">
+                          <div className="team-card-title-row">
+                            <strong>Edit work item</strong>
+                            <span className="task-chip task-chip-state" data-state={editingWorkItem.status === 'unscheduled' ? 'open' : 'assigned'}>
+                              {editingWorkItem.status === 'unscheduled' ? 'Open' : 'Assigned'}
+                            </span>
+                          </div>
+
+                          <div className="grid">
+                            <label>
+                              Title
+                              <input
+                                value={form.title}
+                                onChange={(event) => setForm({ ...form, title: event.target.value })}
+                                required
+                              />
+                            </label>
+                            <label>
+                              Priority
+                              <select value={form.priority} onChange={(event) => setForm({ ...form, priority: event.target.value as Priority })}>
+                                <option value="Low">Low</option>
+                                <option value="Medium">Medium</option>
+                                <option value="High">High</option>
+                              </select>
+                            </label>
+                            <label>
+                              Duration
+                              <select
+                                value={form.durationMinutes}
+                                onChange={(event) => setForm({ ...form, durationMinutes: Number(event.target.value) })}
+                              >
+                                <option value={30}>30 minutes</option>
+                                <option value={60}>60 minutes</option>
+                                <option value={90}>90 minutes</option>
+                                <option value={120}>120 minutes</option>
+                              </select>
+                            </label>
+                            <label>
+                              Target date
+                              <input
+                                type="date"
+                                value={form.targetDate}
+                                onChange={(event) => setForm({ ...form, targetDate: event.target.value })}
+                                required
+                              />
+                            </label>
+                          </div>
+
+                          <label>
+                            Description
+                            <textarea
+                              value={form.description}
+                              onChange={(event) => setForm({ ...form, description: event.target.value })}
+                              rows={3}
+                            />
+                          </label>
+
+                          <div className="skills">
+                            <span>Required skills</span>
+                            <div>
+                              {data.skills.map((skill) => (
+                                <button
+                                  key={skill}
+                                  type="button"
+                                  className={form.requiredSkills.includes(skill) ? 'chip active' : 'chip'}
+                                  onClick={() => toggleSkill(skill)}
+                                >
+                                  {skill}
+                                </button>
+                              ))}
+                            </div>
+                          </div>
+
+                          <div className="task-detail-actions">
+                            <button type="submit" className="primary">
+                              Save changes
+                            </button>
+                            <button type="button" className="secondary" onClick={cancelEdit}>
+                              Cancel edit
+                            </button>
+                          </div>
+                        </form>
+                      ) : (
+                        <>
+                          <div className="team-card-title-row">
+                            <strong>{selectedWorkItem.title}</strong>
+                            <div className="task-detail-title-actions">
+                              <span className="task-chip task-chip-state" data-state={selectedWorkItem.status === 'unscheduled' ? 'open' : 'assigned'}>
+                                {selectedWorkItem.status === 'unscheduled' ? 'Open' : 'Assigned'}
                               </span>
-                            ))
-                          ) : (
-                            <span className="task-chip task-chip-neutral">No skills</span>
-                          )}
-                        </div>
-                      </button>
-                    ))}
-                  </div>
-                </section>
-              ))}
+                              {selectedWorkItem.status === 'unscheduled' ? (
+                                <button type="button" className="secondary task-detail-action-inline" onClick={() => beginEditWorkItem(selectedWorkItem)}>
+                                  Edit work item
+                                </button>
+                              ) : null}
+                            </div>
+                          </div>
+                          <p>{selectedWorkItem.description}</p>
+                          <DetailTable
+                            fields={[
+                              { label: 'Priority', value: selectedWorkItem.priority },
+                              { label: 'Duration', value: `${selectedWorkItem.durationMinutes}m` },
+                              { label: 'Due date', value: formatTaskDate(selectedWorkItem.targetDate) },
+                              {
+                                label: 'Booked',
+                                value: selectedItemBooking
+                                  ? `${resourceLookup.get(selectedItemBooking.resourceId)?.name ?? 'Unknown'} - ${formatClock(selectedItemBooking.startTime)} to ${formatClock(selectedItemBooking.endTime)}`
+                                  : 'Not yet scheduled',
+                              },
+                              {
+                                label: 'Skills',
+                                value: (
+                                  <div className="task-detail-chip-row">
+                                    {selectedWorkItem.requiredSkills.length ? (
+                                      selectedWorkItem.requiredSkills.map((skill) => (
+                                        <span key={skill} className="task-chip task-chip-skill">
+                                          {skill}
+                                        </span>
+                                      ))
+                                    ) : (
+                                      <span className="task-chip task-chip-neutral">No skills</span>
+                                    )}
+                                  </div>
+                                ),
+                              },
+                            ]}
+                          />
+
+                          <div className="task-detail-actions">
+                            {selectedWorkItem.status !== 'unscheduled' ? (
+                              <button
+                                type="button"
+                                className="secondary"
+                                onClick={() => void patchWorkItem(selectedWorkItem.id, { assigneeId: null })}
+                              >
+                                Unassign work item
+                              </button>
+                            ) : null}
+                          </div>
+
+                        </>
+                      )}
+                    </div>
+                  </section>
+                </aside>
+              ) : null}
             </div>
           </section>
         </main>
@@ -663,13 +1502,7 @@ export function App() {
             </button>
           </div>
         </header>
-        <section className="page-placeholder card">
-          <h2>{pageTitle} page</h2>
-          <h2>{pageTitle} page</h2>
-          <button type="button" className="primary" onClick={() => navigate('/schedule')}>
-            Back to schedule
-          </button>
-        </section>
+        {createComposer}
       </main>
     );
   }
@@ -802,7 +1635,7 @@ export function App() {
                     <span className="color-swatch" style={{ backgroundColor: resource.color }} />
                     <div>
                       <strong>{resource.name}</strong>
-                      <span className="resource-role">{resource.role}</span>
+                      <span className="resource-role">{formatResourceRole(resource)}</span>
                     </div>
                   </div>
                 </button>
@@ -919,10 +1752,7 @@ export function App() {
             <>
               <h3>{selectedResource.name}</h3>
               <div className="detail-pills">
-                <span className="detail-pill">{selectedResource.role}</span>
-                <span className="detail-pill">
-                  {selectedResource.workingHours.start}:00 - {selectedResource.workingHours.end}:00
-                </span>
+                <span className="detail-pill">{formatResourceRole(selectedResource)}</span>
                 <span className="detail-pill">{skillLabel(selectedResource.skills)}</span>
               </div>
               <button type="button" className="secondary" onClick={() => beginEditResource(selectedResource)}>
@@ -934,7 +1764,6 @@ export function App() {
                   return (
                     <div key={booking.id} className="booking-summary">
                       <strong>{workItem?.title ?? 'Booking'}</strong>
-                      <span>{formatClock(booking.startTime)} - {formatClock(booking.endTime)}</span>
                     </div>
                   );
                 })}
@@ -980,27 +1809,6 @@ export function App() {
                 <p><strong>Booked:</strong> Not yet scheduled</p>
               )}
 
-              <div className="suggestions">
-                <h4>Suggested assignees</h4>
-                {suggestions.map((suggestion) => (
-                  <button
-                    key={suggestion.resource.id}
-                    type="button"
-                    className="suggestion"
-                    onClick={() => void patchWorkItem(selectedWorkItem.id, { assigneeId: suggestion.resource.id })}
-                  >
-                    <strong>{suggestion.resource.name}</strong>
-                    <span>Score {suggestion.score}</span>
-                    <small>{suggestion.rationale.join(', ')}</small>
-                  </button>
-                ))}
-                {!suggestions.length ? (
-                  <div className="empty-state empty-state-inline">
-                    <strong>No suggestions yet.</strong>
-                    <p>Select a work item with required skills to see matches.</p>
-                  </div>
-                ) : null}
-              </div>
             </>
           ) : (
             <div className="empty-state">
@@ -1011,212 +1819,6 @@ export function App() {
         </aside>
       </section>
 
-      <section className="composer card" ref={composerRef} id="composer">
-        <div className="composer-header">
-          <div>
-            <h2>Create</h2>
-          </div>
-          <div className="form-switcher" role="tablist" aria-label="Form selection">
-            <button
-              type="button"
-              role="tab"
-              aria-selected={activeFormPanel === 'work-item'}
-              className={activeFormPanel === 'work-item' ? 'secondary active' : 'secondary'}
-              onClick={() => setActiveFormPanel('work-item')}
-            >
-              Work item
-            </button>
-            <button
-              type="button"
-              role="tab"
-              aria-selected={activeFormPanel === 'resource'}
-              className={activeFormPanel === 'resource' ? 'secondary active' : 'secondary'}
-              onClick={() => setActiveFormPanel('resource')}
-            >
-              Teammate
-            </button>
-          </div>
-        </div>
-
-        {activeFormPanel === 'work-item' ? (
-          <form onSubmit={submitWorkItem}>
-            <div className="composer-header compact">
-              <div>
-                <h3>{editingWorkItem ? editingWorkItem.title : 'New work item'}</h3>
-              </div>
-              {editingWorkItem ? (
-                <button type="button" className="secondary" onClick={cancelEdit}>
-                  Cancel edit
-                </button>
-              ) : null}
-            </div>
-
-            <div className="grid">
-              <label>
-                Title
-                <input
-                  value={form.title}
-                  onChange={(event) => setForm({ ...form, title: event.target.value })}
-                  placeholder="Prepare release notes"
-                  required
-                />
-              </label>
-              <label>
-                Priority
-                <select value={form.priority} onChange={(event) => setForm({ ...form, priority: event.target.value as Priority })}>
-                  <option value="Low">Low</option>
-                  <option value="Medium">Medium</option>
-                  <option value="High">High</option>
-                </select>
-              </label>
-              <label>
-                Duration
-                <select
-                  value={form.durationMinutes}
-                  onChange={(event) => setForm({ ...form, durationMinutes: Number(event.target.value) })}
-                >
-                  <option value={30}>30 minutes</option>
-                  <option value={60}>60 minutes</option>
-                  <option value={90}>90 minutes</option>
-                  <option value={120}>120 minutes</option>
-                </select>
-              </label>
-              <label>
-                Target date
-                <input
-                  type="date"
-                  value={form.targetDate}
-                  onChange={(event) => setForm({ ...form, targetDate: event.target.value })}
-                  required
-                />
-              </label>
-            </div>
-
-            <label>
-              Description
-              <textarea
-                value={form.description}
-                onChange={(event) => setForm({ ...form, description: event.target.value })}
-                rows={2}
-                placeholder="Short description of the work."
-              />
-            </label>
-
-            <div className="skills">
-              <span>Required skills</span>
-              <div>
-                {data.skills.map((skill) => (
-                  <button
-                    key={skill}
-                    type="button"
-                    className={form.requiredSkills.includes(skill) ? 'chip active' : 'chip'}
-                    onClick={() => toggleSkill(skill)}
-                  >
-                    {skill}
-                  </button>
-                ))}
-              </div>
-            </div>
-
-            <button className="primary" type="submit">
-              {editingWorkItem ? 'Update work item' : 'Add work item'}
-            </button>
-          </form>
-        ) : (
-          <form onSubmit={submitResource}>
-            <div className="composer-header compact">
-              <div>
-                <h3>{editingResource ? editingResource.name : 'Add teammate'}</h3>
-              </div>
-              {editingResource ? (
-                <button type="button" className="secondary" onClick={cancelResourceEdit}>
-                  Cancel edit
-                </button>
-              ) : null}
-            </div>
-
-            <div className="grid">
-              <label>
-                Name
-                <input
-                  value={resourceForm.name}
-                  onChange={(event) => setResourceForm({ ...resourceForm, name: event.target.value })}
-                  placeholder="Avery Chen"
-                  required
-                />
-              </label>
-              <label>
-                Role
-                <input
-                  value={resourceForm.role}
-                  onChange={(event) => setResourceForm({ ...resourceForm, role: event.target.value })}
-                  placeholder="Frontend engineer"
-                  required
-                />
-              </label>
-              <label>
-                Start
-                <input
-                  type="number"
-                  min={0}
-                  max={23}
-                  value={resourceForm.workingHours.start}
-                  onChange={(event) =>
-                    setResourceForm({
-                      ...resourceForm,
-                      workingHours: { ...resourceForm.workingHours, start: Number(event.target.value) },
-                    })
-                  }
-                />
-              </label>
-              <label>
-                End
-                <input
-                  type="number"
-                  min={1}
-                  max={24}
-                  value={resourceForm.workingHours.end}
-                  onChange={(event) =>
-                    setResourceForm({
-                      ...resourceForm,
-                      workingHours: { ...resourceForm.workingHours, end: Number(event.target.value) },
-                    })
-                  }
-                />
-              </label>
-            </div>
-
-            <label>
-              Color
-              <input
-                type="color"
-                value={resourceForm.color}
-                onChange={(event) => setResourceForm({ ...resourceForm, color: event.target.value })}
-              />
-            </label>
-
-            <div className="skills">
-              <span>Skills</span>
-              <div>
-                {data.skills.map((skill) => (
-                  <button
-                    key={skill}
-                    type="button"
-                    className={resourceForm.skills.includes(skill) ? 'chip active' : 'chip'}
-                    onClick={() => toggleResourceSkill(skill)}
-                  >
-                    {skill}
-                  </button>
-                ))}
-              </div>
-            </div>
-
-            <button className="primary" type="submit">
-              {editingResource ? 'Update teammate' : 'Add teammate'}
-            </button>
-          </form>
-        )}
-      </section>
     </main>
   );
 }

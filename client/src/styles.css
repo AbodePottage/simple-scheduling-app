@@ -262,6 +262,12 @@ form textarea {
   transform: translateY(-2px);
 }
 
+.task-detail-rail .task-detail-card.card:hover,
+.team-detail-rail > .task-detail.card:hover {
+  transform: none;
+  box-shadow: var(--shadow);
+}
+
 .work-item.dragging,
 .booking-card.dragging {
   opacity: 0.65;
@@ -582,6 +588,15 @@ label {
   box-shadow: 0 20px 60px rgba(15, 23, 42, 0.12);
 }
 
+body.detail-open .resource-row:hover .booking-strip,
+body.detail-open .resource-row:hover .resource-card,
+body.detail-open .queue:hover,
+body.detail-open .inspector:hover,
+body.detail-open .board:hover,
+body.detail-open .composer:hover {
+  box-shadow: none;
+}
+
 .section-heading {
   display: flex;
   align-items: center;
@@ -621,6 +636,45 @@ label {
 .tasks-page {
   display: grid;
   gap: 16px;
+}
+
+.task-layout {
+  display: block;
+}
+
+.task-layout-main {
+  min-width: 0;
+}
+
+.task-detail-rail {
+  position: fixed;
+  inset: 0;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  padding: 24px;
+  background: rgba(15, 23, 42, 0.18);
+  overflow: auto;
+  z-index: 40;
+}
+
+.task-detail-rail::before,
+.team-detail-rail::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: rgba(15, 23, 42, 0.18);
+}
+
+.task-detail-rail > *,
+.team-detail-rail > * {
+  position: relative;
+  z-index: 1;
+}
+
+.task-detail-rail .task-detail {
+  width: min(720px, 100%);
+  margin-top: 0;
 }
 
 .tasks-toolbar {
@@ -698,7 +752,9 @@ label {
 }
 
 .task-sort-filter {
-  justify-self: end;
+  justify-self: center;
+  justify-items: center;
+  text-align: center;
 }
 
 .task-group {
@@ -746,6 +802,12 @@ label {
   gap: 12px;
 }
 
+.task-group-more {
+  padding: 0 4px;
+  color: var(--muted);
+  font-size: 13px;
+}
+
 .task-item {
   width: 100%;
   display: flex;
@@ -757,6 +819,11 @@ label {
   padding: 10px 12px;
   border-color: var(--border);
   background: var(--surface);
+}
+
+.task-item.selected {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 2px var(--accent-soft);
 }
 
 .task-item-copy {
@@ -837,6 +904,241 @@ label {
   color: var(--accent-text);
 }
 
+.team-page {
+  display: grid;
+  gap: 16px;
+}
+
+.team-toolbar {
+  display: grid;
+  gap: 12px;
+}
+
+.team-layout {
+  display: block;
+}
+
+.team-layout-main {
+  min-width: 0;
+}
+
+.team-detail-rail {
+  position: fixed;
+  inset: 0;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  padding: 24px;
+  background: rgba(15, 23, 42, 0.18);
+  overflow: auto;
+  z-index: 40;
+}
+
+.team-detail-rail .team-detail {
+  width: min(720px, 100%);
+  margin-top: 0;
+}
+
+.task-detail-title-actions {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+}
+
+.task-detail-close {
+  padding: 8px 12px;
+}
+
+.task-detail-action-inline {
+  padding: 8px 12px;
+}
+
+.team-card-title-row .task-detail-title-actions {
+  margin-left: auto;
+}
+
+.team-detail {
+  margin-top: 0;
+}
+
+.team-summary {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.team-list {
+  display: grid;
+  gap: 14px;
+}
+
+.team-card {
+  width: 100%;
+  text-align: left;
+  cursor: pointer;
+  color: inherit;
+  display: grid;
+  gap: 12px;
+  padding: 14px 16px;
+  border: 1px solid color-mix(in srgb, var(--card-accent) 22%, var(--border));
+  border-radius: 20px;
+  background:
+    linear-gradient(180deg, color-mix(in srgb, var(--card-accent) 8%, var(--surface)) 0%, var(--surface) 100%);
+}
+
+.team-card-main {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 14px;
+  align-items: start;
+}
+
+.team-card.selected {
+  box-shadow: 0 0 0 2px var(--accent-soft);
+}
+
+.team-card-copy {
+  display: grid;
+  gap: 6px;
+  min-width: 0;
+}
+
+.team-card-copy p,
+.team-card-copy small {
+  margin: 0;
+}
+
+.team-card-title-row {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.team-card-title-row strong {
+  font-size: 1.02rem;
+}
+
+.team-workload {
+  color: var(--muted);
+  font-size: 12px;
+  white-space: nowrap;
+}
+
+.team-workload-bar {
+  position: relative;
+  overflow: hidden;
+  height: 8px;
+  border-radius: 999px;
+  background: var(--surface-soft);
+  border: 1px solid var(--border);
+}
+
+.team-workload-bar span {
+  display: block;
+  height: 100%;
+  border-radius: inherit;
+  background: linear-gradient(90deg, var(--card-accent), color-mix(in srgb, var(--card-accent) 40%, var(--accent)));
+}
+
+.team-card-chips {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 6px;
+  max-width: 320px;
+}
+
+.team-bookings {
+  display: grid;
+  gap: 8px;
+  padding-top: 2px;
+  max-height: 320px;
+  overflow: auto;
+}
+
+.task-detail,
+.task-detail-card {
+  display: grid;
+  gap: 14px;
+}
+
+.task-detail {
+  margin-top: 8px;
+  padding-top: 16px;
+  border-top: 1px solid var(--border);
+}
+
+.task-detail-card {
+  padding: 18px;
+}
+
+.task-edit-form .grid {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.task-edit-form .grid > label:first-child {
+  grid-column: 1 / -1;
+}
+
+.detail-table {
+  display: grid;
+  gap: 10px;
+  margin: 0;
+}
+
+.detail-table-compact {
+  gap: 8px;
+}
+
+.detail-row {
+  display: grid;
+  gap: 4px;
+  padding: 10px 12px;
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  background: var(--surface-soft);
+}
+
+.detail-label {
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.01em;
+  text-transform: uppercase;
+}
+
+.detail-value {
+  margin: 0;
+  font-size: 14px;
+  font-weight: 600;
+}
+
+.detail-table-compact .detail-row {
+  padding: 8px 10px;
+  border-radius: 14px;
+}
+
+.booking-inline {
+  display: grid;
+  gap: 2px;
+}
+
+.booking-inline span {
+  color: var(--muted);
+  font-size: 13px;
+  font-weight: 500;
+}
+
+.task-detail-actions {
+  display: flex;
+  justify-content: flex-start;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
 .empty-state {
   display: grid;
   gap: 6px;
@@ -911,13 +1213,33 @@ label {
   gap: 8px;
 }
 
+.team-bookings-header {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 4px 2px 2px;
+  color: var(--muted);
+  text-transform: uppercase;
+  letter-spacing: 0.02em;
+  font-size: 12px;
+  font-weight: 700;
+}
+
 .booking-summary {
   display: grid;
   gap: 4px;
-  padding: 10px 12px;
+  padding: 12px 14px;
   border: 1px solid var(--border);
-  border-radius: 14px;
+  border-radius: 16px;
   background: var(--surface-soft);
+}
+
+.booking-summary p {
+  margin: 0;
+  color: var(--muted);
+  font-size: 13px;
+  line-height: 1.4;
 }
 
 @media (max-width: 1200px) {
@@ -937,5 +1259,10 @@ label {
 @media (max-width: 720px) {
   .grid {
     grid-template-columns: 1fr;
+  }
+
+  .task-detail-rail,
+  .team-detail-rail {
+    padding: 16px;
   }
 }

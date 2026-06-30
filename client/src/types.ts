@@ -1,11 +1,14 @@
 export type Priority = 'Low' | 'Medium' | 'High';
 export type WorkItemStatus = 'unscheduled' | 'scheduled' | 'in_progress' | 'completed';
 export type BookingStatus = 'scheduled' | 'in_progress' | 'completed' | 'canceled';
+export type ResourceDiscipline = 'Engineer' | 'Data scientist';
+export type ResourceLevel = 'Junior' | 'Senior' | 'Principal' | 'Manager';
 
 export interface Resource {
   id: string;
   name: string;
-  role: string;
+  discipline: ResourceDiscipline;
+  level: ResourceLevel;
   skills: string[];
   color: string;
   workingHours: {
@@ -50,4 +53,3 @@ export interface BootstrapResponse {
   bookings: Booking[];
   skills: string[];
 }
-
