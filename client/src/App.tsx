@@ -930,8 +930,7 @@ export function App() {
   const homeDashboard = (
     <section className="home-dashboard">
       <div className="home-welcome card">
-        <p className="home-greeting">{greeting} 👋</p>
-        <h2>Welcome back!</h2>
+        <h2>{greeting} 👋</h2>
         <p className="home-welcome-text">Pick up where you left off</p>
       </div>
 
@@ -985,7 +984,7 @@ export function App() {
   );
 
   if (pathname !== '/schedule') {
-    const pageTitle = pathname === '/tasks' ? 'Tasks' : pathname === '/team' ? 'Team' : 'Home';
+    const pageTitle = pathname === '/tasks' ? 'Clear the backlog' : pathname === '/team' ? 'Meet the team' : 'Welcome back!';
     if (pathname === '/team') {
       return (
         <main className="shell">

@@ -1508,15 +1508,6 @@ body.detail-open .team-detail-rail {
   border: 1px solid var(--border);
 }
 
-.home-greeting {
-  margin: 0 0 4px;
-  font-size: 13px;
-  font-weight: 700;
-  letter-spacing: 0.04em;
-  text-transform: uppercase;
-  color: var(--accent);
-}
-
 .home-welcome h2 {
   margin: 6px 0 10px;
   font-size: 30px;
