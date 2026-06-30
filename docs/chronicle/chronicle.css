@@ -13,6 +13,7 @@
   --surface: #ffffff;
   --surface-soft: #f8fafc;
   --surface-strong: #eef2ff;
+  --surface-overlay: rgba(255, 255, 255, 0.82);
   --border: #e5e7eb;
   --border-strong: #d1d5db;
   --text: #1f2937;
@@ -40,6 +41,7 @@
   --surface: #111827;
   --surface-soft: #0f172a;
   --surface-strong: #172033;
+  --surface-overlay: rgba(11, 17, 32, 0.82);
   --border: #243041;
   --border-strong: #334155;
   --text: #e5e7eb;
