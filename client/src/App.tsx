@@ -1,4 +1,6 @@
 import { useEffect, useMemo, useState, type CSSProperties, type FormEvent, type ReactNode } from 'react';
+import { fetchResources, fetchWorkItems, type Page } from './api';
+import { Pagination } from './Pagination';
 import type {
   BootstrapResponse,
   Booking,
@@ -109,6 +111,12 @@ export function App() {
   const [taskDimension, setTaskDimension] = useState<TaskDimension>('status');
   const [taskFilterValue, setTaskFilterValue] = useState<string>('all');
   const [taskSort, setTaskSort] = useState<TaskSort>('priority');
+  const [tasksPageNum, setTasksPageNum] = useState<number>(1);
+  const [tasksPage, setTasksPage] = useState<Page<WorkItem>>({ items: [], total: 0, page: 1, pageSize: 10 });
+  const [engineersPageNum, setEngineersPageNum] = useState<number>(1);
+  const [engineersPage, setEngineersPage] = useState<Page<Resource>>({ items: [], total: 0, page: 1, pageSize: 8 });
+  const [scientistsPageNum, setScientistsPageNum] = useState<number>(1);
+  const [scientistsPage, setScientistsPage] = useState<Page<Resource>>({ items: [], total: 0, page: 1, pageSize: 8 });
   const [theme, setTheme] = useState<Theme>(() => (localStorage.getItem('theme') as Theme) || 'light');
   const [creating, setCreating] = useState<'work-item' | 'resource' | null>(null);
   const [dropTarget, setDropTarget] = useState<{ kind: 'queue' | 'resource'; id?: string } | null>(null);
@@ -161,6 +169,74 @@ export function App() {
   useEffect(() => {
     void load();
   }, []);
+
+  const taskQueryParams = useMemo(() => {
+    const params = {
+      page: tasksPageNum,
+      pageSize: 10,
+      sort: taskSort,
+      status: 'all' as 'all' | 'open' | 'assigned',
+      priority: 'all',
+      skill: 'all',
+    };
+    if (taskDimension === 'status' && (taskFilterValue === 'open' || taskFilterValue === 'assigned')) {
+      params.status = taskFilterValue;
+    } else if (taskDimension === 'priority' && taskFilterValue !== 'all') {
+      params.priority = taskFilterValue;
+    } else if (taskDimension === 'skills' && taskFilterValue !== 'all') {
+      params.skill = taskFilterValue;
+    }
+    return params;
+  }, [tasksPageNum, taskSort, taskDimension, taskFilterValue]);
+
+  useEffect(() => {
+    let cancelled = false;
+    void fetchWorkItems(taskQueryParams).then((result) => {
+      if (cancelled) {
+        return;
+      }
+      setTasksPage(result);
+      if (result.page !== tasksPageNum) {
+        setTasksPageNum(result.page);
+      }
+    });
+    return () => {
+      cancelled = true;
+    };
+    // data is a dep so the page refetches after create/edit reloads bootstrap.
+  }, [taskQueryParams, data]);
+
+  useEffect(() => {
+    let cancelled = false;
+    void fetchResources({ page: engineersPageNum, pageSize: 8, discipline: 'Engineer' }).then((result) => {
+      if (cancelled) {
+        return;
+      }
+      setEngineersPage(result);
+      if (result.page !== engineersPageNum) {
+        setEngineersPageNum(result.page);
+      }
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [engineersPageNum, data]);
+
+  useEffect(() => {
+    let cancelled = false;
+    void fetchResources({ page: scientistsPageNum, pageSize: 8, discipline: 'Data scientist' }).then((result) => {
+      if (cancelled) {
+        return;
+      }
+      setScientistsPage(result);
+      if (result.page !== scientistsPageNum) {
+        setScientistsPageNum(result.page);
+      }
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [scientistsPageNum, data]);
 
   useEffect(() => {
     const onPopState = () => {
@@ -344,110 +420,6 @@ export function App() {
     return [{ value: 'all', label: 'All' }, ...Array.from(skills).map((skill) => ({ value: skill, label: skill }))];
   }, [data, taskDimension]);
 
-  function sortTaskItems(items: WorkItem[]) {
-    return [...items].sort((a, b) => {
-      switch (taskSort) {
-        case 'priority':
-          return (
-            priorityOrder[b.priority] - priorityOrder[a.priority] ||
-            a.targetDate.localeCompare(b.targetDate) ||
-            a.title.localeCompare(b.title)
-          );
-        case 'date':
-          return priorityOrder[b.priority] - priorityOrder[a.priority] || a.targetDate.localeCompare(b.targetDate) || a.title.localeCompare(b.title);
-        case 'name':
-          return a.title.localeCompare(b.title);
-        case 'duration':
-          return b.durationMinutes - a.durationMinutes || a.title.localeCompare(b.title);
-      }
-    });
-  }
-
-  const groupLabelFor = (item: WorkItem) => {
-    if (taskDimension === 'status') {
-      return item.status === 'unscheduled' ? 'Open' : 'Assigned';
-    }
-
-    if (taskDimension === 'priority') {
-      return item.priority;
-    }
-
-    return item.requiredSkills.length ? item.requiredSkills[0] : 'No skills';
-  };
-
-  const taskItems = useMemo(() => {
-    if (!data) {
-      return [];
-    }
-
-    return data.workItems.filter((item) => {
-      if (taskDimension === 'status' && taskFilterValue !== 'all') {
-        const isOpen = item.status === 'unscheduled';
-        if (taskFilterValue === 'open' && !isOpen) {
-          return false;
-        }
-
-        if (taskFilterValue === 'assigned' && isOpen) {
-          return false;
-        }
-      }
-
-      if (taskDimension === 'priority' && taskFilterValue !== 'all' && item.priority !== taskFilterValue) {
-        return false;
-      }
-
-      if (taskDimension === 'skills' && taskFilterValue !== 'all' && !item.requiredSkills.includes(taskFilterValue)) {
-        return false;
-      }
-
-      return true;
-    });
-  }, [data, taskDimension, taskFilterValue]);
-
-  const taskGroups = useMemo(() => {
-    const grouped = new Map<string, WorkItem[]>();
-
-    taskItems.forEach((item) => {
-      const groupKey = groupLabelFor(item);
-
-      const list = grouped.get(groupKey) ?? [];
-      list.push(item);
-      grouped.set(groupKey, list);
-    });
-
-    const order =
-      taskDimension === 'status'
-        ? ['Open', 'Assigned']
-        : taskDimension === 'priority'
-          ? ['High', 'Medium', 'Low']
-          : undefined;
-
-    const entries = Array.from(grouped.entries()).map(([label, items]) => ({
-      label,
-      items: sortTaskItems(items),
-    }));
-
-    if (!order) {
-      return entries.sort((a, b) => a.label.localeCompare(b.label));
-    }
-
-    return entries.sort((a, b) => order.indexOf(a.label) - order.indexOf(b.label));
-  }, [groupLabelFor, sortTaskItems, taskDimension, taskItems]);
-
-  const teamColumns = useMemo(() => {
-    const byName = (a: (typeof resourceWorkloads)[number], b: (typeof resourceWorkloads)[number]) =>
-      a.resource.name.localeCompare(b.resource.name);
-    return [
-      {
-        label: 'Engineers',
-        items: resourceWorkloads.filter((entry) => entry.resource.discipline === 'Engineer').sort(byName),
-      },
-      {
-        label: 'Data scientists',
-        items: resourceWorkloads.filter((entry) => entry.resource.discipline === 'Data scientist').sort(byName),
-      },
-    ];
-  }, [resourceWorkloads]);
 
   const unscheduledWorkItems = useMemo(
       () => visibleWorkItems.filter((item) => item.status === 'unscheduled'),
@@ -1023,15 +995,18 @@ export function App() {
           <section className="card team-page">
             <div className="team-layout">
               <div className="team-columns team-layout-main">
-                {teamColumns.map(({ label, items }) => (
+                {[
+                  { label: 'Engineers', page: engineersPage, noun: 'engineers', onPageChange: setEngineersPageNum },
+                  { label: 'Data scientists', page: scientistsPage, noun: 'data scientists', onPageChange: setScientistsPageNum },
+                ].map(({ label, page, noun, onPageChange }) => (
                   <section key={label} className="task-group team-column">
                     <div className="task-group-heading">
                       <h3>{label}</h3>
-                      <span className="team-column-count">{items.length}</span>
+                      <span className="team-column-count">{page.total}</span>
                     </div>
 
                     <div className="task-list">
-                      {items.map(({ resource }) => (
+                      {page.items.map((resource) => (
                         <button
                           key={resource.id}
                           type="button"
@@ -1046,6 +1021,15 @@ export function App() {
                         </button>
                       ))}
                     </div>
+
+                    <Pagination
+                      page={page.page}
+                      pageSize={page.pageSize}
+                      total={page.total}
+                      itemCount={page.items.length}
+                      noun={noun}
+                      onPageChange={onPageChange}
+                    />
                   </section>
                 ))}
               </div>
@@ -1158,6 +1142,7 @@ export function App() {
                     onChange={(event) => {
                       setTaskDimension(event.target.value as TaskDimension);
                       setTaskFilterValue('all');
+                      setTasksPageNum(1);
                     }}
                   >
                     {taskDimensionOptions.map((option) => (
@@ -1174,7 +1159,10 @@ export function App() {
                       key={option.value}
                       type="button"
                       className={taskFilterValue === option.value ? 'task-filter-chip active' : 'task-filter-chip'}
-                      onClick={() => setTaskFilterValue(option.value)}
+                      onClick={() => {
+                        setTaskFilterValue(option.value);
+                        setTasksPageNum(1);
+                      }}
                     >
                       {option.label}
                     </button>
@@ -1183,7 +1171,13 @@ export function App() {
 
                 <label className="task-dimension-filter task-sort-filter">
                   <span>Sort</span>
-                  <select value={taskSort} onChange={(event) => setTaskSort(event.target.value as TaskSort)}>
+                  <select
+                    value={taskSort}
+                    onChange={(event) => {
+                      setTaskSort(event.target.value as TaskSort);
+                      setTasksPageNum(1);
+                    }}
+                  >
                     <option value="priority">Priority</option>
                     <option value="date">Due date</option>
                     <option value="name">Name</option>
@@ -1195,54 +1189,58 @@ export function App() {
 
             <div className="task-layout">
               <div className="task-groups task-layout-main">
-                {taskGroups.map(({ label, items }) => (
-                  <section key={label} className="task-group">
-                    <div className="task-group-heading">
-                      <h3>{label}</h3>
-                    </div>
+                <div className="task-list">
+                  {tasksPage.items.map((item) => (
+                    <button
+                      key={item.id}
+                      type="button"
+                      className={selectedWorkItemId === item.id ? 'work-item task-item selected' : 'work-item task-item'}
+                      onClick={() => {
+                        toggleWorkItemSelection(item.id);
+                      }}
+                    >
+                      <div className="task-item-copy">
+                        <strong>{item.title}</strong>
+                        <p>{item.description}</p>
+                      </div>
 
-                    <div className="task-list">
-                      {items.slice(0, taskGroupRenderLimit).map((item) => (
-                        <button
-                          key={item.id}
-                          type="button"
-                          className={selectedWorkItemId === item.id ? 'work-item task-item selected' : 'work-item task-item'}
-                          onClick={() => {
-                            toggleWorkItemSelection(item.id);
-                          }}
-                        >
-                          <div className="task-item-copy">
-                            <strong>{item.title}</strong>
-                            <p>{item.description}</p>
-                          </div>
-
-                          <div className="task-item-chips">
-                            <span className="task-chip task-chip-state" data-state={item.status === 'unscheduled' ? 'open' : 'assigned'}>
-                              {item.status === 'unscheduled' ? 'Open' : 'Assigned'}
+                      <div className="task-item-chips">
+                        <span className="task-chip task-chip-state" data-state={item.status === 'unscheduled' ? 'open' : 'assigned'}>
+                          {item.status === 'unscheduled' ? 'Open' : 'Assigned'}
+                        </span>
+                        <span className="task-chip task-chip-priority" data-priority={item.priority}>
+                          {item.priority}
+                        </span>
+                        <span className="task-chip task-chip-neutral">{item.durationMinutes}m</span>
+                        <span className="task-chip task-chip-neutral">{formatTaskDate(item.targetDate)}</span>
+                        {item.requiredSkills.length ? (
+                          item.requiredSkills.map((skill) => (
+                            <span key={skill} className="task-chip task-chip-skill">
+                              {skill}
                             </span>
-                            <span className="task-chip task-chip-priority" data-priority={item.priority}>
-                              {item.priority}
-                            </span>
-                            <span className="task-chip task-chip-neutral">{item.durationMinutes}m</span>
-                            <span className="task-chip task-chip-neutral">{formatTaskDate(item.targetDate)}</span>
-                            {item.requiredSkills.length ? (
-                              item.requiredSkills.map((skill) => (
-                                <span key={skill} className="task-chip task-chip-skill">
-                                  {skill}
-                                </span>
-                              ))
-                            ) : (
-                              <span className="task-chip task-chip-neutral">No skills</span>
-                            )}
-                          </div>
-                        </button>
-                      ))}
-                      {items.length > taskGroupRenderLimit ? (
-                        <div className="task-group-more">And {items.length - taskGroupRenderLimit} more.</div>
-                      ) : null}
+                          ))
+                        ) : (
+                          <span className="task-chip task-chip-neutral">No skills</span>
+                        )}
+                      </div>
+                    </button>
+                  ))}
+                  {tasksPage.total === 0 ? (
+                    <div className="empty-state empty-state-inline">
+                      <strong>No work items match.</strong>
+                      <p>Try a different filter.</p>
                     </div>
-                  </section>
-                ))}
+                  ) : null}
+                </div>
+
+                <Pagination
+                  page={tasksPage.page}
+                  pageSize={tasksPage.pageSize}
+                  total={tasksPage.total}
+                  itemCount={tasksPage.items.length}
+                  noun="work items"
+                  onPageChange={setTasksPageNum}
+                />
               </div>
 
               {selectedWorkItem ? (
