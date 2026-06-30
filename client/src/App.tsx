@@ -931,7 +931,7 @@ export function App() {
               New work item
             </button>
             <button type="button" className="secondary" onClick={openCreateResource}>
-              New team member
+              Manage team
             </button>
           </div>
         </div>
