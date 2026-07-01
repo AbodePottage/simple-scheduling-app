@@ -776,32 +776,41 @@ export interface WorkItemQuery {
   priority?: string;
   skill?: string;
   sort?: string;
+  sortDir?: string;
 }
+
+const sortDefaultDirection: Record<WorkItemSort, 'asc' | 'desc'> = {
+  priority: 'desc',
+  date: 'asc',
+  name: 'asc',
+  duration: 'desc',
+};
 
 export function queryWorkItems(query: WorkItemQuery): Page<WorkItem> {
   const page = clampInt(query.page, 1, 1, Number.MAX_SAFE_INTEGER);
   const pageSize = clampInt(query.pageSize, 10, 1, 100);
   const search = (query.search ?? '').trim().toLowerCase();
-  const status = query.status ?? 'all';
-  const priority = query.priority ?? 'all';
-  const skill = query.skill ?? 'all';
+  const statuses = query.status && query.status !== 'all' ? query.status.split(',').filter(Boolean) : [];
+  const priorities = query.priority && query.priority !== 'all' ? query.priority.split(',').filter(Boolean) : [];
+  const skills = query.skill && query.skill !== 'all' ? query.skill.split(',').filter(Boolean) : [];
   const sort: WorkItemSort = (['priority', 'date', 'name', 'duration'] as const).includes(
     query.sort as WorkItemSort,
   )
     ? (query.sort as WorkItemSort)
     : 'priority';
+  const dir = (query.sortDir === 'asc' ? 'asc' : query.sortDir === 'desc' ? 'desc' : sortDefaultDirection[sort]) === 'asc' ? 1 : -1;
 
   let items = state.workItems.filter((item) => {
-    if (status === 'open' && item.status !== 'unscheduled') {
+    if (statuses.length > 0) {
+      const itemStatus = item.status === 'unscheduled' ? 'open' : 'assigned';
+      if (!statuses.includes(itemStatus)) {
+        return false;
+      }
+    }
+    if (priorities.length > 0 && !priorities.includes(item.priority)) {
       return false;
     }
-    if (status === 'assigned' && item.status === 'unscheduled') {
-      return false;
-    }
-    if (priority !== 'all' && item.priority !== priority) {
-      return false;
-    }
-    if (skill !== 'all' && !item.requiredSkills.includes(skill)) {
+    if (skills.length > 0 && !skills.every((skill) => item.requiredSkills.includes(skill))) {
       return false;
     }
     if (search) {
@@ -818,14 +827,15 @@ export function queryWorkItems(query: WorkItemQuery): Page<WorkItem> {
   items = [...items].sort((a, b) => {
     switch (sort) {
       case 'name':
-        return a.title.localeCompare(b.title);
+        return dir * a.title.localeCompare(b.title);
       case 'duration':
-        return b.durationMinutes - a.durationMinutes || a.title.localeCompare(b.title);
+        return dir * (a.durationMinutes - b.durationMinutes) || a.title.localeCompare(b.title);
       case 'date':
+        return dir * a.targetDate.localeCompare(b.targetDate) || priorityRank[b.priority] - priorityRank[a.priority] || a.title.localeCompare(b.title);
       case 'priority':
       default:
         return (
-          priorityRank[b.priority] - priorityRank[a.priority] ||
+          dir * (priorityRank[a.priority] - priorityRank[b.priority]) ||
           a.targetDate.localeCompare(b.targetDate) ||
           a.title.localeCompare(b.title)
         );

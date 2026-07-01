@@ -11,10 +11,11 @@ export interface WorkItemPageParams {
   page: number;
   pageSize: number;
   search?: string;
-  status?: 'all' | 'open' | 'assigned';
+  status?: string;
   priority?: string;
   skill?: string;
   sort?: 'priority' | 'date' | 'name' | 'duration';
+  sortDir?: 'asc' | 'desc';
 }
 
 export interface ResourcePageParams {

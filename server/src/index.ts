@@ -43,7 +43,7 @@ app.get('/api/bootstrap', (_request, response) => {
 });
 
 app.get('/api/work-items', (request, response) => {
-  const { page, pageSize, search, status, priority, skill, sort } = request.query;
+  const { page, pageSize, search, status, priority, skill, sort, sortDir } = request.query;
   response.json(
     queryWorkItems({
       page,
@@ -53,6 +53,7 @@ app.get('/api/work-items', (request, response) => {
       priority: typeof priority === 'string' ? priority : undefined,
       skill: typeof skill === 'string' ? skill : undefined,
       sort: typeof sort === 'string' ? sort : undefined,
+      sortDir: typeof sortDir === 'string' ? sortDir : undefined,
     }),
   );
 });

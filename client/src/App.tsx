@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState, type CSSProperties, type FormEvent, type ReactNode } from 'react';
+import { Calendar, CheckCircle2, ClipboardList, Home, Moon, Sun, Users } from 'lucide-react';
 import { fetchResources, fetchWorkItems, type Page } from './api';
 import { Pagination } from './Pagination';
 import type {
@@ -14,18 +15,24 @@ import type {
 const priorityOrder: Record<Priority, number> = { High: 3, Medium: 2, Low: 1 };
 const taskGroupRenderLimit = 8;
 type Theme = 'light' | 'dark';
-type AppPath = '/home' | '/schedule' | '/tasks' | '/team';
+type AppPath = '/' | '/schedule' | '/tasks' | '/team';
 type TaskDimension = 'status' | 'priority' | 'skills';
 type TaskSort = 'priority' | 'date' | 'name' | 'duration';
+const sortDefaultDirection: Record<TaskSort, 'asc' | 'desc'> = {
+  priority: 'desc',
+  date: 'asc',
+  name: 'asc',
+  duration: 'desc',
+};
 type DetailField = {
   label: string;
   value: ReactNode;
 };
 
-const validPaths: AppPath[] = ['/home', '/schedule', '/tasks', '/team'];
+const validPaths: AppPath[] = ['/', '/schedule', '/tasks', '/team'];
 
 function normalizePath(pathname: string) {
-  return validPaths.includes(pathname as AppPath) ? (pathname as AppPath) : '/home';
+  return validPaths.includes(pathname as AppPath) ? (pathname as AppPath) : '/';
 }
 
 function formatClock(iso: string) {
@@ -106,11 +113,13 @@ export function App() {
   const [selectedResourceId, setSelectedResourceId] = useState<string | null>(null);
   const [editingWorkItemId, setEditingWorkItemId] = useState<string | null>(null);
   const [editingResourceId, setEditingResourceId] = useState<string | null>(null);
-  const [selectedSkill, setSelectedSkill] = useState<string>('All');
   const [workItemQuery, setWorkItemQuery] = useState<string>('');
   const [taskDimension, setTaskDimension] = useState<TaskDimension>('status');
-  const [taskFilterValue, setTaskFilterValue] = useState<string>('all');
+  const [taskFilterValues, setTaskFilterValues] = useState<string[]>([]);
   const [taskSort, setTaskSort] = useState<TaskSort>('priority');
+  const [taskSortDirection, setTaskSortDirection] = useState<'asc' | 'desc'>('desc');
+  const [backlogDimension, setBacklogDimension] = useState<'priority' | 'skills'>('priority');
+  const [backlogFilterValues, setBacklogFilterValues] = useState<string[]>([]);
   const [tasksPageNum, setTasksPageNum] = useState<number>(1);
   const [tasksPage, setTasksPage] = useState<Page<WorkItem>>({ items: [], total: 0, page: 1, pageSize: 10 });
   const [engineersPageNum, setEngineersPageNum] = useState<number>(1);
@@ -150,6 +159,7 @@ export function App() {
   });
   const [draggingWorkItemId, setDraggingWorkItemId] = useState<string | null>(null);
   const [draggingBookingId, setDraggingBookingId] = useState<string | null>(null);
+  const [pendingScrollId, setPendingScrollId] = useState<string | null>(null);
 
   const navigate = (path: AppPath) => {
     const nextPath = normalizePath(path);
@@ -159,6 +169,20 @@ export function App() {
 
     window.history.pushState({}, '', nextPath);
     setPathname(nextPath);
+  };
+
+  useEffect(() => {
+    if (pathname === '/schedule' && pendingScrollId) {
+      document.getElementById(pendingScrollId)?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      setPendingScrollId(null);
+    }
+  }, [pathname, pendingScrollId]);
+
+  const navigateToTasksFiltered = (status: 'open' | 'assigned') => {
+    setTaskDimension('status');
+    setTaskFilterValues([status]);
+    setTasksPageNum(1);
+    navigate('/tasks');
   };
 
   const load = async () => {
@@ -175,19 +199,22 @@ export function App() {
       page: tasksPageNum,
       pageSize: 10,
       sort: taskSort,
-      status: 'all' as 'all' | 'open' | 'assigned',
+      sortDir: taskSortDirection,
+      status: 'all',
       priority: 'all',
       skill: 'all',
     };
-    if (taskDimension === 'status' && (taskFilterValue === 'open' || taskFilterValue === 'assigned')) {
-      params.status = taskFilterValue;
-    } else if (taskDimension === 'priority' && taskFilterValue !== 'all') {
-      params.priority = taskFilterValue;
-    } else if (taskDimension === 'skills' && taskFilterValue !== 'all') {
-      params.skill = taskFilterValue;
+    if (taskFilterValues.length > 0) {
+      if (taskDimension === 'status') {
+        params.status = taskFilterValues.join(',');
+      } else if (taskDimension === 'priority') {
+        params.priority = taskFilterValues.join(',');
+      } else if (taskDimension === 'skills') {
+        params.skill = taskFilterValues.join(',');
+      }
     }
     return params;
-  }, [tasksPageNum, taskSort, taskDimension, taskFilterValue]);
+  }, [tasksPageNum, taskSort, taskSortDirection, taskDimension, taskFilterValues]);
 
   useEffect(() => {
     let cancelled = false;
@@ -245,13 +272,6 @@ export function App() {
 
     window.addEventListener('popstate', onPopState);
     return () => window.removeEventListener('popstate', onPopState);
-  }, []);
-
-  useEffect(() => {
-    if (window.location.pathname === '/') {
-      window.history.replaceState({}, '', '/home');
-      setPathname('/home');
-    }
   }, []);
 
   useEffect(() => {
@@ -320,37 +340,42 @@ export function App() {
       .sort((a, b) => a.resource.name.localeCompare(b.resource.name));
   }, [data]);
 
-  const skillOptions = useMemo(() => ['All', ...(data?.skills ?? [])], [data]);
-
   const visibleResources = useMemo(() => {
     if (!data) {
       return [];
     }
 
-    if (selectedSkill === 'All') {
+    if (backlogDimension !== 'skills' || backlogFilterValues.length === 0) {
       return data.resources;
     }
 
-    return data.resources.filter((resource) => resource.skills.includes(selectedSkill));
-  }, [data, selectedSkill]);
+    return data.resources.filter((resource) => backlogFilterValues.every((skill) => resource.skills.includes(skill)));
+  }, [data, backlogDimension, backlogFilterValues]);
 
-  const visibleWorkItems = useMemo(() => {
-    if (!data) {
-      return [];
-    }
-
-    return data.workItems.filter((item) => {
-      if (selectedSkill === 'All') {
-        return true;
-      }
-
-      return item.requiredSkills.length === 0 || item.requiredSkills.includes(selectedSkill);
-    });
-  }, [data, selectedSkill]);
+  const visibleWorkItems = useMemo(() => data?.workItems ?? [], [data]);
 
   const backlogItems = useMemo(() => {
     const query = workItemQuery.trim().toLowerCase();
     const filtered = visibleWorkItems.filter((item) => {
+      if (item.status !== 'unscheduled') {
+        return false;
+      }
+
+      if (
+        backlogDimension === 'priority' &&
+        backlogFilterValues.length > 0 &&
+        !backlogFilterValues.includes(item.priority)
+      ) {
+        return false;
+      }
+      if (
+        backlogDimension === 'skills' &&
+        backlogFilterValues.length > 0 &&
+        !backlogFilterValues.every((skill) => item.requiredSkills.includes(skill))
+      ) {
+        return false;
+      }
+
       if (!query) {
         return true;
       }
@@ -361,23 +386,24 @@ export function App() {
         .includes(query);
     });
 
+    const dir = taskSortDirection === 'asc' ? 1 : -1;
     return [...filtered].sort((a, b) => {
       switch (taskSort) {
         case 'priority':
           return (
-            priorityOrder[b.priority] - priorityOrder[a.priority] ||
+            dir * (priorityOrder[a.priority] - priorityOrder[b.priority]) ||
             a.targetDate.localeCompare(b.targetDate) ||
             a.title.localeCompare(b.title)
           );
         case 'date':
-          return priorityOrder[b.priority] - priorityOrder[a.priority] || a.targetDate.localeCompare(b.targetDate) || a.title.localeCompare(b.title);
+          return dir * a.targetDate.localeCompare(b.targetDate) || priorityOrder[b.priority] - priorityOrder[a.priority] || a.title.localeCompare(b.title);
         case 'name':
-          return a.title.localeCompare(b.title);
+          return dir * a.title.localeCompare(b.title);
         case 'duration':
-          return b.durationMinutes - a.durationMinutes || a.title.localeCompare(b.title);
+          return dir * (a.durationMinutes - b.durationMinutes) || a.title.localeCompare(b.title);
       }
     });
-  }, [visibleWorkItems, taskSort, workItemQuery]);
+  }, [visibleWorkItems, taskSort, taskSortDirection, workItemQuery, backlogDimension, backlogFilterValues]);
 
   const visibleBacklogItems = useMemo(
     () => backlogItems.slice(0, taskGroupRenderLimit * 2),
@@ -420,6 +446,30 @@ export function App() {
     return [{ value: 'all', label: 'All' }, ...Array.from(skills).map((skill) => ({ value: skill, label: skill }))];
   }, [data, taskDimension]);
 
+  const backlogDimensionOptions = useMemo(
+    () => [
+      { value: 'priority' as const, label: 'Priority' },
+      { value: 'skills' as const, label: 'Skills' },
+    ],
+    [],
+  );
+
+  const backlogValueOptions = useMemo(() => {
+    if (!data) {
+      return [];
+    }
+
+    if (backlogDimension === 'priority') {
+      return [
+        { value: 'all', label: 'All' },
+        { value: 'High', label: 'High' },
+        { value: 'Medium', label: 'Medium' },
+        { value: 'Low', label: 'Low' },
+      ];
+    }
+
+    return [{ value: 'all', label: 'All' }, ...data.skills.map((skill) => ({ value: skill, label: skill }))];
+  }, [data, backlogDimension]);
 
   const unscheduledWorkItems = useMemo(
       () => visibleWorkItems.filter((item) => item.status === 'unscheduled'),
@@ -446,12 +496,11 @@ export function App() {
   const editingResource = editingResourceId ? resourceLookup.get(editingResourceId) ?? null : null;
   const hasScheduleDetails = Boolean(selectedResource || selectedWorkItem);
 
-  const navItems = [
-    { label: 'Home', target: '/home' as AppPath },
-    { label: 'Schedule', target: '/schedule' as AppPath },
-    { label: 'Team', target: '/team' as AppPath },
-    { label: 'Tasks', target: '/tasks' as AppPath },
-  ];
+  const homeIconButton = (
+    <button type="button" className="secondary home-icon-btn" aria-label="Go to home" onClick={() => navigate('/')}>
+      <Home size={18} aria-hidden="true" />
+    </button>
+  );
 
   const submitWorkItem = async (event: FormEvent) => {
     event.preventDefault();
@@ -891,69 +940,36 @@ export function App() {
     (booking) => booking.status !== 'canceled' && booking.startTime.slice(0, 10) === today,
   ).length;
   const homeStats = [
-    { label: 'Open work items', value: openWorkItems, target: '/tasks' as AppPath, icon: '📋', accent: '#d97706' },
-    { label: 'Assigned work items', value: assignedWorkItems, target: '/tasks' as AppPath, icon: '✅', accent: '#16a34a' },
-    { label: 'Teammates', value: data.resources.length, target: '/team' as AppPath, icon: '👥', accent: '#2563eb' },
-    { label: "Today's bookings", value: todaysBookings, target: '/schedule' as AppPath, icon: '📅', accent: '#7c3aed' },
+    {
+      label: "Today's bookings",
+      value: todaysBookings,
+      icon: Calendar,
+      onSelect: () => {
+        navigate('/schedule');
+        setPendingScrollId('board');
+      },
+    },
+    {
+      label: 'Assigned work items',
+      value: assignedWorkItems,
+      icon: CheckCircle2,
+      onSelect: () => navigateToTasksFiltered('assigned'),
+    },
+    {
+      label: 'Open work items',
+      value: openWorkItems,
+      icon: ClipboardList,
+      onSelect: () => navigateToTasksFiltered('open'),
+    },
+    {
+      label: 'Teammates',
+      value: data.resources.length,
+      icon: Users,
+      onSelect: () => navigate('/team'),
+    },
   ];
   const hour = new Date().getHours();
   const greeting = hour < 12 ? 'Good morning' : hour < 18 ? 'Good afternoon' : 'Good evening';
-
-  const homeDashboard = (
-    <section className="home-dashboard">
-      <div className="home-welcome card">
-        <h2>{greeting} 👋</h2>
-        <p className="home-welcome-text">Pick up where you left off</p>
-      </div>
-
-      <div className="home-stats">
-        {homeStats.map((stat) => (
-          <button
-            key={stat.label}
-            type="button"
-            className="home-stat card"
-            style={{ '--stat-accent': stat.accent } as CSSProperties}
-            onClick={() => navigate(stat.target)}
-          >
-            <span className="home-stat-icon" aria-hidden="true">{stat.icon}</span>
-            <span className="home-stat-value">{stat.value}</span>
-            <span className="home-stat-label">{stat.label}</span>
-          </button>
-        ))}
-      </div>
-
-      <div className="home-panels">
-        <div className="home-actions card">
-          <h2>Quick actions</h2>
-          <p className="home-card-sub">Create a new work item or onboard someone to the team.</p>
-          <div className="home-action-buttons">
-            <button type="button" className="secondary" onClick={openCreateWorkItem}>
-              New work item
-            </button>
-            <button type="button" className="secondary" onClick={openCreateResource}>
-              Manage team
-            </button>
-          </div>
-        </div>
-
-        <div className="home-links card">
-          <h2>Jump in</h2>
-          <p className="home-card-sub">Head straight to the workspace you need.</p>
-          <div className="home-link-buttons">
-            <button type="button" className="secondary" onClick={() => navigate('/schedule')}>
-              Open Schedule
-            </button>
-            <button type="button" className="secondary" onClick={() => navigate('/team')}>
-              View Team
-            </button>
-            <button type="button" className="secondary" onClick={() => navigate('/tasks')}>
-              View Tasks
-            </button>
-          </div>
-        </div>
-      </div>
-    </section>
-  );
 
   if (pathname !== '/schedule') {
     const pageTitle = pathname === '/tasks' ? 'Clear the backlog' : pathname === '/team' ? 'Meet the team' : 'Welcome back!';
@@ -961,25 +977,14 @@ export function App() {
       return (
         <main className="shell">
           <header className="hero card">
+            {homeIconButton}
             <div className="hero-copy">
               <h1>{pageTitle}</h1>
-              <nav className="hero-nav" aria-label="Page sections">
-                {navItems.map((item) => (
-                  <button
-                    key={item.target}
-                    type="button"
-                    className={item.target === pathname ? 'hero-nav-pill active' : 'hero-nav-pill'}
-                    onClick={() => navigate(item.target)}
-                  >
-                    {item.label}
-                  </button>
-                ))}
-              </nav>
             </div>
 
             <div className="hero-actions">
               <button type="button" className="primary hero-cta" onClick={openCreateResource}>
-                Manage team
+                New team member
               </button>
               <button
                 type="button"
@@ -987,7 +992,7 @@ export function App() {
                 aria-label={theme === 'light' ? 'Switch to dark mode' : 'Switch to light mode'}
                 onClick={() => setTheme(theme === 'light' ? 'dark' : 'light')}
               >
-                <span aria-hidden="true">{theme === 'light' ? '🌙' : '☀️'}</span>
+                {theme === 'light' ? <Moon size={16} aria-hidden="true" /> : <Sun size={16} aria-hidden="true" />}
               </button>
             </div>
           </header>
@@ -1002,7 +1007,6 @@ export function App() {
                   <section key={label} className="task-group team-column">
                     <div className="task-group-heading">
                       <h3>{label}</h3>
-                      <span className="team-column-count">{page.total}</span>
                     </div>
 
                     <div className="task-list">
@@ -1056,6 +1060,20 @@ export function App() {
                         <DetailTable
                           fields={[
                             { label: 'Role', value: formatResourceRole(selectedResource) },
+                            {
+                              label: 'Skills',
+                              value: selectedResource.skills.length ? (
+                                <div className="detail-skill-chips">
+                                  {selectedResource.skills.map((skill) => (
+                                    <span key={skill} className="task-chip task-chip-skill">
+                                      {skill}
+                                    </span>
+                                  ))}
+                                </div>
+                              ) : (
+                                'No skills listed'
+                              ),
+                            },
                           ]}
                         />
 
@@ -1099,20 +1117,9 @@ export function App() {
       return (
         <main className="shell">
           <header className="hero card">
+            {homeIconButton}
             <div className="hero-copy">
               <h1>{pageTitle}</h1>
-              <nav className="hero-nav" aria-label="Page sections">
-                {navItems.map((item) => (
-                  <button
-                    key={item.target}
-                    type="button"
-                    className={item.target === pathname ? 'hero-nav-pill active' : 'hero-nav-pill'}
-                    onClick={() => navigate(item.target)}
-                  >
-                    {item.label}
-                  </button>
-                ))}
-              </nav>
             </div>
 
             <div className="hero-actions">
@@ -1125,7 +1132,7 @@ export function App() {
                 aria-label={theme === 'light' ? 'Switch to dark mode' : 'Switch to light mode'}
                 onClick={() => setTheme(theme === 'light' ? 'dark' : 'light')}
               >
-                <span aria-hidden="true">{theme === 'light' ? '🌙' : '☀️'}</span>
+                {theme === 'light' ? <Moon size={16} aria-hidden="true" /> : <Sun size={16} aria-hidden="true" />}
               </button>
             </div>
           </header>
@@ -1141,7 +1148,7 @@ export function App() {
                     value={taskDimension}
                     onChange={(event) => {
                       setTaskDimension(event.target.value as TaskDimension);
-                      setTaskFilterValue('all');
+                      setTaskFilterValues([]);
                       setTasksPageNum(1);
                     }}
                   >
@@ -1154,35 +1161,63 @@ export function App() {
                 </label>
 
                 <div className="task-value-group" aria-label="Task values">
-                  {taskValueOptions.map((option) => (
-                    <button
-                      key={option.value}
-                      type="button"
-                      className={taskFilterValue === option.value ? 'task-filter-chip active' : 'task-filter-chip'}
-                      onClick={() => {
-                        setTaskFilterValue(option.value);
-                        setTasksPageNum(1);
-                      }}
-                    >
-                      {option.label}
-                    </button>
-                  ))}
+                  {taskValueOptions.map((option) => {
+                    const isActive =
+                      option.value === 'all' ? taskFilterValues.length === 0 : taskFilterValues.includes(option.value);
+                    return (
+                      <button
+                        key={option.value}
+                        type="button"
+                        className={isActive ? 'task-filter-chip active' : 'task-filter-chip'}
+                        onClick={() => {
+                          if (option.value === 'all') {
+                            setTaskFilterValues([]);
+                          } else {
+                            setTaskFilterValues((current) =>
+                              current.includes(option.value)
+                                ? current.filter((value) => value !== option.value)
+                                : [...current, option.value],
+                            );
+                          }
+                          setTasksPageNum(1);
+                        }}
+                      >
+                        {option.label}
+                      </button>
+                    );
+                  })}
                 </div>
 
                 <label className="task-dimension-filter task-sort-filter">
                   <span>Sort</span>
-                  <select
-                    value={taskSort}
-                    onChange={(event) => {
-                      setTaskSort(event.target.value as TaskSort);
-                      setTasksPageNum(1);
-                    }}
-                  >
-                    <option value="priority">Priority</option>
-                    <option value="date">Due date</option>
-                    <option value="name">Name</option>
-                    <option value="duration">Duration</option>
-                  </select>
+                  <div className="sort-control">
+                    <select
+                      value={taskSort}
+                      onChange={(event) => {
+                        const nextSort = event.target.value as TaskSort;
+                        setTaskSort(nextSort);
+                        setTaskSortDirection(sortDefaultDirection[nextSort]);
+                        setTasksPageNum(1);
+                      }}
+                    >
+                      <option value="priority">Priority</option>
+                      <option value="date">Due date</option>
+                      <option value="name">Name</option>
+                      <option value="duration">Duration</option>
+                    </select>
+                    <button
+                      type="button"
+                      className="secondary sort-direction-btn"
+                      aria-label={taskSortDirection === 'asc' ? 'Sorting ascending, click for descending' : 'Sorting descending, click for ascending'}
+                      title={taskSortDirection === 'asc' ? 'Ascending' : 'Descending'}
+                      onClick={() => {
+                        setTaskSortDirection((current) => (current === 'asc' ? 'desc' : 'asc'));
+                        setTasksPageNum(1);
+                      }}
+                    >
+                      <span aria-hidden="true">{taskSortDirection === 'asc' ? '↑' : '↓'}</span>
+                    </button>
+                  </div>
                 </label>
               </div>
             </div>
@@ -1205,9 +1240,6 @@ export function App() {
                       </div>
 
                       <div className="task-item-chips">
-                        <span className="task-chip task-chip-state" data-state={item.status === 'unscheduled' ? 'open' : 'assigned'}>
-                          {item.status === 'unscheduled' ? 'Open' : 'Assigned'}
-                        </span>
                         <span className="task-chip task-chip-priority" data-priority={item.priority}>
                           {item.priority}
                         </span>
@@ -1304,22 +1336,36 @@ export function App() {
     }
 
     return (
-      <main className="shell">
-        <header className="hero card">
+      <main className="shell shell-home">
+        <section className="hero card hero-home">
+          {homeIconButton}
           <div className="hero-copy">
-            <h1>{pageTitle}</h1>
-            <nav className="hero-nav" aria-label="Page sections">
-              {navItems.map((item) => (
-                <button
-                  key={item.target}
-                  type="button"
-                  className={item.target === pathname ? 'hero-nav-pill active' : 'hero-nav-pill'}
-                  onClick={() => navigate(item.target)}
-                >
-                  {item.label}
+            <h1>{greeting}</h1>
+            <p className="home-welcome-text">Pick up where you left off</p>
+
+            <div className="home-action-buttons">
+              <button type="button" className="secondary" onClick={() => navigate('/schedule')}>
+                Schedule work
+              </button>
+              <button type="button" className="secondary" onClick={() => navigate('/tasks')}>
+                Handle backlog
+              </button>
+              <button type="button" className="secondary" onClick={() => navigate('/team')}>
+                Manage team
+              </button>
+            </div>
+
+            <div className="home-stats">
+              {homeStats.map((stat) => (
+                <button key={stat.label} type="button" className="home-stat" onClick={stat.onSelect}>
+                  <span className="home-stat-icon" aria-hidden="true">
+                    <stat.icon size={32} />
+                  </span>
+                  <span className="home-stat-value">{stat.value}</span>
+                  <span className="home-stat-label">{stat.label}</span>
                 </button>
               ))}
-            </nav>
+            </div>
           </div>
 
           <div className="hero-actions">
@@ -1329,11 +1375,10 @@ export function App() {
               aria-label={theme === 'light' ? 'Switch to dark mode' : 'Switch to light mode'}
               onClick={() => setTheme(theme === 'light' ? 'dark' : 'light')}
             >
-              <span aria-hidden="true">{theme === 'light' ? '🌙' : '☀️'}</span>
+              {theme === 'light' ? <Moon size={16} aria-hidden="true" /> : <Sun size={16} aria-hidden="true" />}
             </button>
           </div>
-        </header>
-        {homeDashboard}
+        </section>
         {composerRail}
       </main>
     );
@@ -1342,33 +1387,12 @@ export function App() {
   return (
     <main className="shell">
       <header className="hero card">
+        {homeIconButton}
         <div className="hero-copy">
           <h1>Assign work fast</h1>
-          <nav className="hero-nav" aria-label="Page sections">
-            {navItems.map((item) => (
-              <button
-                key={item.target}
-                type="button"
-                className={item.target === pathname ? 'hero-nav-pill active' : 'hero-nav-pill'}
-                onClick={() => navigate(item.target)}
-              >
-                {item.label}
-              </button>
-            ))}
-          </nav>
         </div>
 
         <div className="hero-actions">
-          <label className="filter hero-filter">
-            <span>Filter by skill</span>
-            <select value={selectedSkill} onChange={(event) => setSelectedSkill(event.target.value)}>
-              {skillOptions.map((skill) => (
-                <option key={skill} value={skill}>
-                  {skill}
-                </option>
-              ))}
-            </select>
-          </label>
 
           <button
             type="button"
@@ -1376,22 +1400,94 @@ export function App() {
             aria-label={theme === 'light' ? 'Switch to dark mode' : 'Switch to light mode'}
             onClick={() => setTheme(theme === 'light' ? 'dark' : 'light')}
           >
-            <span aria-hidden="true">{theme === 'light' ? '🌙' : '☀️'}</span>
+            {theme === 'light' ? <Moon size={16} aria-hidden="true" /> : <Sun size={16} aria-hidden="true" />}
           </button>
         </div>
       </header>
 
+      <div className="task-filters" aria-label="Page filters">
+        <label className="task-dimension-filter">
+          <span>Dimension</span>
+          <select
+            value={backlogDimension}
+            onChange={(event) => {
+              setBacklogDimension(event.target.value as 'priority' | 'skills');
+              setBacklogFilterValues([]);
+            }}
+          >
+            {backlogDimensionOptions.map((option) => (
+              <option key={option.value} value={option.value}>
+                {option.label}
+              </option>
+            ))}
+          </select>
+        </label>
+
+        <div className="task-value-group" aria-label="Filter values">
+          {backlogValueOptions.map((option) => {
+            const isActive =
+              option.value === 'all' ? backlogFilterValues.length === 0 : backlogFilterValues.includes(option.value);
+            return (
+              <button
+                key={option.value}
+                type="button"
+                className={isActive ? 'task-filter-chip active' : 'task-filter-chip'}
+                onClick={() => {
+                  if (option.value === 'all') {
+                    setBacklogFilterValues([]);
+                  } else {
+                    setBacklogFilterValues((current) =>
+                      current.includes(option.value)
+                        ? current.filter((value) => value !== option.value)
+                        : [...current, option.value],
+                    );
+                  }
+                }}
+              >
+                {option.label}
+              </button>
+            );
+          })}
+        </div>
+
+        <label className="task-dimension-filter task-sort-filter">
+          <span>Sort</span>
+          <div className="sort-control">
+            <select
+              value={taskSort}
+              onChange={(event) => {
+                const nextSort = event.target.value as TaskSort;
+                setTaskSort(nextSort);
+                setTaskSortDirection(sortDefaultDirection[nextSort]);
+              }}
+            >
+              <option value="priority">Priority</option>
+              <option value="date">Due date</option>
+              <option value="name">Name</option>
+              <option value="duration">Duration</option>
+            </select>
+            <button
+              type="button"
+              className="secondary sort-direction-btn"
+              aria-label={taskSortDirection === 'asc' ? 'Sorting ascending, click for descending' : 'Sorting descending, click for ascending'}
+              title={taskSortDirection === 'asc' ? 'Ascending' : 'Descending'}
+              onClick={() => setTaskSortDirection((current) => (current === 'asc' ? 'desc' : 'asc'))}
+            >
+              <span aria-hidden="true">{taskSortDirection === 'asc' ? '↑' : '↓'}</span>
+            </button>
+          </div>
+        </label>
+      </div>
+
       <section className="workspace schedule-workspace">
         <aside className="card backlog-panel" aria-label="Work item backlog">
-          <div className="section-heading">
+          <div className="section-heading backlog-heading">
             <h2>Work items</h2>
-            <span>
-              Showing {visibleBacklogItems.length} out of {backlogItems.length} work items
-            </span>
             <button type="button" className="primary backlog-new-btn" onClick={openCreateWorkItem}>
               New work item
             </button>
           </div>
+
           <label className="backlog-search">
             <div className="search-shell">
               <span aria-hidden="true" className="search-icon">
@@ -1406,7 +1502,21 @@ export function App() {
               />
             </div>
           </label>
-          <div className="backlog-list">
+          <div
+            className={dropTarget?.kind === 'queue' ? 'backlog-list drop-target' : 'backlog-list'}
+            onDragOver={(event) => event.preventDefault()}
+            onDragEnter={() => {
+              if (draggingBookingId) {
+                setDropTarget({ kind: 'queue' });
+              }
+            }}
+            onDragLeave={() => {
+              if (dropTarget?.kind === 'queue') {
+                setDropTarget(null);
+              }
+            }}
+            onDrop={() => void handleQueueDrop()}
+          >
             {visibleBacklogItems.map((item) => (
               <button
                 key={item.id}
@@ -1427,9 +1537,6 @@ export function App() {
                 </div>
 
                 <div className="task-item-chips">
-                  <span className="task-chip task-chip-state" data-state={item.status === 'unscheduled' ? 'open' : 'assigned'}>
-                    {item.status === 'unscheduled' ? 'Open' : 'Assigned'}
-                  </span>
                   <span className="task-chip task-chip-priority" data-priority={item.priority}>
                     {item.priority}
                   </span>
@@ -1447,14 +1554,18 @@ export function App() {
               </button>
             ))}
           </div>
+          <span className="pagination-count backlog-count">
+            Showing {visibleBacklogItems.length} out of {backlogItems.length} work items
+          </span>
         </aside>
 
         <section className="board schedule-board" id="board">
           <div className="board-header">
-            <div>
-              <h2>Schedule</h2>
-            </div>
+            <h2>Schedule</h2>
           </div>
+          <p className="help-text schedule-hint">
+            Drag a work item onto a teammate to assign it, or drag a booking back up to Work items to unassign it.
+          </p>
 
           <div className="schedule-grid">
             {visibleResources.map((resource) => {
@@ -1581,6 +1692,20 @@ export function App() {
                 <DetailTable
                   fields={[
                     { label: 'Role', value: formatResourceRole(selectedResource) },
+                    {
+                      label: 'Skills',
+                      value: selectedResource.skills.length ? (
+                        <div className="detail-skill-chips">
+                          {selectedResource.skills.map((skill) => (
+                            <span key={skill} className="task-chip task-chip-skill">
+                              {skill}
+                            </span>
+                          ))}
+                        </div>
+                      ) : (
+                        'No skills listed'
+                      ),
+                    },
                   ]}
                 />
                 <div className="team-bookings">
@@ -1632,19 +1757,9 @@ export function App() {
                 <div className="team-card-title-row">
                   <strong>{selectedWorkItem.title}</strong>
                   <div className="task-detail-title-actions">
-                    {selectedWorkItem.status === 'unscheduled' ? (
-                      <button type="button" className="secondary task-detail-action-inline" onClick={() => beginEditWorkItem(selectedWorkItem)}>
-                        Edit work item
-                      </button>
-                    ) : (
-                      <button
-                        type="button"
-                        className="secondary task-detail-action-inline"
-                        onClick={() => void patchWorkItem(selectedWorkItem.id, { assigneeId: null })}
-                      >
-                        Unassign work item
-                      </button>
-                    )}
+                    <button type="button" className="secondary task-detail-action-inline" onClick={() => beginEditWorkItem(selectedWorkItem)}>
+                      Edit work item
+                    </button>
                   </div>
                 </div>
                 <DetailTable
