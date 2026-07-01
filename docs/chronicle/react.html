@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>S6 &middot; React state &amp; effects</title>
+  <title>React state &amp; effects</title>
   <link rel="stylesheet" href="chronicle.css">
   <script src="chronicle.js"></script>
 </head>
@@ -11,7 +11,11 @@
   <header class="topnav">
     <div class="topnav-inner">
       <a class="brand" href="index.html"><span class="mark">🗓️</span> Scheduling SPA Chronicle</a>
+      <div class="nav-controls">
+      <button class="zoom-out" type="button" aria-label="Decrease text size">A−</button>
+      <button class="zoom-in"  type="button" aria-label="Increase text size">A+</button>
       <button class="theme-toggle" type="button" aria-label="Toggle theme"><span class="icon-moon">🌙</span><span class="icon-sun">☀️</span></button>
+    </div>
     </div>
   </header>
 
@@ -19,17 +23,20 @@
     <aside class="sidebar">
       <div class="sidebar-eyebrow">The deck</div>
       <ol>
-        <li><a href="index.html"><span class="sb-num">00</span><span>Overview</span></a></li>
-        <li><a href="s1-timeline.html"><span class="sb-num">S1</span><span>The build timeline</span></a></li>
-        <li><a href="s2-architecture.html"><span class="sb-num">S2</span><span>Architecture &amp; data flow</span></a></li>
-        <li><a href="s3-typescript.html"><span class="sb-num">S3</span><span>TypeScript</span></a></li>
-        <li><a href="s4-html-jsx.html"><span class="sb-num">S4</span><span>HTML &amp; JSX</span></a></li>
-        <li><a href="s5-css.html"><span class="sb-num">S5</span><span>CSS &amp; design system</span></a></li>
-        <li class="active"><a href="s6-react.html"><span class="sb-num">S6</span><span>React state &amp; effects</span></a></li>
-        <li><a href="s7-lessons.html"><span class="sb-num">S7</span><span>Redirects &amp; lessons</span></a></li>
-        <li><a href="s8-rebuild.html"><span class="sb-num">S8</span><span>Rebuild 1: brief &amp; plan</span></a></li>
-        <li><a href="s9-clean-architecture.html"><span class="sb-num">S9</span><span>Rebuild 2: the server</span></a></li>
-        <li><a href="s10-frontend-conventions.html"><span class="sb-num">S10</span><span>Rebuild 3: the client</span></a></li>
+        <li><a href="index.html"><span>Overview</span></a></li>
+        <li><a href="timeline.html"><span>The build timeline</span></a></li>
+        <li><a href="architecture.html"><span>Architecture &amp; data flow</span></a></li>
+        <li><a href="framework-landscape.html"><span>Framework landscape</span></a></li>
+        <li><a href="stack-choices.html"><span>Stack choices</span></a></li>
+        <li><a href="typescript.html"><span>TypeScript</span></a></li>
+        <li><a href="html-jsx.html"><span>HTML &amp; JSX</span></a></li>
+        <li><a href="css.html"><span>CSS &amp; design system</span></a></li>
+        <li class="active"><a href="react.html"><span>React state &amp; effects</span></a></li>
+        <li><a href="angular-comparison.html"><span>Angular: a direct translation</span></a></li>
+        <li><a href="lessons.html"><span>Redirects &amp; lessons</span></a></li>
+        <li><a href="rebuild.html"><span>Rebuild 1: brief &amp; plan</span></a></li>
+        <li><a href="clean-architecture.html"><span>Rebuild 2: the server</span></a></li>
+        <li><a href="frontend-conventions.html"><span>Rebuild 3: the client</span></a></li>
       </ol>
     </aside>
 
@@ -37,7 +44,7 @@
       <header class="mission-header">
         <a class="crumb" href="index.html">&larr; Overview</a>
         <div class="badge-large">⚛️</div>
-        <div class="kicker">S6 &middot; crash course</div>
+        <div class="kicker">crash course</div>
         <h1>React state &amp; effects</h1>
         <div class="meta-row"><span>UI = f(state)</span><span>the three hooks</span></div>
       </header>
@@ -128,11 +135,11 @@ const [data, setData] = useState&lt;BootstrapResponse | null&gt;(null);</code></
         <figure class="diagram">
           <pre class="mermaid">
 graph TD
-  A["Click '2'&lt;br/&gt;Pagination &amp;rarr; onPageChange(2) &amp;rarr; setTasksPageNum(2)&lt;br/&gt;&lt;b&gt;[useState]&lt;/b&gt;"] --&gt; B["State changed &amp;rarr; App re-renders"]
-  B --&gt; C["taskQueryParams recomputes (page now 2)&lt;br/&gt;&lt;b&gt;[useMemo]&lt;/b&gt;"]
-  C --&gt; D["Its value changed &amp;rarr; the fetch effect re-runs&lt;br/&gt;&lt;b&gt;[useEffect]&lt;/b&gt;"]
-  D --&gt; E["fetchWorkItems &amp;rarr; GET /api/work-items?page=2 &amp;rarr; setTasksPage(...)"]
-  E --&gt; F["State changed &amp;rarr; App re-renders&lt;br/&gt;new rows + 'Showing 11-20 of 60'"]
+  A["Click page 2&lt;br/&gt;&lt;b&gt;useState&lt;/b&gt;"] --&gt; B["App re-renders"]
+  B --&gt; C["taskQueryParams recomputes&lt;br/&gt;&lt;b&gt;useMemo&lt;/b&gt;"]
+  C --&gt; D["Fetch effect re-runs&lt;br/&gt;&lt;b&gt;useEffect&lt;/b&gt;"]
+  D --&gt; E["GET /api/work-items?page=2"]
+  E --&gt; F["New rows paint&lt;br/&gt;Showing 11–20 of 60"]
           </pre>
           <figcaption>One click, one state change; the screen follows. No DOM surgery anywhere.</figcaption>
         </figure>
@@ -140,18 +147,18 @@ graph TD
 
         <h2>Where the monolith strains this model</h2>
         <p>Because <em>all</em> ~20 state slices live in one <code>App</code> function, every keystroke in a form re-runs the whole component (React is fast enough that it doesn't matter here, but it's a smell). And state that should be local to a form or a page is hoisted to the top, tangling concerns.</p>
-        <div class="callout warn"><span class="label">Relearn by redoing</span>The fix is <strong>colocation</strong>: state lives in the smallest component that needs it. A <code>&lt;WorkItemForm&gt;</code> owns its own form state; a <code>&lt;TasksPage&gt;</code> owns its own pagination state. Data still flows down, events still flow up &mdash; but the blast radius of any change shrinks to one file. That's the central refactor of <a href="s8-rebuild.html">S8</a>, and you'll only appreciate <em>why</em> after having lived in the one-big-component version.</div>
+        <div class="callout warn"><span class="label">Relearn by redoing</span>The fix is <strong>colocation</strong>: state lives in the smallest component that needs it. A <code>&lt;WorkItemForm&gt;</code> owns its own form state; a <code>&lt;TasksPage&gt;</code> owns its own pagination state. Data still flows down, events still flow up &mdash; but the blast radius of any change shrinks to one file. That's the central refactor of <a href="rebuild.html">S8</a>, and you'll only appreciate <em>why</em> after having lived in the one-big-component version.</div>
 
         <div class="callout good"><span class="label">The mental model</span><strong>UI = f(state).</strong> Hold the truth in <code>useState</code>; derive from it with <code>useMemo</code>; reach outside with <code>useEffect</code> (and mind the dependency array). Pass data down as props, send events up as callbacks. Never touch the DOM &mdash; change state and let React reconcile.</div>
       </article>
 
       <nav class="slide-nav">
-        <a href="s5-css.html"><div class="dir">Previous</div><div class="ttl">S5 &middot; CSS &amp; design system</div></a>
-        <a class="next" href="s7-lessons.html"><div class="dir">Next</div><div class="ttl">S7 &middot; Redirects &amp; lessons</div></a>
+        <a href="css.html"><div class="dir">Previous</div><div class="ttl">CSS &amp; design system</div></a>
+        <a class="next" href="angular-comparison.html"><div class="dir">Next</div><div class="ttl">Angular: a direct translation</div></a>
       </nav>
     </main>
   </div>
 
-  <footer class="site-footer">Chronicle of <code>simple-scheduling-app</code> &middot; S6 of 10</footer>
+  <footer class="site-footer">Chronicle of <code>simple-scheduling-app</code></footer>
 </body>
 </html>

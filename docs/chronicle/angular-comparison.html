@@ -1,0 +1,432 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Angular &middot; A direct translation</title>
+  <meta name="description" content="Every React concept from S4–S6 shown in Angular 17+ syntax, side by side.">
+  <link rel="stylesheet" href="chronicle.css">
+  <script src="chronicle.js"></script>
+</head>
+<body>
+  <header class="topnav">
+    <div class="topnav-inner">
+      <a class="brand" href="index.html"><span class="mark">🗓️</span> Scheduling SPA Chronicle</a>
+      <div class="nav-controls">
+      <button class="zoom-out" type="button" aria-label="Decrease text size">A−</button>
+      <button class="zoom-in"  type="button" aria-label="Increase text size">A+</button>
+      <button class="theme-toggle" type="button" aria-label="Toggle theme"><span class="icon-moon">🌙</span><span class="icon-sun">☀️</span></button>
+    </div>
+    </div>
+  </header>
+
+  <div class="layout">
+    <aside class="sidebar">
+      <div class="sidebar-eyebrow">The deck</div>
+      <ol>
+        <li><a href="index.html"><span>Overview</span></a></li>
+        <li><a href="timeline.html"><span>The build timeline</span></a></li>
+        <li><a href="architecture.html"><span>Architecture &amp; data flow</span></a></li>
+        <li><a href="framework-landscape.html"><span>Framework landscape</span></a></li>
+        <li><a href="stack-choices.html"><span>Stack choices</span></a></li>
+        <li><a href="typescript.html"><span>TypeScript</span></a></li>
+        <li><a href="html-jsx.html"><span>HTML &amp; JSX</span></a></li>
+        <li><a href="css.html"><span>CSS &amp; design system</span></a></li>
+        <li><a href="react.html"><span>React state &amp; effects</span></a></li>
+        <li class="active"><a href="angular-comparison.html"><span>Angular: a direct translation</span></a></li>
+        <li><a href="lessons.html"><span>Redirects &amp; lessons</span></a></li>
+        <li><a href="rebuild.html"><span>Rebuild 1: brief &amp; plan</span></a></li>
+        <li><a href="clean-architecture.html"><span>Rebuild 2: the server</span></a></li>
+        <li><a href="frontend-conventions.html"><span>Rebuild 3: the client</span></a></li>
+      </ol>
+    </aside>
+
+    <main class="content">
+      <header class="mission-header">
+        <a class="crumb" href="index.html">&larr; Overview</a>
+        <div class="badge-large">⬡</div>
+        <div class="kicker">reference</div>
+        <h1>Angular: a direct translation</h1>
+        <div class="meta-row"><span>same scheduling app</span><span>same concepts</span><span>Angular 17+</span></div>
+      </header>
+
+      <article class="body">
+        <p>S4&ndash;S6 taught React: components as functions, JSX, hooks, the data-down/events-up discipline. Every one of those concepts has a direct Angular equivalent. This slide is a side-by-side translation of the same scheduling app code &mdash; same logic, same domain types, different syntax and framework conventions. Read it after S6 and you can switch frameworks with a week of syntax adjustment rather than a month of relearning.</p>
+
+        <div class="callout"><span class="label">Angular version</span>All examples use Angular 17+ standalone components and the new <code>@if</code> / <code>@for</code> control-flow syntax. Older Angular code uses <code>NgModules</code> and <code>*ngIf</code> / <code>*ngFor</code> structural directives &mdash; the concepts are the same, the syntax is more ceremonial. If you are reading a pre-2024 Angular codebase, the table at the end of section 3 maps between old and new syntax.</div>
+
+        <h2>1. One component, three files (vs one <code>.tsx</code>)</h2>
+        <p>React keeps everything in one file. Angular splits a component into (usually) three files by convention. The content is identical; the organisation is enforced by the framework rather than a folder convention you choose yourself.</p>
+
+        <div class="two-col">
+          <div class="card">
+            <strong>React &mdash; one file</strong>
+            <pre><code>// Pagination.tsx
+export function Pagination({
+  page,
+  total,
+  pageSize,
+  noun,
+  onPageChange,
+}: PaginationProps) {
+  /* JSX + logic in one place */
+}</code></pre>
+          </div>
+          <div class="card">
+            <strong>Angular &mdash; three files</strong>
+            <pre><code>pagination.component.ts   // the class
+pagination.component.html // the template
+pagination.component.css  // scoped styles</code></pre>
+            <p style="margin-top:0.75rem;font-size:0.875rem">Angular also generates a <code>.spec.ts</code> test file. The <code>ng generate component pagination</code> CLI command creates all four.</p>
+          </div>
+        </div>
+
+        <div class="callout good"><span class="label">Styles are scoped by default</span>Angular emulates CSS scoping automatically via <code>ViewEncapsulation.Emulated</code>. A rule in <code>pagination.component.css</code> only applies inside that component &mdash; what the rebuild achieves with CSS Modules, Angular gives you without opting in. The design-token pattern from S5 (<code>:root</code> custom properties) works identically in both frameworks.</div>
+
+        <h2>2. The component class vs the component function</h2>
+        <p>A React component is a function. An Angular component is a <strong>class decorated with metadata</strong>. Everything the function's closure holds (props, local state, derived values) the class holds as properties, getters, and methods.</p>
+
+        <div class="two-col">
+          <div class="card">
+            <strong>React</strong>
+            <pre><code>export function Pagination({
+  page,
+  total,
+  pageSize = 10,
+  noun,
+  onPageChange,
+}: PaginationProps) {
+
+  const lastPage =
+    Math.max(1, Math.ceil(total / pageSize));
+
+  if (total === 0) return null;
+  return (
+    &lt;div className="pagination"&gt;...&lt;/div&gt;
+  );
+}</code></pre>
+          </div>
+          <div class="card">
+            <strong>Angular</strong>
+            <pre><code>@Component({
+  standalone: true,
+  selector: 'app-pagination',
+  templateUrl: './pagination.component.html',
+  styleUrls: ['./pagination.component.css'],
+})
+export class PaginationComponent {
+  @Input() page: number = 1;
+  @Input() total: number = 0;
+  @Input() pageSize: number = 10;
+  @Input() noun: string = '';
+  @Output() pageChange =
+    new EventEmitter&lt;number&gt;();
+
+  get lastPage(): number {
+    return Math.max(
+      1, Math.ceil(this.total / this.pageSize)
+    );
+  }
+}</code></pre>
+          </div>
+        </div>
+
+        <ul>
+          <li><strong><code>@Component</code></strong> is the .NET <code>[Attribute]</code> pattern. It provides metadata: the HTML tag name (<code>selector</code>), the template file, and the styles. Angular reads this at startup, not at runtime per-render.</li>
+          <li><strong><code>standalone: true</code></strong> is the modern Angular default (17+): no <code>NgModule</code> required. You import the class directly where you need it, like a React component.</li>
+          <li><strong><code>@Input()</code></strong> is a prop. <strong><code>@Output()</code></strong> + <code>EventEmitter</code> is a callback prop. The data-down/events-up discipline from S6 is the same &mdash; Angular just makes it explicit with decorators.</li>
+          <li><strong>Getters</strong> replace <code>useMemo</code> for derived values that depend only on <code>@Input()</code> properties. For derived values that depend on Signals, use <code>computed()</code> (covered in section 4).</li>
+        </ul>
+
+        <h2>3. Template syntax vs JSX</h2>
+        <p>JSX puts markup inside TypeScript. Angular keeps them separate: the template is an HTML file with Angular-specific syntax. Compare the Pagination template with the JSX from S4:</p>
+
+        <pre><code>&lt;!-- pagination.component.html (Angular 17+) --&gt;
+@if (total &gt; 0) {
+  &lt;nav class="pagination" aria-label="Pagination"&gt;
+    &lt;span class="pagination-count"&gt;
+      Showing page {{ page }} of {{ lastPage }} {{ noun }}
+    &lt;/span&gt;
+    @for (p of pages; track p) {
+      &lt;button
+        [attr.aria-current]="p === page ? 'page' : null"
+        (click)="pageChange.emit(p)"
+      &gt;{{ p }}&lt;/button&gt;
+    }
+  &lt;/nav&gt;
+}</code></pre>
+
+        <table>
+          <thead>
+            <tr><th>Concept</th><th>React (JSX)</th><th>Angular (template)</th></tr>
+          </thead>
+          <tbody>
+            <tr><td>CSS class</td><td><code>className="foo"</code></td><td><code>class="foo"</code> &mdash; plain HTML</td></tr>
+            <tr><td>Interpolate a value</td><td><code>{expression}</code></td><td><code>{{ expression }}</code></td></tr>
+            <tr><td>Bind a property</td><td><code>value={x}</code></td><td><code>[value]="x"</code> &mdash; square brackets</td></tr>
+            <tr><td>Handle an event</td><td><code>onClick={() =&gt; fn()}</code></td><td><code>(click)="fn()"</code> &mdash; round brackets</td></tr>
+            <tr><td>Two-way bind a form field</td><td><code>value={x} onChange={set}</code></td><td><code>[(ngModel)]="x"</code> &mdash; &ldquo;banana in a box&rdquo;</td></tr>
+            <tr><td>Render a list</td><td><code>items.map(i =&gt; &lt;li key={i.id}&gt;)</code></td><td><code>@for (i of items; track i.id) { &lt;li&gt; }</code></td></tr>
+            <tr><td>Conditional render</td><td><code>condition ? &lt;A /&gt; : null</code></td><td><code>@if (condition) { ... } @else { ... }</code></td></tr>
+            <tr><td>Use a child component</td><td><code>&lt;Pagination page={x} onPageChange={fn} /&gt;</code></td><td><code>&lt;app-pagination [page]="x" (pageChange)="fn($event)" /&gt;</code></td></tr>
+          </tbody>
+        </table>
+
+        <div class="callout"><span class="label">Square brackets, round brackets, banana in a box</span><strong><code>[property]</code></strong> = data flowing <em>in</em> (binding a TypeScript expression to an element property). <strong><code>(event)</code></strong> = events flowing <em>out</em> (listening for a DOM event or Output). <strong><code>[(ngModel)]</code></strong> = both directions at once (two-way binding for form inputs). This is the data-down/events-up discipline from S6 made visible in the syntax itself. You can always expand <code>[(ngModel)]="x"</code> into its parts: <code>[ngModel]="x" (ngModelChange)="x = $event"</code>.</div>
+
+        <details>
+          <summary>Old syntax you will see in pre-2024 code</summary>
+          <table>
+            <thead><tr><th>Old (Angular &lt; 17)</th><th>New (Angular 17+)</th></tr></thead>
+            <tbody>
+              <tr><td><code>*ngIf="condition"</code></td><td><code>@if (condition) { ... }</code></td></tr>
+              <tr><td><code>*ngFor="let i of items; trackBy: trackFn"</code></td><td><code>@for (i of items; track i.id) { ... }</code></td></tr>
+              <tr><td><code>*ngSwitch</code> + <code>*ngSwitchCase</code></td><td><code>@switch (x) { @case (y) { ... } }</code></td></tr>
+              <tr><td><code>NgModule</code> declarations array</td><td><code>standalone: true</code> + component <code>imports</code></td></tr>
+            </tbody>
+          </table>
+        </details>
+
+        <h2>4. State: Signals vs <code>useState</code></h2>
+        <p>Angular 17 stabilised <strong>Signals</strong> &mdash; a reactive primitive that works almost identically to <code>useState</code>. Before Signals, Angular used plain class properties and relied on its change-detection engine to track mutations. Signals are the recommended modern path and the one to learn first. Traditional class properties still work and appear in all pre-2024 code.</p>
+
+        <div class="two-col">
+          <div class="card">
+            <strong>React</strong>
+            <pre><code>// declare:
+const [theme, setTheme] =
+  useState&lt;Theme&gt;('light');
+const [data, setData] =
+  useState&lt;AppState | null&gt;(null);
+
+// read:
+return &lt;div className={theme}&gt;...&lt;/div&gt;;
+
+// update:
+setTheme('dark');
+setData(newState);</code></pre>
+          </div>
+          <div class="card">
+            <strong>Angular (Signals)</strong>
+            <pre><code>// declare (class property):
+theme = signal&lt;Theme&gt;('light');
+data = signal&lt;AppState | null&gt;(null);
+
+// read (template):
+&lt;div [class]="theme()"&gt;...&lt;/div&gt;
+
+// update:
+this.theme.set('dark');
+this.data.set(newState);</code></pre>
+          </div>
+        </div>
+
+        <p>Reading a Signal always requires <strong>calling it as a function</strong>: <code>this.theme()</code>, not <code>this.theme</code>. Angular tracks the read and knows to re-run anything that depends on it when the value changes.</p>
+
+        <h3>Derived state: <code>computed</code> vs <code>useMemo</code></h3>
+        <div class="two-col">
+          <div class="card">
+            <strong>React</strong>
+            <pre><code>const openItems = useMemo(
+  () =&gt;
+    data?.workItems
+      .filter(i =&gt; i.status === 'unscheduled')
+      .length ?? 0,
+  [data]   // &larr; dependency array
+);</code></pre>
+          </div>
+          <div class="card">
+            <strong>Angular</strong>
+            <pre><code>openItems = computed(
+  () =&gt;
+    this.data()?.workItems
+      .filter(i =&gt; i.status === 'unscheduled')
+      .length ?? 0
+  // no dependency array &mdash; tracked automatically
+);</code></pre>
+          </div>
+        </div>
+
+        <div class="callout good"><span class="label">No dependency array</span><code>computed()</code> tracks which Signals were read during its last execution and re-runs automatically when any of them change. You cannot forget a dependency or include a stale one. This is one place the Angular signal model is genuinely less error-prone than React hooks.</div>
+
+        <h2>5. Lifecycle: <code>ngOnInit</code> / <code>effect</code> vs <code>useEffect</code></h2>
+        <p>React's <code>useEffect</code> covers the entire lifecycle with one function and a dependency array. Angular separates the cases into named lifecycle hooks and &mdash; with Signals &mdash; a reactive <code>effect()</code>.</p>
+
+        <div class="two-col">
+          <div class="card">
+            <strong>React</strong>
+            <pre><code>// once on mount:
+useEffect(() =&gt; {
+  void load();
+}, []);
+
+// when deps change:
+useEffect(() =&gt; {
+  let cancelled = false;
+  fetchWorkItems(params).then(r =&gt; {
+    if (!cancelled) setTasksPage(r);
+  });
+  return () =&gt; { cancelled = true; };
+}, [params, data]);
+
+// cleanup on unmount:
+useEffect(() =&gt; {
+  const id = setInterval(poll, 30_000);
+  return () =&gt; clearInterval(id);
+}, []);</code></pre>
+          </div>
+          <div class="card">
+            <strong>Angular</strong>
+            <pre><code>// once on mount:
+ngOnInit() {
+  this.load();
+}
+
+// when a Signal changes (in constructor):
+constructor() {
+  effect(() =&gt; {
+    const p = this.taskQueryParams();
+    this.workItemsService.query(p)
+      .subscribe(r =&gt; this.tasksPage.set(r));
+  });
+}
+
+// cleanup on unmount:
+ngOnDestroy() {
+  clearInterval(this.pollId);
+}</code></pre>
+          </div>
+        </div>
+
+        <table>
+          <thead>
+            <tr><th>React <code>useEffect</code> pattern</th><th>Angular equivalent</th><th>When</th></tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td><code>useEffect(fn, [])</code></td>
+              <td><code>ngOnInit()</code></td>
+              <td>Run once on mount</td>
+            </tr>
+            <tr>
+              <td><code>useEffect(fn, [deps])</code></td>
+              <td><code>effect()</code> (reads Signals inside) <em>or</em> <code>ngOnChanges()</code> (for <code>@Input</code> changes)</td>
+              <td>Run when something changes</td>
+            </tr>
+            <tr>
+              <td>Cleanup <code>return</code></td>
+              <td><code>ngOnDestroy()</code></td>
+              <td>Unsubscribe, clear timers, release resources</td>
+            </tr>
+          </tbody>
+        </table>
+
+        <div class="callout"><span class="label">The cancelled-flag pattern in Angular</span>The React cancelled-flag pattern from S6 &mdash; <code>let cancelled = false; return () =&gt; { cancelled = true; }</code> &mdash; exists to handle the case where a component unmounts before an async call returns. In Angular the idiomatic equivalent is storing the Observable subscription in a property and calling <code>this.sub.unsubscribe()</code> in <code>ngOnDestroy()</code>, or using <code>takeUntilDestroyed()</code> from <code>@angular/core/rxjs-interop</code> to close the subscription automatically when the component is destroyed.</div>
+
+        <h2>6. Services + DI vs Custom Hooks</h2>
+        <p>React extracts reusable logic into custom hooks. Angular uses <strong>injectable services</strong> &mdash; classes registered in a DI container and injected wherever needed. For a .NET developer, this is the most immediately familiar pattern in the entire framework.</p>
+
+        <div class="two-col">
+          <div class="card">
+            <strong>React (custom hook)</strong>
+            <pre><code>// useWorkItems.ts
+export function useWorkItems(
+  params: WorkItemQuery
+) {
+  const [page, setPage] =
+    useState&lt;Page&lt;WorkItem&gt; | null&gt;(null);
+
+  useEffect(() =&gt; {
+    let cancelled = false;
+    fetchWorkItems(params).then(p =&gt; {
+      if (!cancelled) setPage(p);
+    });
+    return () =&gt; { cancelled = true; };
+  }, [params]);
+
+  return page;
+}
+
+// in a component:
+const page = useWorkItems(params);</code></pre>
+          </div>
+          <div class="card">
+            <strong>Angular (injectable service)</strong>
+            <pre><code>// work-items.service.ts
+@Injectable({ providedIn: 'root' })
+export class WorkItemsService {
+  private http = inject(HttpClient);
+
+  query(
+    params: WorkItemQuery
+  ): Observable&lt;Page&lt;WorkItem&gt;&gt; {
+    return this.http.get&lt;Page&lt;WorkItem&gt;&gt;(
+      '/api/work-items', { params }
+    );
+  }
+}
+
+// in a component:
+private svc = inject(WorkItemsService);
+page = toSignal(this.svc.query(this.params));</code></pre>
+          </div>
+        </div>
+
+        <p>The .NET analogy is exact:</p>
+        <table>
+          <thead><tr><th>.NET</th><th>Angular</th></tr></thead>
+          <tbody>
+            <tr><td><code>services.AddSingleton&lt;WorkItemsService&gt;()</code></td><td><code>@Injectable({ providedIn: 'root' })</code></td></tr>
+            <tr><td><code>services.AddScoped&lt;WorkItemsService&gt;()</code></td><td><code>providers: [WorkItemsService]</code> on a component</td></tr>
+            <tr><td>Constructor injection in a controller</td><td><code>private svc = inject(WorkItemsService)</code></td></tr>
+            <tr><td><code>IHttpClientFactory.CreateClient()</code></td><td><code>inject(HttpClient)</code></td></tr>
+          </tbody>
+        </table>
+
+        <h2>7. The RxJS callout</h2>
+        <div class="callout warn"><span class="label">The one genuinely new concept: Observables</span>Angular's <code>HttpClient</code> returns <strong>Observables</strong> from the RxJS library, not Promises. An Observable is like a <code>Task&lt;T&gt;</code> that can emit multiple values over time and compose with operators (<code>map</code>, <code>switchMap</code>, <code>combineLatest</code>, <code>debounceTime</code>). For simple one-shot HTTP calls you can bridge to a Promise: <code>firstValueFrom(this.http.get(...))</code>. Or convert to a Signal: <code>toSignal(this.http.get(...))</code>. Idiomatic Angular uses Observables throughout; the <code>async</code> pipe in templates subscribes and unsubscribes automatically. RxJS is powerful and has its own learning curve &mdash; it is the one part of Angular with no close .NET equivalent. Budget time for it.</div>
+
+        <h2>8. The full mental model map</h2>
+        <table>
+          <thead>
+            <tr><th>React concept</th><th>Angular equivalent</th><th>Notes</th></tr>
+          </thead>
+          <tbody>
+            <tr><td>Function component</td><td>Class + <code>@Component</code> decorator</td><td>Same responsibilities, different shape</td></tr>
+            <tr><td>JSX (inline markup)</td><td>Separate HTML template file</td><td>Angular uses real HTML + directives</td></tr>
+            <tr><td>Props (function parameters)</td><td><code>@Input()</code> properties</td><td>Data flowing in from parent</td></tr>
+            <tr><td>Callback prop</td><td><code>@Output()</code> + <code>EventEmitter&lt;T&gt;</code></td><td>Events flowing out to parent</td></tr>
+            <tr><td><code>useState&lt;T&gt;()</code></td><td><code>signal&lt;T&gt;()</code></td><td>Both trigger a re-render on change</td></tr>
+            <tr><td><code>useMemo(fn, [deps])</code></td><td><code>computed(fn)</code></td><td>No dependency array; tracked automatically</td></tr>
+            <tr><td><code>useEffect(fn, [])</code></td><td><code>ngOnInit()</code></td><td>Run once on mount</td></tr>
+            <tr><td><code>useEffect(fn, [signals])</code></td><td><code>effect(fn)</code></td><td>Reads tracked; re-runs on any signal change</td></tr>
+            <tr><td>Cleanup <code>return</code></td><td><code>ngOnDestroy()</code></td><td>Unsubscribe, clear timers</td></tr>
+            <tr><td>Custom hook</td><td><code>@Injectable()</code> service</td><td>DI container; like .NET <code>AddSingleton</code></td></tr>
+            <tr><td><code>fetch</code> + <code>useEffect</code></td><td><code>HttpClient</code> (Observable → <code>toSignal</code>)</td><td>RxJS; bridgeable but has its own model</td></tr>
+            <tr><td>CSS Modules (<code>import styles from './X.module.css'</code>)</td><td>Component CSS (scoped by default)</td><td>Same outcome; automatic in Angular</td></tr>
+            <tr><td><code>React.createContext</code> + <code>useContext</code></td><td>DI providers + <code>inject()</code></td><td>Angular DI is a superset of what Context does</td></tr>
+            <tr><td><code>React.memo</code></td><td><code>ChangeDetectionStrategy.OnPush</code></td><td>Skip re-render unless inputs change</td></tr>
+            <tr><td><code>npm create vite</code></td><td><code>ng new my-app</code></td><td>Angular CLI generates more: routing, tests, lint config</td></tr>
+          </tbody>
+        </table>
+
+        <div class="callout good"><span class="label">The takeaway</span>The concepts are the same. Components receive data, render markup, raise events, fetch from the server, and clean up after themselves. Angular externalises the template, makes DI first-class, and uses decorators where React uses function arguments. Once you can read one you can read the other &mdash; the vocabulary is a week's work, not a month's. The FW slide helps you choose; this slide helps you switch.</div>
+
+        <h3>Hands-on (15 min)</h3>
+        <ol>
+          <li>Take the <code>Pagination</code> component from this app (<code>client/src/App.tsx</code>, search for <code>function Pagination</code>) and translate it on paper into an Angular class and template: the <code>@Input</code> / <code>@Output</code> class, then the <code>@if</code> / <code>@for</code> template. Check it against the examples in section 2&ndash;3 above.</li>
+          <li>Find the bootstrap <code>useEffect</code> in <code>App.tsx</code> (search for <code>GET /api/bootstrap</code>). Which Angular lifecycle hook does it become? Where does the <code>HttpClient</code> call go? Write it out.</li>
+          <li>Find any <code>useMemo</code> in <code>App.tsx</code>. Rewrite it as an Angular <code>computed()</code>. Notice you drop the dependency array entirely &mdash; what does Angular use instead?</li>
+        </ol>
+      </article>
+
+      <nav class="slide-nav">
+        <a href="react.html"><div class="dir">Previous</div><div class="ttl">React state &amp; effects</div></a>
+        <a class="next" href="lessons.html"><div class="dir">Next</div><div class="ttl">Redirects &amp; lessons</div></a>
+      </nav>
+    </main>
+  </div>
+
+  <footer class="site-footer">Chronicle of <code>simple-scheduling-app</code></footer>
+</body>
+</html>

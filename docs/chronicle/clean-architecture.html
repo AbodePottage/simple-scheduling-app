@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>S9 &middot; The server: clean architecture &amp; DDD</title>
+  <title>The server: clean architecture &amp; DDD</title>
   <link rel="stylesheet" href="chronicle.css">
   <script src="chronicle.js"></script>
 </head>
@@ -11,7 +11,11 @@
   <header class="topnav">
     <div class="topnav-inner">
       <a class="brand" href="index.html"><span class="mark">🗓️</span> Scheduling SPA Chronicle</a>
+      <div class="nav-controls">
+      <button class="zoom-out" type="button" aria-label="Decrease text size">A−</button>
+      <button class="zoom-in"  type="button" aria-label="Increase text size">A+</button>
       <button class="theme-toggle" type="button" aria-label="Toggle theme"><span class="icon-moon">🌙</span><span class="icon-sun">☀️</span></button>
+    </div>
     </div>
   </header>
 
@@ -19,17 +23,20 @@
     <aside class="sidebar">
       <div class="sidebar-eyebrow">The deck</div>
       <ol>
-        <li><a href="index.html"><span class="sb-num">00</span><span>Overview</span></a></li>
-        <li><a href="s1-timeline.html"><span class="sb-num">S1</span><span>The build timeline</span></a></li>
-        <li><a href="s2-architecture.html"><span class="sb-num">S2</span><span>Architecture &amp; data flow</span></a></li>
-        <li><a href="s3-typescript.html"><span class="sb-num">S3</span><span>TypeScript</span></a></li>
-        <li><a href="s4-html-jsx.html"><span class="sb-num">S4</span><span>HTML &amp; JSX</span></a></li>
-        <li><a href="s5-css.html"><span class="sb-num">S5</span><span>CSS &amp; design system</span></a></li>
-        <li><a href="s6-react.html"><span class="sb-num">S6</span><span>React state &amp; effects</span></a></li>
-        <li><a href="s7-lessons.html"><span class="sb-num">S7</span><span>Redirects &amp; lessons</span></a></li>
-        <li><a href="s8-rebuild.html"><span class="sb-num">S8</span><span>Rebuild 1: brief &amp; plan</span></a></li>
-        <li class="active"><a href="s9-clean-architecture.html"><span class="sb-num">S9</span><span>Rebuild 2: the server</span></a></li>
-        <li><a href="s10-frontend-conventions.html"><span class="sb-num">S10</span><span>Rebuild 3: the client</span></a></li>
+        <li><a href="index.html"><span>Overview</span></a></li>
+        <li><a href="timeline.html"><span>The build timeline</span></a></li>
+        <li><a href="architecture.html"><span>Architecture &amp; data flow</span></a></li>
+        <li><a href="framework-landscape.html"><span>Framework landscape</span></a></li>
+        <li><a href="stack-choices.html"><span>Stack choices</span></a></li>
+        <li><a href="typescript.html"><span>TypeScript</span></a></li>
+        <li><a href="html-jsx.html"><span>HTML &amp; JSX</span></a></li>
+        <li><a href="css.html"><span>CSS &amp; design system</span></a></li>
+        <li><a href="react.html"><span>React state &amp; effects</span></a></li>
+        <li><a href="angular-comparison.html"><span>Angular: a direct translation</span></a></li>
+        <li><a href="lessons.html"><span>Redirects &amp; lessons</span></a></li>
+        <li><a href="rebuild.html"><span>Rebuild 1: brief &amp; plan</span></a></li>
+        <li class="active"><a href="clean-architecture.html"><span>Rebuild 2: the server</span></a></li>
+        <li><a href="frontend-conventions.html"><span>Rebuild 3: the client</span></a></li>
       </ol>
     </aside>
 
@@ -37,25 +44,25 @@
       <header class="mission-header">
         <a class="crumb" href="index.html">&larr; Overview</a>
         <div class="badge-large">🧱</div>
-        <div class="kicker">S9 &middot; the rebuild &middot; 2 of 3</div>
+        <div class="kicker">the rebuild &middot; 2 of 3</div>
         <h1>The server: clean architecture &amp; DDD</h1>
         <div class="meta-row"><span>four layers</span><span>a rich domain</span><span>backend-first</span></div>
       </header>
 
       <article class="body">
-        <p>S8 set the brief, the method, and the ordered plan. This is build phase one in depth: the <strong>server</strong>, rebuilt with clean architecture and domain-driven design. You start here because it is your home turf &mdash; lock the data truth and the contract first, and the client (S10) has a stable thing to talk to.</p>
+        <p>The prior slide set the brief, the method, and the ordered plan. This is build phase one in depth: the <strong>server</strong>, rebuilt with clean architecture and domain-driven design. You start here because it is your home turf &mdash; lock the data truth and the contract first, and the client has a stable thing to talk to.</p>
 
-        <div class="callout"><span class="label">Read alongside this slide</span>The exhaustive version &mdash; every layer, every value object, the full chunk-by-chunk plan with a learning checkpoint for each step &mdash; lives in <a href="the-gap-poc-to-clean-architecture.md"><code>the-gap-poc-to-clean-architecture.md</code></a>. This slide is the map; that doc is the territory.</div>
+
 
         <h2>The server: four layers, dependencies pointing inward</h2>
         <p>The POC server is one <code>scheduling.ts</code> &mdash; seed data, a mutable global, and all the logic in one file. In DDD terms it is a <strong>transaction script over a shared global</strong>. Clean architecture is the same onion you know from .NET: four layers, and one rule &mdash; <strong>source dependencies only ever point inward.</strong> The domain knows nothing about the database or HTTP.</p>
         <figure class="diagram">
           <pre class="mermaid">
 flowchart TB
-  API["API / Presentation&lt;br/&gt;Express routes + Zod"]
-  APP["Application&lt;br/&gt;use cases + repository ports"]
-  DOM["Domain&lt;br/&gt;entities, value objects, services"]
-  INFRA["Infrastructure&lt;br/&gt;SQLite repository + seeding"]
+  API["API / Presentation&lt;br/&gt;routes + validation"]
+  APP["Application&lt;br/&gt;use cases + ports"]
+  DOM["Domain&lt;br/&gt;entities + value objects"]
+  INFRA["Infrastructure&lt;br/&gt;SQLite + seeding"]
   API --&gt; APP
   APP --&gt; DOM
   INFRA --&gt; DOM
@@ -140,16 +147,16 @@ classDiagram
         <div class="callout"><span class="label">The key DDD decision</span>What is the consistency boundary for "no double-booking"? The invariant spans a resource and <em>all</em> of its bookings, so <strong>the invariant decides the boundary</strong>: <code>Resource</code> owns its bookings as one aggregate. Boundaries are a judgment call, never arbitrary &mdash; the rule you must protect tells you where to draw the line.</div>
         <div class="callout"><span class="label">The rest of the stack, briefly</span><strong>Application:</strong> one thin use case per action (<code>BookWorkItem</code>), loading aggregates through a repository <em>port</em> &mdash; exactly a MediatR handler. <strong>Infrastructure:</strong> a <code>SqliteWorkItemRepository</code> implementing that port (your <code>IRepository</code> + EF Core). <strong>API:</strong> a thin route that validates the body with Zod (your FluentValidation) and maps <code>DomainError</code> to a 409. <strong>Shared:</strong> one <code>shared/</code> package of wire DTOs + schemas, so client and server cannot drift.</div>
 
-        <div class="callout good"><span class="label">Where this leaves you</span>The server now owns the data truth, enforces every rule on the type that owns it, and exposes a contract the client can trust. That is the hard half done on home turf. <strong>Next, S10:</strong> rebuild the client to mirror this cleanly &mdash; the three kinds of state, scoped cache invalidation, and the conventions that stop <code>App.tsx</code> from ever becoming a monolith again.</div>
+        <div class="callout good"><span class="label">Where this leaves you</span>The server now owns the data truth, enforces every rule on the type that owns it, and exposes a contract the client can trust. That is the hard half done on home turf. <strong>Next:</strong> rebuild the client to mirror this cleanly &mdash; the three kinds of state, scoped cache invalidation, and the conventions that stop <code>App.tsx</code> from ever becoming a monolith again.</div>
       </article>
 
       <nav class="slide-nav">
-        <a href="s8-rebuild.html"><div class="dir">Previous</div><div class="ttl">S8 &middot; The rebuild: brief &amp; plan</div></a>
-        <a class="next" href="s10-frontend-conventions.html"><div class="dir">Next</div><div class="ttl">S10 &middot; The client: React at scale</div></a>
+        <a href="rebuild.html"><div class="dir">Previous</div><div class="ttl">The rebuild: brief &amp; plan</div></a>
+        <a class="next" href="frontend-conventions.html"><div class="dir">Next</div><div class="ttl">The client: React at scale</div></a>
       </nav>
     </main>
   </div>
 
-  <footer class="site-footer">Chronicle of <code>simple-scheduling-app</code> &middot; S9 of 10 &middot; learn by doing, relearn by redoing</footer>
+  <footer class="site-footer">Chronicle of <code>simple-scheduling-app</code></footer>
 </body>
 </html>

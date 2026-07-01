@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>S3 &middot; TypeScript in an hour</title>
+  <title>TypeScript in an hour</title>
   <link rel="stylesheet" href="chronicle.css">
   <script src="chronicle.js"></script>
 </head>
@@ -11,7 +11,11 @@
   <header class="topnav">
     <div class="topnav-inner">
       <a class="brand" href="index.html"><span class="mark">🗓️</span> Scheduling SPA Chronicle</a>
+      <div class="nav-controls">
+      <button class="zoom-out" type="button" aria-label="Decrease text size">A−</button>
+      <button class="zoom-in"  type="button" aria-label="Increase text size">A+</button>
       <button class="theme-toggle" type="button" aria-label="Toggle theme"><span class="icon-moon">🌙</span><span class="icon-sun">☀️</span></button>
+    </div>
     </div>
   </header>
 
@@ -19,17 +23,20 @@
     <aside class="sidebar">
       <div class="sidebar-eyebrow">The deck</div>
       <ol>
-        <li><a href="index.html"><span class="sb-num">00</span><span>Overview</span></a></li>
-        <li><a href="s1-timeline.html"><span class="sb-num">S1</span><span>The build timeline</span></a></li>
-        <li><a href="s2-architecture.html"><span class="sb-num">S2</span><span>Architecture &amp; data flow</span></a></li>
-        <li class="active"><a href="s3-typescript.html"><span class="sb-num">S3</span><span>TypeScript</span></a></li>
-        <li><a href="s4-html-jsx.html"><span class="sb-num">S4</span><span>HTML &amp; JSX</span></a></li>
-        <li><a href="s5-css.html"><span class="sb-num">S5</span><span>CSS &amp; design system</span></a></li>
-        <li><a href="s6-react.html"><span class="sb-num">S6</span><span>React state &amp; effects</span></a></li>
-        <li><a href="s7-lessons.html"><span class="sb-num">S7</span><span>Redirects &amp; lessons</span></a></li>
-        <li><a href="s8-rebuild.html"><span class="sb-num">S8</span><span>Rebuild 1: brief &amp; plan</span></a></li>
-        <li><a href="s9-clean-architecture.html"><span class="sb-num">S9</span><span>Rebuild 2: the server</span></a></li>
-        <li><a href="s10-frontend-conventions.html"><span class="sb-num">S10</span><span>Rebuild 3: the client</span></a></li>
+        <li><a href="index.html"><span>Overview</span></a></li>
+        <li><a href="timeline.html"><span>The build timeline</span></a></li>
+        <li><a href="architecture.html"><span>Architecture &amp; data flow</span></a></li>
+        <li><a href="framework-landscape.html"><span>Framework landscape</span></a></li>
+        <li><a href="stack-choices.html"><span>Stack choices</span></a></li>
+        <li class="active"><a href="typescript.html"><span>TypeScript</span></a></li>
+        <li><a href="html-jsx.html"><span>HTML &amp; JSX</span></a></li>
+        <li><a href="css.html"><span>CSS &amp; design system</span></a></li>
+        <li><a href="react.html"><span>React state &amp; effects</span></a></li>
+        <li><a href="angular-comparison.html"><span>Angular: a direct translation</span></a></li>
+        <li><a href="lessons.html"><span>Redirects &amp; lessons</span></a></li>
+        <li><a href="rebuild.html"><span>Rebuild 1: brief &amp; plan</span></a></li>
+        <li><a href="clean-architecture.html"><span>Rebuild 2: the server</span></a></li>
+        <li><a href="frontend-conventions.html"><span>Rebuild 3: the client</span></a></li>
       </ol>
     </aside>
 
@@ -37,7 +44,7 @@
       <header class="mission-header">
         <a class="crumb" href="index.html">&larr; Overview</a>
         <div class="badge-large">🧩</div>
-        <div class="kicker">S3 &middot; crash course</div>
+        <div class="kicker">crash course</div>
         <h1>TypeScript in an hour</h1>
         <div class="meta-row"><span>for typed-language natives</span><span>grounded in domain.ts</span></div>
       </header>
@@ -69,7 +76,7 @@ export interface WorkItem { /* ... */ }    // export = make it importable
 // index.ts
 import { WorkItem } from './domain';        // import by relative path, no extension
 import express from 'express';              // bare name = a package from node_modules</code></pre>
-        <p>A relative path (<code>./domain</code>) is your own file; a bare name (<code>express</code>, <code>react</code>) resolves to an installed package. This is ES Modules (ESM) &mdash; the modern standard. (More on where packages come from in <a href="s2-architecture.html">S2</a>.)</p>
+        <p>A relative path (<code>./domain</code>) is your own file; a bare name (<code>express</code>, <code>react</code>) resolves to an installed package. This is ES Modules (ESM) &mdash; the modern standard. (More on where packages come from in <a href="architecture.html">S2</a>.)</p>
 
         <h3>Promises and <code>async</code> / <code>await</code>: the network is asynchronous</h3>
         <p>Anything that touches the network or disk returns a <strong>Promise</strong> &mdash; a value that isn't here yet (your <code>Task&lt;T&gt;</code>). You <code>await</code> it inside an <code>async</code> function, exactly like C#:</p>
@@ -189,12 +196,12 @@ event.target.value as TaskSort</code></pre>
       </article>
 
       <nav class="slide-nav">
-        <a href="s2-architecture.html"><div class="dir">Previous</div><div class="ttl">S2 &middot; Architecture &amp; data flow</div></a>
-        <a class="next" href="s4-html-jsx.html"><div class="dir">Next</div><div class="ttl">S4 &middot; HTML &amp; JSX</div></a>
+        <a href="stack-choices.html"><div class="dir">Previous</div><div class="ttl">Stack choices</div></a>
+        <a class="next" href="html-jsx.html"><div class="dir">Next</div><div class="ttl">HTML &amp; JSX</div></a>
       </nav>
     </main>
   </div>
 
-  <footer class="site-footer">Chronicle of <code>simple-scheduling-app</code> &middot; S3 of 10</footer>
+  <footer class="site-footer">Chronicle of <code>simple-scheduling-app</code></footer>
 </body>
 </html>

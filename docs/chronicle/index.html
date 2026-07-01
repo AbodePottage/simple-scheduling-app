@@ -12,7 +12,11 @@
   <header class="topnav">
     <div class="topnav-inner">
       <a class="brand" href="index.html"><span class="mark">🗓️</span> Scheduling SPA Chronicle</a>
+      <div class="nav-controls">
+      <button class="zoom-out" type="button" aria-label="Decrease text size">A−</button>
+      <button class="zoom-in"  type="button" aria-label="Increase text size">A+</button>
       <button class="theme-toggle" type="button" aria-label="Toggle theme"><span class="icon-moon">🌙</span><span class="icon-sun">☀️</span></button>
+    </div>
     </div>
   </header>
 
@@ -20,17 +24,20 @@
     <aside class="sidebar">
       <div class="sidebar-eyebrow">The deck</div>
       <ol>
-        <li class="active"><a href="index.html"><span class="sb-num">00</span><span>Overview</span></a></li>
-        <li><a href="s1-timeline.html"><span class="sb-num">S1</span><span>The build timeline</span></a></li>
-        <li><a href="s2-architecture.html"><span class="sb-num">S2</span><span>Architecture &amp; data flow</span></a></li>
-        <li><a href="s3-typescript.html"><span class="sb-num">S3</span><span>TypeScript</span></a></li>
-        <li><a href="s4-html-jsx.html"><span class="sb-num">S4</span><span>HTML &amp; JSX</span></a></li>
-        <li><a href="s5-css.html"><span class="sb-num">S5</span><span>CSS &amp; design system</span></a></li>
-        <li><a href="s6-react.html"><span class="sb-num">S6</span><span>React state &amp; effects</span></a></li>
-        <li><a href="s7-lessons.html"><span class="sb-num">S7</span><span>Redirects &amp; lessons</span></a></li>
-        <li><a href="s8-rebuild.html"><span class="sb-num">S8</span><span>Rebuild 1: brief &amp; plan</span></a></li>
-        <li><a href="s9-clean-architecture.html"><span class="sb-num">S9</span><span>Rebuild 2: the server</span></a></li>
-        <li><a href="s10-frontend-conventions.html"><span class="sb-num">S10</span><span>Rebuild 3: the client</span></a></li>
+        <li class="active"><a href="index.html"><span>Overview</span></a></li>
+        <li><a href="timeline.html"><span>The build timeline</span></a></li>
+        <li><a href="architecture.html"><span>Architecture &amp; data flow</span></a></li>
+        <li><a href="framework-landscape.html"><span>Framework landscape</span></a></li>
+        <li><a href="stack-choices.html"><span>Stack choices</span></a></li>
+        <li><a href="typescript.html"><span>TypeScript</span></a></li>
+        <li><a href="html-jsx.html"><span>HTML &amp; JSX</span></a></li>
+        <li><a href="css.html"><span>CSS &amp; design system</span></a></li>
+        <li><a href="react.html"><span>React state &amp; effects</span></a></li>
+        <li><a href="angular-comparison.html"><span>Angular: a direct translation</span></a></li>
+        <li><a href="lessons.html"><span>Redirects &amp; lessons</span></a></li>
+        <li><a href="rebuild.html"><span>Rebuild 1: brief &amp; plan</span></a></li>
+        <li><a href="clean-architecture.html"><span>Rebuild 2: the server</span></a></li>
+        <li><a href="frontend-conventions.html"><span>Rebuild 3: the client</span></a></li>
       </ol>
     </aside>
 
@@ -38,7 +45,7 @@
       <section class="hero">
         <div class="eyebrow">Field chronicle</div>
         <h1>Breaking down React</h1>
-        <p class="lede">A commit-by-commit autopsy of a real React&nbsp;+&nbsp;Node scheduling app &mdash; 35 commits, ~13 hours, from empty folder to a tagged <code>v1</code> &mdash; rebuilt here as a crash course in TypeScript, HTML, and CSS.</p>
+        <p class="lede">A commit-by-commit autopsy of a React&nbsp;+&nbsp;Node scheduling app, rebuilt as a crash course in TypeScript, HTML, and CSS.</p>
         <div class="meta-row">
           <span>35 commits</span>
           <span>~13 hours</span>
@@ -50,7 +57,7 @@
       <article class="body">
         <h2>What this is</h2>
         <p>This deck chronicles the actual construction of <code>simple-scheduling-app</code> &mdash; a small work-assignment tool inspired by Microsoft's Universal Resource Scheduling. It was built fast and a little messily, on purpose. The mess is the point: every reversal, every "temp" commit, every place the design wandered is a teaching moment.</p>
-        <p>You are a backend engineer. You read this to learn how the front of the house works &mdash; the three languages of the browser (<strong>HTML, CSS, TypeScript/JS</strong>), the React mental model, and how client concerns (state, layout, perceived speed) differ from the server concerns you already know. Then you rebuild the app <em>clean</em> yourself &mdash; AI-assisted, but reviewing every diff with your own eyes &mdash; following the ordered rebuild in <a href="s8-rebuild.html">S8&ndash;S10</a> and the full companion lesson, <a href="the-gap-poc-to-clean-architecture.md">the-gap-poc-to-clean-architecture.md</a>.</p>
+        <p>You are a backend engineer. You read this to learn how the front of the house works &mdash; the three languages of the browser (<strong>HTML, CSS, TypeScript/JS</strong>), the React mental model, and how client concerns (state, layout, perceived speed) differ from the server concerns you already know. Then you rebuild the app <em>clean</em> yourself &mdash; AI-assisted, but reviewing every diff with your own eyes &mdash; following the ordered rebuild in <a href="rebuild.html">the rebuild slides</a>.</p>
 
         <div class="callout"><span class="label">This is a private learning artifact, not a presentation</span>The deck format is just a convenient way to read. The point is not to present to anyone &mdash; it is to cement the concepts you brushed over on the fast first pass, because you are about to build real UIs and want the fundamentals solid. The app itself is a throwaway training ground; the understanding you carry out is the real deliverable.</div>
 
@@ -61,67 +68,72 @@
 
         <div class="callout">
           <span class="label">How to read this</span>
-          The deck runs in two movements. <strong>Understand the POC (S1&ndash;S7):</strong> S1&ndash;S2 tell the story and map the architecture; S3&ndash;S6 are the crash course, each grounded in real code from this repo; S7 distills the mistakes. <strong>Rebuild it right (S8&ndash;S10), in three beats:</strong> S8 is the brief, the method, and the ordered plan; S9 rebuilds the server with clean architecture and DDD; S10 rebuilds the client with production React conventions. The deeper companion lesson is <a href="the-gap-poc-to-clean-architecture.md">the-gap-poc-to-clean-architecture.md</a>.
+          The deck runs in two movements. <strong>Understand the POC:</strong> The timeline and architecture slides tell the story; the crash course slides (TypeScript, HTML, CSS, React) are each grounded in real code from this repo; the lessons slide distills the mistakes. <strong>Rebuild it right, in three beats:</strong> the brief &amp; plan slide sets the method and order; the server rebuild goes deep on clean architecture and DDD; the client rebuild covers production React conventions.
         </div>
 
         <h2>The deck</h2>
         <div class="deck-grid">
-          <a class="deck-card" href="s1-timeline.html">
-            <div class="num">S1 &middot; the story</div>
+          <a class="deck-card" href="timeline.html">
             <h3>The build timeline</h3>
             <div class="meta">All 35 commits grouped into 5 phases. Where it flowed, where it backtracked.</div>
             <div class="emoji">🧭</div>
           </a>
-          <a class="deck-card" href="s2-architecture.html">
-            <div class="num">S2 &middot; the map</div>
+          <a class="deck-card" href="architecture.html">
             <h3>Architecture &amp; data flow</h3>
             <div class="meta">The stack, the repo layout, and how a click becomes a re-render.</div>
             <div class="emoji">🏗️</div>
           </a>
-          <a class="deck-card" href="s3-typescript.html">
-            <div class="num">S3 &middot; crash course</div>
+          <a class="deck-card" href="framework-landscape.html">
+            <h3>Framework landscape</h3>
+            <div class="meta">React, Angular, and Vue compared — and why this chronicle chose React.</div>
+            <div class="emoji">🌐</div>
+          </a>
+          <a class="deck-card" href="stack-choices.html">
+            <h3>Stack choices</h3>
+            <div class="meta">Express, Vite, tsx, REST — why each tool was chosen and what the alternatives are.</div>
+            <div class="emoji">🔧</div>
+          </a>
+          <a class="deck-card" href="typescript.html">
             <h3>TypeScript in an hour</h3>
             <div class="meta">Types, interfaces, unions, generics &mdash; for people who already know a typed language.</div>
             <div class="emoji">🧩</div>
           </a>
-          <a class="deck-card" href="s4-html-jsx.html">
-            <div class="num">S4 &middot; crash course</div>
+          <a class="deck-card" href="html-jsx.html">
             <h3>HTML &amp; JSX</h3>
             <div class="meta">The DOM, semantic markup, and how JSX is just functions returning trees.</div>
             <div class="emoji">📄</div>
           </a>
-          <a class="deck-card" href="s5-css.html">
-            <div class="num">S5 &middot; crash course</div>
+          <a class="deck-card" href="css.html">
             <h3>CSS &amp; the design system</h3>
             <div class="meta">Tokens, theming, flexbox, grid &mdash; read straight out of <code>styles.css</code>.</div>
             <div class="emoji">🎨</div>
           </a>
-          <a class="deck-card" href="s6-react.html">
-            <div class="num">S6 &middot; crash course</div>
+          <a class="deck-card" href="react.html">
             <h3>React state &amp; effects</h3>
             <div class="meta">Components, props, <code>useState</code>/<code>useMemo</code>/<code>useEffect</code>, and the fetch loop.</div>
             <div class="emoji">⚛️</div>
           </a>
-          <a class="deck-card" href="s7-lessons.html">
-            <div class="num">S7 &middot; the autopsy</div>
+          <a class="deck-card" href="angular-comparison.html">
+            <h3>Angular: a direct translation</h3>
+            <div class="meta">Every React concept from the crash course translated directly into Angular 17+ side by side.</div>
+            <div class="emoji">🅰️</div>
+          </a>
+          <a class="deck-card" href="lessons.html">
             <h3>Redirects, mistakes, lessons</h3>
             <div class="meta">The reversals and the client&rarr;server pagination pivot, and what they teach.</div>
             <div class="emoji">🔁</div>
           </a>
-          <a class="deck-card" href="s8-rebuild.html">
-            <div class="num">S8 &middot; the rebuild &middot; 1 of 3</div>
+          <a class="deck-card" href="rebuild.html">
             <h3>The rebuild: brief, method &amp; plan</h3>
             <div class="meta">The brief, the review-every-diff method, and the ordered phase plan for the whole rebuild.</div>
             <div class="emoji">📦</div>
           </a>
-          <a class="deck-card" href="s9-clean-architecture.html">
-            <div class="num">S9 &middot; the rebuild &middot; 2 of 3</div>
+          <a class="deck-card" href="clean-architecture.html">
             <h3>The server: clean architecture &amp; DDD</h3>
             <div class="meta">Four layers, a rich domain, aggregates and value objects &mdash; the server half, rebuilt.</div>
             <div class="emoji">🧱</div>
           </a>
-          <a class="deck-card" href="s10-frontend-conventions.html">
-            <div class="num">S10 &middot; the rebuild &middot; 3 of 3</div>
+          <a class="deck-card" href="frontend-conventions.html">
             <h3>The client: React at scale</h3>
             <div class="meta">Three kinds of state, custom hooks, co-location, path aliases, lint/test/validate, RTL.</div>
             <div class="emoji">🧰</div>
@@ -153,7 +165,7 @@
 
       <nav class="slide-nav">
         <span></span>
-        <a class="next" href="s1-timeline.html"><div class="dir">Next</div><div class="ttl">S1 &middot; The build timeline</div></a>
+        <a class="next" href="timeline.html"><div class="dir">Next</div><div class="ttl">The build timeline</div></a>
       </nav>
     </main>
   </div>

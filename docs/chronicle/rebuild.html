@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>S8 &middot; The rebuild: brief &amp; plan</title>
+  <title>The rebuild: brief &amp; plan</title>
   <link rel="stylesheet" href="chronicle.css">
   <script src="chronicle.js"></script>
 </head>
@@ -11,7 +11,11 @@
   <header class="topnav">
     <div class="topnav-inner">
       <a class="brand" href="index.html"><span class="mark">🗓️</span> Scheduling SPA Chronicle</a>
+      <div class="nav-controls">
+      <button class="zoom-out" type="button" aria-label="Decrease text size">A−</button>
+      <button class="zoom-in"  type="button" aria-label="Increase text size">A+</button>
       <button class="theme-toggle" type="button" aria-label="Toggle theme"><span class="icon-moon">🌙</span><span class="icon-sun">☀️</span></button>
+    </div>
     </div>
   </header>
 
@@ -19,17 +23,20 @@
     <aside class="sidebar">
       <div class="sidebar-eyebrow">The deck</div>
       <ol>
-        <li><a href="index.html"><span class="sb-num">00</span><span>Overview</span></a></li>
-        <li><a href="s1-timeline.html"><span class="sb-num">S1</span><span>The build timeline</span></a></li>
-        <li><a href="s2-architecture.html"><span class="sb-num">S2</span><span>Architecture &amp; data flow</span></a></li>
-        <li><a href="s3-typescript.html"><span class="sb-num">S3</span><span>TypeScript</span></a></li>
-        <li><a href="s4-html-jsx.html"><span class="sb-num">S4</span><span>HTML &amp; JSX</span></a></li>
-        <li><a href="s5-css.html"><span class="sb-num">S5</span><span>CSS &amp; design system</span></a></li>
-        <li><a href="s6-react.html"><span class="sb-num">S6</span><span>React state &amp; effects</span></a></li>
-        <li><a href="s7-lessons.html"><span class="sb-num">S7</span><span>Redirects &amp; lessons</span></a></li>
-        <li class="active"><a href="s8-rebuild.html"><span class="sb-num">S8</span><span>Rebuild 1: brief &amp; plan</span></a></li>
-        <li><a href="s9-clean-architecture.html"><span class="sb-num">S9</span><span>Rebuild 2: the server</span></a></li>
-        <li><a href="s10-frontend-conventions.html"><span class="sb-num">S10</span><span>Rebuild 3: the client</span></a></li>
+        <li><a href="index.html"><span>Overview</span></a></li>
+        <li><a href="timeline.html"><span>The build timeline</span></a></li>
+        <li><a href="architecture.html"><span>Architecture &amp; data flow</span></a></li>
+        <li><a href="framework-landscape.html"><span>Framework landscape</span></a></li>
+        <li><a href="stack-choices.html"><span>Stack choices</span></a></li>
+        <li><a href="typescript.html"><span>TypeScript</span></a></li>
+        <li><a href="html-jsx.html"><span>HTML &amp; JSX</span></a></li>
+        <li><a href="css.html"><span>CSS &amp; design system</span></a></li>
+        <li><a href="react.html"><span>React state &amp; effects</span></a></li>
+        <li><a href="angular-comparison.html"><span>Angular: a direct translation</span></a></li>
+        <li><a href="lessons.html"><span>Redirects &amp; lessons</span></a></li>
+        <li class="active"><a href="rebuild.html"><span>Rebuild 1: brief &amp; plan</span></a></li>
+        <li><a href="clean-architecture.html"><span>Rebuild 2: the server</span></a></li>
+        <li><a href="frontend-conventions.html"><span>Rebuild 3: the client</span></a></li>
       </ol>
     </aside>
 
@@ -37,15 +44,15 @@
       <header class="mission-header">
         <a class="crumb" href="index.html">&larr; Overview</a>
         <div class="badge-large">📦</div>
-        <div class="kicker">S8 &middot; the rebuild &middot; 1 of 3</div>
+        <div class="kicker">the rebuild &middot; 1 of 3</div>
         <h1>The rebuild: brief, method &amp; plan</h1>
         <div class="meta-row"><span>the redo</span><span>review every diff</span><span>ordered &amp; shippable</span></div>
       </header>
 
       <article class="body">
-        <p>Now you relearn by redoing. Same app, same features, same data model &mdash; but built deliberately, with every S7 lesson baked into the structure, and shipped as one self-contained Docker container. This slide is the <strong>brief, the method, and the ordered plan</strong> for the whole rebuild; the next two go deep on each half &mdash; <strong>S9 the server</strong>, then <strong>S10 the client</strong>. Use AI to draft each chunk, but review every diff with your own eyes &mdash; the review is where the learning happens. The <a href="the-gap-poc-to-clean-architecture.md">companion lesson</a> breaks the rebuild into small, review-sized chunks with a learning checkpoint for each.</p>
+        <p>Now you relearn by redoing. Same app, same features, same data model &mdash; but built deliberately, with every lesson from the POC autopsy baked into the structure, and shipped as one self-contained Docker container. This slide is the <strong>brief, the method, and the ordered plan</strong> for the whole rebuild; the next two go deep on each half &mdash; <strong>the server</strong>, then <strong>the client</strong>. Use AI to draft each chunk, but review every diff with your own eyes &mdash; the review is where the learning happens.</p>
 
-        <h2>Guiding principles (each answers a S7 debt)</h2>
+        <h2>Guiding principles</h2>
         <table>
           <thead><tr><th>Principle</th><th>Replaces</th></tr></thead>
           <tbody>
@@ -70,11 +77,11 @@
         <figure class="diagram">
           <pre class="mermaid">
 flowchart LR
-  A["Agent drafts&lt;br/&gt;one small chunk"] --&gt; B["You read&lt;br/&gt;every diff"]
+  A["Agent drafts&lt;br/&gt;a chunk"] --&gt; B["You read&lt;br/&gt;the diff"]
   B --&gt; C{"Can you&lt;br/&gt;explain it?"}
-  C -- "no" --&gt; D["Dig in,&lt;br/&gt;ask, rewrite"]
+  C -- "no" --&gt; D["Ask or&lt;br/&gt;rewrite"]
   D --&gt; B
-  C -- "yes" --&gt; E["Verify gate&lt;br/&gt;green?"]
+  C -- "yes" --&gt; E{"Gate&lt;br/&gt;green?"}
   E -- "no" --&gt; D
   E -- "yes" --&gt; F["Next chunk"]
   F --&gt; A
@@ -107,7 +114,7 @@ flowchart LR
         │   ├── team/TeamPage.tsx + TeamColumn.tsx
         │   └── tasks/TasksPage.tsx + WorkItemForm.tsx
         └── styles/tokens.css    # the :root variables — the one global file</code></pre>
-        <div class="callout good"><span class="label">Keep what was already good</span>Three pieces from the POC graduate unchanged: the <strong>design-token system</strong> (S5), the <strong><code>paginate&lt;T&gt;()</code> + clamp logic</strong> (S2), and the <strong><code>Pagination</code> component + <code>Page&lt;T&gt;</code> envelope</strong> (S6). A rebuild isn't a rewrite of everything &mdash; it's keeping the good bones and fixing the structure around them.</p></div>
+        <div class="callout good"><span class="label">Keep what was already good</span>Three pieces from the POC graduate unchanged: the <strong>design-token system</strong>, the <strong><code>paginate&lt;T&gt;()</code> + clamp logic</strong>, and the <strong><code>Pagination</code> component + <code>Page&lt;T&gt;</code> envelope</strong>. A rebuild isn't a rewrite of everything &mdash; it's keeping the good bones and fixing the structure around them.</p></div>
 
         <h2>The E2E Docker container</h2>
         <p>One image: build the client to static files, then let the Express server host both the API <em>and</em> those files (the POC already does this with <code>express.static(clientDist)</code> &mdash; reuse it). A multi-stage build keeps the final image small:</p>
@@ -137,7 +144,7 @@ services:
         <div class="callout"><span class="label">Why this is the right shape</span>One container, one port, both halves inside. No CORS in production (same origin). The SQLite file lives on a mounted volume so data survives <code>docker compose down</code> &mdash; the exact debt the in-memory POC couldn't pay. This is "self-contained" in the truest sense: <code>git clone</code> + <code>docker compose up</code> and a stranger has your app running.</div>
 
         <h2>The rebuild, in order</h2>
-        <p>Backend first, on purpose: start where you are strong, lock the contract, then the frontend has a stable thing to talk to. Each phase ends on a green gate before the next begins. <strong>S9</strong> goes deep on P1&ndash;P3 (the server); <strong>S10</strong> goes deep on P4&ndash;P5 (the client).</p>
+        <p>Backend first, on purpose: start where you are strong, lock the contract, then the frontend has a stable thing to talk to. Each phase ends on a green gate before the next begins. The server slide goes deep on P1&ndash;P3; the client slide goes deep on P4&ndash;P5.</p>
         <figure class="diagram">
           <pre class="mermaid">
 flowchart LR
@@ -147,7 +154,7 @@ flowchart LR
   P3 --&gt; P4["P4&lt;br/&gt;one client&lt;br/&gt;feature E2E"]
   P4 --&gt; P5["P5&lt;br/&gt;rest&lt;br/&gt;+ Docker"]
           </pre>
-          <figcaption>Six phases, ~20 small chunks. The full table with a "review lens" per chunk is in the companion doc.</figcaption>
+          <figcaption>Six phases, ~20 small chunks. Review every diff before moving to the next.</figcaption>
         </figure>
         <table>
           <thead><tr><th>Phase</th><th>The chunks</th><th>Green gate</th></tr></thead>
@@ -161,7 +168,7 @@ flowchart LR
           </tbody>
         </table>
         <div class="callout"><span class="label">Why this order</span>Each phase produces a stable foundation the next one stands on, so you are never debugging two unfamiliar layers at once. P1 finishing with "zero infrastructure imported" is not a slogan &mdash; it is the literal proof that your dependency arrows point the right way.</div>
-        <div class="callout"><span class="label">What a focused weekend looks like</span><strong>Saturday &mdash; backend &amp; contract (home turf):</strong> stand up <code>shared/domain.ts</code> with types <em>and</em> Zod schemas, scaffold <code>routes/services/repository</code>, port <code>paginate.ts</code> verbatim, implement the SQLite repo + seed, wire and validate the routes, write a few endpoint tests (that's P0&ndash;P3, all S3 types and S2 data flow). <strong>Sunday &mdash; frontend (new turf):</strong> one feature folder end to end (<code>TasksPage</code>: fetch a page, render the list, drop in the kept <code>Pagination</code> &mdash; S4 JSX, S5 a CSS Module, S6 the fetch effect at once), then repeat the pattern for Home/Team/Schedule, extract shared bits as you notice them, Dockerize, <code>docker compose up</code>, click through (P4&ndash;P5). It mirrors the one disciplined arc from the POC &mdash; <em>doc &rarr; server &rarr; client</em> &mdash; that produced its cleanest feature.</div>
+        <div class="callout"><span class="label">What a focused weekend looks like</span><strong>Saturday &mdash; backend &amp; contract (home turf):</strong> stand up <code>shared/domain.ts</code> with types <em>and</em> Zod schemas, scaffold <code>routes/services/repository</code>, port <code>paginate.ts</code> verbatim, implement the SQLite repo + seed, wire and validate the routes, write a few endpoint tests (P0&ndash;P3). <strong>Sunday &mdash; frontend (new turf):</strong> one feature folder end to end (<code>TasksPage</code>: fetch a page, render the list, drop in the kept <code>Pagination</code> component), then repeat the pattern for Home/Team/Schedule, extract shared bits as you notice them, Dockerize, <code>docker compose up</code>, click through (P4&ndash;P5). It mirrors the one disciplined arc from the POC &mdash; <em>doc &rarr; server &rarr; client</em> &mdash; that produced its cleanest feature.</div>
 
         <h2>Definition of done</h2>
         <p>Two kinds of done. First the artifact:</p>
@@ -181,22 +188,22 @@ flowchart LR
         </ul>
 
         <h2>Driving the rebuild yourself</h2>
-        <p>Work one small chunk at a time, in the order from the <a href="the-gap-poc-to-clean-architecture.md">companion lesson</a> (contract &rarr; domain &rarr; app+infra &rarr; API &rarr; one client feature &rarr; the rest). Let AI draft a chunk, then read the whole diff before you accept it: if you cannot explain a line, you have not learned it yet. A useful per-chunk prompt:</p>
+        <p>Work one small chunk at a time, in order (contract &rarr; domain &rarr; app+infra &rarr; API &rarr; one client feature &rarr; the rest). Let AI draft a chunk, then read the whole diff before you accept it: if you cannot explain a line, you have not learned it yet. A useful per-chunk prompt:</p>
         <div class="callout">
           <span class="label">Per-chunk prompt (you review the result)</span>
           "Implement only <em>this</em> chunk of the <code>simple-scheduling-app</code> rebuild: [the one chunk]. Match the clean architecture from <code>docs/chronicle/</code>: a <code>shared/</code> types+Zod package; an Express server split into <code>domain/application/infrastructure/api</code> with a SQLite-backed <code>Repository</code> and the existing <code>paginate&lt;T&gt;()</code> kept; a React client of per-feature folders with CSS Modules and one <code>tokens.css</code>; keep the <code>Pagination</code> component and <code>Page&lt;T&gt;</code> envelope; pagination/filtering/sorting server-side only. Show me the full diff and stop. Do not move to the next chunk."
         </div>
 
-        <div class="callout good"><span class="label">Next: build it, server first</span>You have the brief, the method, the shape, and the ordered plan. The next two slides are the build itself &mdash; <strong>S9</strong> rebuilds the server (clean architecture + a rich domain), then <strong>S10</strong> rebuilds the client (the three kinds of state, hooks, and the conventions that keep it clean). Start on home turf.</div>
+        <div class="callout good"><span class="label">Next: build it, server first</span>You have the brief, the method, the shape, and the ordered plan. The next two slides are the build itself &mdash; <strong>the server</strong> (clean architecture + a rich domain), then <strong>the client</strong> (the three kinds of state, hooks, and the conventions that keep it clean). Start on home turf.</div>
       </article>
 
       <nav class="slide-nav">
-        <a href="s7-lessons.html"><div class="dir">Previous</div><div class="ttl">S7 &middot; Redirects &amp; lessons</div></a>
-        <a class="next" href="s9-clean-architecture.html"><div class="dir">Next</div><div class="ttl">S9 &middot; The server: clean architecture</div></a>
+        <a href="lessons.html"><div class="dir">Previous</div><div class="ttl">Redirects &amp; lessons</div></a>
+        <a class="next" href="clean-architecture.html"><div class="dir">Next</div><div class="ttl">The server: clean architecture</div></a>
       </nav>
     </main>
   </div>
 
-  <footer class="site-footer">Chronicle of <code>simple-scheduling-app</code> &middot; S8 of 10 &middot; learn by doing, relearn by redoing</footer>
+  <footer class="site-footer">Chronicle of <code>simple-scheduling-app</code></footer>
 </body>
 </html>

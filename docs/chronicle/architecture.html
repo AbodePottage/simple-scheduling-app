@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>S2 &middot; Architecture &amp; data flow</title>
+  <title>Architecture &amp; data flow</title>
   <link rel="stylesheet" href="chronicle.css">
   <script src="chronicle.js"></script>
 </head>
@@ -11,7 +11,11 @@
   <header class="topnav">
     <div class="topnav-inner">
       <a class="brand" href="index.html"><span class="mark">🗓️</span> Scheduling SPA Chronicle</a>
+      <div class="nav-controls">
+      <button class="zoom-out" type="button" aria-label="Decrease text size">A−</button>
+      <button class="zoom-in"  type="button" aria-label="Increase text size">A+</button>
       <button class="theme-toggle" type="button" aria-label="Toggle theme"><span class="icon-moon">🌙</span><span class="icon-sun">☀️</span></button>
+    </div>
     </div>
   </header>
 
@@ -19,17 +23,20 @@
     <aside class="sidebar">
       <div class="sidebar-eyebrow">The deck</div>
       <ol>
-        <li><a href="index.html"><span class="sb-num">00</span><span>Overview</span></a></li>
-        <li><a href="s1-timeline.html"><span class="sb-num">S1</span><span>The build timeline</span></a></li>
-        <li class="active"><a href="s2-architecture.html"><span class="sb-num">S2</span><span>Architecture &amp; data flow</span></a></li>
-        <li><a href="s3-typescript.html"><span class="sb-num">S3</span><span>TypeScript</span></a></li>
-        <li><a href="s4-html-jsx.html"><span class="sb-num">S4</span><span>HTML &amp; JSX</span></a></li>
-        <li><a href="s5-css.html"><span class="sb-num">S5</span><span>CSS &amp; design system</span></a></li>
-        <li><a href="s6-react.html"><span class="sb-num">S6</span><span>React state &amp; effects</span></a></li>
-        <li><a href="s7-lessons.html"><span class="sb-num">S7</span><span>Redirects &amp; lessons</span></a></li>
-        <li><a href="s8-rebuild.html"><span class="sb-num">S8</span><span>Rebuild 1: brief &amp; plan</span></a></li>
-        <li><a href="s9-clean-architecture.html"><span class="sb-num">S9</span><span>Rebuild 2: the server</span></a></li>
-        <li><a href="s10-frontend-conventions.html"><span class="sb-num">S10</span><span>Rebuild 3: the client</span></a></li>
+        <li><a href="index.html"><span>Overview</span></a></li>
+        <li><a href="timeline.html"><span>The build timeline</span></a></li>
+        <li class="active"><a href="architecture.html"><span>Architecture &amp; data flow</span></a></li>
+        <li><a href="framework-landscape.html"><span>Framework landscape</span></a></li>
+        <li><a href="stack-choices.html"><span>Stack choices</span></a></li>
+        <li><a href="typescript.html"><span>TypeScript</span></a></li>
+        <li><a href="html-jsx.html"><span>HTML &amp; JSX</span></a></li>
+        <li><a href="css.html"><span>CSS &amp; design system</span></a></li>
+        <li><a href="react.html"><span>React state &amp; effects</span></a></li>
+        <li><a href="angular-comparison.html"><span>Angular: a direct translation</span></a></li>
+        <li><a href="lessons.html"><span>Redirects &amp; lessons</span></a></li>
+        <li><a href="rebuild.html"><span>Rebuild 1: brief &amp; plan</span></a></li>
+        <li><a href="clean-architecture.html"><span>Rebuild 2: the server</span></a></li>
+        <li><a href="frontend-conventions.html"><span>Rebuild 3: the client</span></a></li>
       </ol>
     </aside>
 
@@ -37,7 +44,7 @@
       <header class="mission-header">
         <a class="crumb" href="index.html">&larr; Overview</a>
         <div class="badge-large">🏗️</div>
-        <div class="kicker">S2</div>
+        
         <h1>Architecture &amp; data flow</h1>
         <div class="meta-row"><span>monorepo</span><span>SPA + REST</span><span>in-memory state</span></div>
       </header>
@@ -49,10 +56,10 @@
           <pre class="mermaid">
 graph LR
   subgraph BROWSER["Browser"]
-    C["React app (client/)&lt;br/&gt;renders the 4 routes&lt;br/&gt;holds UI state&lt;br/&gt;fetch() to the API"]
+    C["React SPA&lt;br/&gt;renders UI · holds state"]
   end
   subgraph NODE["Node process"]
-    S["Express server (server/)&lt;br/&gt;GET /api/bootstrap&lt;br/&gt;GET /api/work-items&lt;br/&gt;POST / PATCH mutations&lt;br/&gt;state = in-memory object"]
+    S["Express API&lt;br/&gt;routes + handlers&lt;br/&gt;in-memory state"]
   end
   C == "HTTP request" ==&gt; S
   S -. "JSON response" .-&gt; C
@@ -93,7 +100,7 @@ graph LR
   status: WorkItemStatus;        // 'unscheduled' | 'scheduled' | ...
   assigneeId?: string;           // optional → only when booked
 }</code></pre>
-        <p>The client keeps a near-identical copy in <code>client/src/types.ts</code>. That duplication is a smell &mdash; <a href="s8-rebuild.html">S8</a> shares one package instead &mdash; but it shows the principle: <strong>the types are the API contract.</strong> When the client expects <code>assigneeId</code> and the server stops sending it, TypeScript complains before the user ever sees a bug.</p>
+        <p>The client keeps a near-identical copy in <code>client/src/types.ts</code>. That duplication is a smell &mdash; <a href="rebuild.html">S8</a> shares one package instead &mdash; but it shows the principle: <strong>the types are the API contract.</strong> When the client expects <code>assigneeId</code> and the server stops sending it, TypeScript complains before the user ever sees a bug.</p>
 
         <h2>The backend: in-memory state</h2>
         <p>There is no database. <code>scheduling.ts</code> holds a module-level object and mutates it:</p>
@@ -124,17 +131,17 @@ function paginate&lt;T&gt;(items: T[], page: number, pageSize: number): Page&lt;
   const start = (safePage - 1) * pageSize;
   return { items: items.slice(start, start + pageSize), total, page: safePage, pageSize };
 }</code></pre>
-        <p><code>total</code> is computed <em>before</em> slicing, so it always reflects the full filtered set &mdash; that's what powers "Showing 11&ndash;20 of 40". The server returns the corrected <code>page</code>, and the client trusts it. (This is the heart of the pagination pivot in <a href="s7-lessons.html">S7</a>.)</p>
+        <p><code>total</code> is computed <em>before</em> slicing, so it always reflects the full filtered set &mdash; that's what powers "Showing 11&ndash;20 of 40". The server returns the corrected <code>page</code>, and the client trusts it. (This is the heart of the pagination pivot in <a href="lessons.html">S7</a>.)</p>
 
         <h2>The data-flow loop: how a click becomes a re-render</h2>
         <p>This is <em>the</em> mental shift from backend work. The app uses one simple, slightly blunt pattern: <strong>mutate on the server, then re-fetch everything.</strong></p>
         <figure class="diagram">
           <pre class="mermaid">
 graph TD
-  A["1 · On load&lt;br/&gt;fetch('/api/bootstrap') &amp;rarr; setData(state)"] --&gt; B["2 · Render&lt;br/&gt;React paints the screen from data"]
-  B --&gt; C["3 · User acts&lt;br/&gt;drag a card &amp;rarr; POST /api/bookings"]
-  C --&gt; D["4 · Re-sync&lt;br/&gt;load() again &amp;rarr; setData(newState)"]
-  D --&gt; E["5 · Diff &amp;amp; repaint&lt;br/&gt;React re-paints only what changed"]
+  A["1 · Load&lt;br/&gt;GET /api/bootstrap"] --&gt; B["2 · Render"]
+  B --&gt; C["3 · Act&lt;br/&gt;POST or PATCH"]
+  C --&gt; D["4 · Re-sync&lt;br/&gt;load() again"]
+  D --&gt; E["5 · Repaint&lt;br/&gt;diff only"]
   E -. "next interaction" .-&gt; C
           </pre>
           <figcaption>Mutate on the server, then re-fetch everything. Blunt, but always consistent.</figcaption>
@@ -146,7 +153,7 @@ const load = async () => {
 };
 useEffect(() => { void load(); }, []);   // run once on mount</code></pre>
         <div class="callout"><span class="label">Server brain vs client brain</span>On the server, a request handler runs, returns, and forgets. In the browser, the app <em>stays alive</em>. <code>data</code> is a long-lived variable; calling <code>setData(...)</code> is what tells React "the world changed, re-draw." You don't touch the DOM yourself &mdash; you change state and React reconciles the screen.</div>
-        <p>"Re-fetch the whole bootstrap after every change" is deliberately naive. It keeps the client trivially correct (no clever cache to get wrong) at the cost of over-fetching. Pagination later broke from this &mdash; the Tasks and Team pages fetch <em>their own slice</em> instead. Knowing when to leave the simple pattern is a judgment call you'll meet again in <a href="s6-react.html">S6</a>.</p>
+        <p>"Re-fetch the whole bootstrap after every change" is deliberately naive. It keeps the client trivially correct (no clever cache to get wrong) at the cost of over-fetching. Pagination later broke from this &mdash; the Tasks and Team pages fetch <em>their own slice</em> instead. Knowing when to leave the simple pattern is a judgment call you'll meet again in <a href="react.html">S6</a>.</p>
 
         <h2>The dev setup: two servers, one origin</h2>
         <p><code>npm run dev</code> runs both halves at once (via <code>concurrently</code>): Vite on <code>:5173</code> and the API on <code>:3001</code>. Vite proxies <code>/api/*</code> to the backend so the browser thinks everything is one origin (no CORS pain in dev):</p>
@@ -183,18 +190,18 @@ server: { proxy: { '/api': 'http://localhost:3001' } }</code></pre>
         <figure class="diagram">
           <pre class="mermaid">
 graph LR
-  subgraph SRC["What you write (Node-only)"]
-    A["App.tsx&lt;br/&gt;(TypeScript + JSX)"]
-    B["types.ts, api.ts&lt;br/&gt;(modules)"]
-    C["styles.css&lt;br/&gt;(tokens, rules)"]
+  subgraph SRC["Source"]
+    A["App.tsx"]
+    B["types.ts · api.ts"]
+    C["styles.css"]
   end
-  subgraph VITE["Vite / esbuild: the build"]
-    T["1 · Transpile&lt;br/&gt;TS + JSX &amp;rarr; plain JS"]
-    U["2 · Bundle&lt;br/&gt;many files &amp;rarr; a few"]
-    V["3 · Optimize&lt;br/&gt;minify + hash names"]
+  subgraph VITE["Vite build"]
+    T["1 · Transpile"]
+    U["2 · Bundle"]
+    V["3 · Optimize"]
   end
-  subgraph OUT["What the browser runs"]
-    D["index.html&lt;br/&gt;assets/*.js&lt;br/&gt;assets/*.css"]
+  subgraph OUT["Output"]
+    D["index.html&lt;br/&gt;assets/"]
   end
   A --&gt; T
   B --&gt; T
@@ -228,12 +235,12 @@ graph LR
       </article>
 
       <nav class="slide-nav">
-        <a href="s1-timeline.html"><div class="dir">Previous</div><div class="ttl">S1 &middot; The build timeline</div></a>
-        <a class="next" href="s3-typescript.html"><div class="dir">Next</div><div class="ttl">S3 &middot; TypeScript</div></a>
+        <a href="timeline.html"><div class="dir">Previous</div><div class="ttl">The build timeline</div></a>
+        <a class="next" href="framework-landscape.html"><div class="dir">Next</div><div class="ttl">Framework landscape</div></a>
       </nav>
     </main>
   </div>
 
-  <footer class="site-footer">Chronicle of <code>simple-scheduling-app</code> &middot; S2 of 10</footer>
+  <footer class="site-footer">Chronicle of <code>simple-scheduling-app</code></footer>
 </body>
 </html>

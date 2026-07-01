@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>S1 &middot; The build timeline</title>
+  <title>The build timeline</title>
   <meta name="description" content="All 35 commits of the scheduling app, grouped into five phases, with the redirects called out.">
   <link rel="stylesheet" href="chronicle.css">
   <script src="chronicle.js"></script>
@@ -12,7 +12,11 @@
   <header class="topnav">
     <div class="topnav-inner">
       <a class="brand" href="index.html"><span class="mark">🗓️</span> Scheduling SPA Chronicle</a>
+      <div class="nav-controls">
+      <button class="zoom-out" type="button" aria-label="Decrease text size">A−</button>
+      <button class="zoom-in"  type="button" aria-label="Increase text size">A+</button>
       <button class="theme-toggle" type="button" aria-label="Toggle theme"><span class="icon-moon">🌙</span><span class="icon-sun">☀️</span></button>
+    </div>
     </div>
   </header>
 
@@ -20,17 +24,20 @@
     <aside class="sidebar">
       <div class="sidebar-eyebrow">The deck</div>
       <ol>
-        <li><a href="index.html"><span class="sb-num">00</span><span>Overview</span></a></li>
-        <li class="active"><a href="s1-timeline.html"><span class="sb-num">S1</span><span>The build timeline</span></a></li>
-        <li><a href="s2-architecture.html"><span class="sb-num">S2</span><span>Architecture &amp; data flow</span></a></li>
-        <li><a href="s3-typescript.html"><span class="sb-num">S3</span><span>TypeScript</span></a></li>
-        <li><a href="s4-html-jsx.html"><span class="sb-num">S4</span><span>HTML &amp; JSX</span></a></li>
-        <li><a href="s5-css.html"><span class="sb-num">S5</span><span>CSS &amp; design system</span></a></li>
-        <li><a href="s6-react.html"><span class="sb-num">S6</span><span>React state &amp; effects</span></a></li>
-        <li><a href="s7-lessons.html"><span class="sb-num">S7</span><span>Redirects &amp; lessons</span></a></li>
-        <li><a href="s8-rebuild.html"><span class="sb-num">S8</span><span>Rebuild 1: brief &amp; plan</span></a></li>
-        <li><a href="s9-clean-architecture.html"><span class="sb-num">S9</span><span>Rebuild 2: the server</span></a></li>
-        <li><a href="s10-frontend-conventions.html"><span class="sb-num">S10</span><span>Rebuild 3: the client</span></a></li>
+        <li><a href="index.html"><span>Overview</span></a></li>
+        <li class="active"><a href="timeline.html"><span>The build timeline</span></a></li>
+        <li><a href="architecture.html"><span>Architecture &amp; data flow</span></a></li>
+        <li><a href="framework-landscape.html"><span>Framework landscape</span></a></li>
+        <li><a href="stack-choices.html"><span>Stack choices</span></a></li>
+        <li><a href="typescript.html"><span>TypeScript</span></a></li>
+        <li><a href="html-jsx.html"><span>HTML &amp; JSX</span></a></li>
+        <li><a href="css.html"><span>CSS &amp; design system</span></a></li>
+        <li><a href="react.html"><span>React state &amp; effects</span></a></li>
+        <li><a href="angular-comparison.html"><span>Angular: a direct translation</span></a></li>
+        <li><a href="lessons.html"><span>Redirects &amp; lessons</span></a></li>
+        <li><a href="rebuild.html"><span>Rebuild 1: brief &amp; plan</span></a></li>
+        <li><a href="clean-architecture.html"><span>Rebuild 2: the server</span></a></li>
+        <li><a href="frontend-conventions.html"><span>Rebuild 3: the client</span></a></li>
       </ol>
     </aside>
 
@@ -38,7 +45,7 @@
       <header class="mission-header">
         <a class="crumb" href="index.html">&larr; Overview</a>
         <div class="badge-large">🧭</div>
-        <div class="kicker">S1</div>
+        
         <h1>The build timeline</h1>
         <div class="meta-row"><span>35 commits</span><span>5 phases</span><span>b4ae659 &rarr; dcee8c6 (v1)</span></div>
       </header>
@@ -59,7 +66,7 @@
             <tr><td><code>1a122b8</code></td><td>Polish interaction states (hover, focus, selected)</td><td>+161 / -38</td></tr>
           </tbody>
         </table>
-        <div class="callout"><span class="label">Lesson</span>The dark-mode toggle worked on commit 4 because the very first CSS used <strong>custom properties</strong> for every color. Theming was almost free. Design-token discipline up front buys you a feature later. (More in <a href="s5-css.html">S5</a>.)</div>
+        <div class="callout"><span class="label">Lesson</span>The dark-mode toggle worked on commit 4 because the very first CSS used <strong>custom properties</strong> for every color. Theming was almost free. Design-token discipline up front buys you a feature later. (More in <a href="css.html">S5</a>.)</div>
 
         <h2>Phase 2 &middot; Visual identity and the first reversal <span class="pill">13 commits &middot; 13:47&ndash;15:03</span></h2>
         <p>The longest, twitchiest phase &mdash; lots of small commits chasing the right look and the right navigation. This is where you see the design <em>think out loud</em>.</p>
@@ -100,7 +107,7 @@
             <tr><td><code>9bb5508</code></td><td>Fix detail popups and refine cards</td><td><span class="pill bad">+365 / -398</span></td></tr>
           </tbody>
         </table>
-        <div class="callout bad"><span class="label">Anti-pattern: the big-bang commit</span><code>22629fb</code> changed 6 files and 2,272 lines in one commit. It's effectively un-reviewable &mdash; nobody can reason about a diff that big. It happened because several concerns (team detail, layout, routing) were entangled in one file. <strong>The rebuild in <a href="s8-rebuild.html">S8</a> splits the UI into small files precisely so changes stay small.</strong></div>
+        <div class="callout bad"><span class="label">Anti-pattern: the big-bang commit</span><code>22629fb</code> changed 6 files and 2,272 lines in one commit. It's effectively un-reviewable &mdash; nobody can reason about a diff that big. It happened because several concerns (team detail, layout, routing) were entangled in one file. <strong>The rebuild in <a href="rebuild.html">S8</a> splits the UI into small files precisely so changes stay small.</strong></div>
         <div class="callout good"><span class="label">Healthy signal</span><code>816973d</code> and <code>9bb5508</code> are <em>net-negative or net-neutral</em> &mdash; they delete almost as much as they add. Code that shrinks while improving is a sign the design is converging, not sprawling.</div>
 
         <h2>Phase 4 &middot; Popups, dashboard, voice <span class="pill">3 commits &middot; 23:49&ndash;00:04</span></h2>
@@ -125,7 +132,7 @@
             <tr><td><code>dcee8c6</code></td><td>Use "Manage team" on the home quick action too &mdash; <strong>tagged <code>v1</code></strong></td><td><span class="pill accent">v1</span></td></tr>
           </tbody>
         </table>
-        <div class="callout good"><span class="label">The good arc</span>Pagination is the model to copy: <strong>doc &rarr; server &rarr; client</strong>, each layer landed and verified before the next. Contrast with the Phase-3 big bang. Same engineer, same day &mdash; the difference is sequencing. (Full autopsy in <a href="s7-lessons.html">S7</a>.)</div>
+        <div class="callout good"><span class="label">The good arc</span>Pagination is the model to copy: <strong>doc &rarr; server &rarr; client</strong>, each layer landed and verified before the next. Contrast with the Phase-3 big bang. Same engineer, same day &mdash; the difference is sequencing. (Full autopsy in <a href="lessons.html">S7</a>.)</div>
 
         <h2>The shape of the work</h2>
         <p>Read the commit <em>sizes</em> and a pattern appears:</p>
@@ -139,11 +146,11 @@
 
       <nav class="slide-nav">
         <a href="index.html"><div class="dir">Previous</div><div class="ttl">Overview</div></a>
-        <a class="next" href="s2-architecture.html"><div class="dir">Next</div><div class="ttl">S2 &middot; Architecture &amp; data flow</div></a>
+        <a class="next" href="architecture.html"><div class="dir">Next</div><div class="ttl">Architecture &amp; data flow</div></a>
       </nav>
     </main>
   </div>
 
-  <footer class="site-footer">Chronicle of <code>simple-scheduling-app</code> &middot; S1 of 10</footer>
+  <footer class="site-footer">Chronicle of <code>simple-scheduling-app</code></footer>
 </body>
 </html>

@@ -1,0 +1,183 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Framework landscape &middot; React, Angular &amp; Vue</title>
+  <meta name="description" content="React, Angular, and Vue compared for a .NET developer choosing a frontend framework.">
+  <link rel="stylesheet" href="chronicle.css">
+  <script src="chronicle.js"></script>
+</head>
+<body>
+  <header class="topnav">
+    <div class="topnav-inner">
+      <a class="brand" href="index.html"><span class="mark">🗓️</span> Scheduling SPA Chronicle</a>
+      <div class="nav-controls">
+      <button class="zoom-out" type="button" aria-label="Decrease text size">A−</button>
+      <button class="zoom-in"  type="button" aria-label="Increase text size">A+</button>
+      <button class="theme-toggle" type="button" aria-label="Toggle theme"><span class="icon-moon">🌙</span><span class="icon-sun">☀️</span></button>
+    </div>
+    </div>
+  </header>
+
+  <div class="layout">
+    <aside class="sidebar">
+      <div class="sidebar-eyebrow">The deck</div>
+      <ol>
+        <li><a href="index.html"><span>Overview</span></a></li>
+        <li><a href="timeline.html"><span>The build timeline</span></a></li>
+        <li><a href="architecture.html"><span>Architecture &amp; data flow</span></a></li>
+        <li class="active"><a href="framework-landscape.html"><span>Framework landscape</span></a></li>
+        <li><a href="stack-choices.html"><span>Stack choices</span></a></li>
+        <li><a href="typescript.html"><span>TypeScript</span></a></li>
+        <li><a href="html-jsx.html"><span>HTML &amp; JSX</span></a></li>
+        <li><a href="css.html"><span>CSS &amp; design system</span></a></li>
+        <li><a href="react.html"><span>React state &amp; effects</span></a></li>
+        <li><a href="angular-comparison.html"><span>Angular: a direct translation</span></a></li>
+        <li><a href="lessons.html"><span>Redirects &amp; lessons</span></a></li>
+        <li><a href="rebuild.html"><span>Rebuild 1: brief &amp; plan</span></a></li>
+        <li><a href="clean-architecture.html"><span>Rebuild 2: the server</span></a></li>
+        <li><a href="frontend-conventions.html"><span>Rebuild 3: the client</span></a></li>
+      </ol>
+    </aside>
+
+    <main class="content">
+      <header class="mission-header">
+        <a class="crumb" href="index.html">&larr; Overview</a>
+        <div class="badge-large">🌐</div>
+        <div class="kicker">orientation</div>
+        <h1>Framework landscape</h1>
+        <div class="meta-row"><span>React</span><span>Angular</span><span>Vue</span></div>
+      </header>
+
+      <article class="body">
+        <p>S3&ndash;S6 teach React. Before diving in, it is worth knowing what you chose &mdash; and what you didn't. There are three serious options. They solve the same problem differently, and a .NET developer reads each one through a different lens.</p>
+
+        <div class="callout warn"><span class="label">This chronicle has not committed to React</span>The POC was built in React because it is the industry default and the right choice for a fast learning project. The <strong>NG</strong> slide after S6 shows every concept here translated directly into Angular. Read S3&ndash;S6 to understand the ideas; consult the NG slide when you need to apply them in Angular. The choice of framework for your real project is still open.</div>
+
+        <h2>At a glance</h2>
+        <table>
+          <thead>
+            <tr>
+              <th></th>
+              <th>React</th>
+              <th>Angular</th>
+              <th>Vue</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td><strong>What it is</strong></td>
+              <td>UI library &mdash; assemble your own stack</td>
+              <td>Full framework &mdash; batteries included</td>
+              <td>Progressive framework &mdash; official batteries, optional</td>
+            </tr>
+            <tr>
+              <td><strong>Markup</strong></td>
+              <td>JSX &mdash; HTML inside TypeScript</td>
+              <td>HTML templates + Angular directives</td>
+              <td>Single File Components: <code>&lt;template&gt;</code>, <code>&lt;script&gt;</code>, <code>&lt;style&gt;</code> in one <code>.vue</code> file</td>
+            </tr>
+            <tr>
+              <td><strong>TypeScript</strong></td>
+              <td>First-class via tooling</td>
+              <td>First-class from day one &mdash; Angular is written in TS</td>
+              <td>First-class via tooling</td>
+            </tr>
+            <tr>
+              <td><strong>Router</strong></td>
+              <td>Third-party (React Router, TanStack Router)</td>
+              <td>Built-in Angular Router</td>
+              <td>Official Vue Router</td>
+            </tr>
+            <tr>
+              <td><strong>HTTP client</strong></td>
+              <td><code>fetch</code> + TanStack Query</td>
+              <td>Built-in <code>HttpClient</code> (returns Observables)</td>
+              <td><code>fetch</code> + Pinia / TanStack Query</td>
+            </tr>
+            <tr>
+              <td><strong>State management</strong></td>
+              <td>useState / Context / Zustand / TanStack Query</td>
+              <td>Signals (Angular 17+) / Services / NgRx</td>
+              <td>Composition API / Pinia</td>
+            </tr>
+            <tr>
+              <td><strong>Dependency injection</strong></td>
+              <td>Not built-in</td>
+              <td>Built-in, like .NET DI</td>
+              <td>Not built-in</td>
+            </tr>
+            <tr>
+              <td><strong>CLI / scaffolding</strong></td>
+              <td><code>npm create vite</code></td>
+              <td><code>ng new</code> / <code>ng generate</code> &mdash; like <code>dotnet new</code></td>
+              <td><code>npm create vue</code></td>
+            </tr>
+            <tr>
+              <td><strong>Learning curve</strong></td>
+              <td>Moderate &mdash; JS ecosystem choices add friction</td>
+              <td>Steep &mdash; RxJS, decorators, DI, NgModules</td>
+              <td>Gentle &mdash; template syntax is HTML-first</td>
+            </tr>
+            <tr>
+              <td><strong>Market share</strong></td>
+              <td>~39% of developers (Stack Overflow 2024)</td>
+              <td>~17%</td>
+              <td>~16%</td>
+            </tr>
+            <tr>
+              <td><strong>Strong in</strong></td>
+              <td>Startups, product companies, most job listings</td>
+              <td>Enterprise, Microsoft-stack orgs, government</td>
+              <td>Smaller teams, rapid prototyping, Asia-Pacific market</td>
+            </tr>
+          </tbody>
+        </table>
+
+        <h2>Angular through .NET eyes</h2>
+        <p>Angular is the framework that feels most like ASP.NET, and deliberately so. It is opinionated, structured, and makes most decisions for you. The parallels are close enough to be immediately useful:</p>
+        <table>
+          <thead><tr><th>Angular</th><th>.NET equivalent</th></tr></thead>
+          <tbody>
+            <tr><td><code>ng new my-app</code></td><td><code>dotnet new mvc -n MyApp</code></td></tr>
+            <tr><td><code>ng generate component tasks</code></td><td><code>dotnet new razorcomponent -n Tasks</code></td></tr>
+            <tr><td><code>@Injectable({ providedIn: 'root' })</code></td><td><code>services.AddSingleton&lt;MyService&gt;()</code></td></tr>
+            <tr><td><code>inject(WorkItemsService)</code></td><td>Constructor injection in a controller</td></tr>
+            <tr><td>HTML template + <code>*ngFor</code> / <code>@for</code></td><td>Razor view + <code>@foreach</code></td></tr>
+            <tr><td><code>[(ngModel)]="value"</code></td><td>Two-way model binding in Blazor / Razor</td></tr>
+            <tr><td><code>HttpClient</code> (built-in)</td><td><code>HttpClient</code> / <code>IHttpClientFactory</code></td></tr>
+            <tr><td>Guards (<code>CanActivate</code>)</td><td>Authorization middleware / filters</td></tr>
+            <tr><td><code>Pipe</code></td><td><code>IValueConverter</code> / display formatters</td></tr>
+          </tbody>
+        </table>
+        <p>The one genuinely unfamiliar concept is <strong>RxJS Observables</strong> &mdash; what Angular's <code>HttpClient</code> returns instead of Promises. Think of an Observable as a <code>Task&lt;T&gt;</code> that can emit multiple values over time and compose with operators like <code>switchMap</code> and <code>combineLatest</code>. Angular 17+ lets you convert Observables to Signals with <code>toSignal()</code>, which reduces the surface area you need to learn immediately. RxJS is Angular's steepest learning cliff; plan for it.</p>
+
+        <h2>Vue in one paragraph</h2>
+        <p>Vue sits between React and Angular on almost every axis. Its <strong>Single File Components</strong> (<code>.vue</code> files with a <code>&lt;template&gt;</code> block, a <code>&lt;script setup&gt;</code> block, and a <code>&lt;style scoped&gt;</code> block) are the closest thing in the frontend world to a Razor <code>.cshtml</code>: the template is genuine HTML, not JSX, and you write logic in a <code>script</code> section alongside it. Vue 3's Composition API (<code>ref()</code>, <code>computed()</code>, <code>watch()</code>) maps almost directly to React hooks. It has an official router (Vue Router) and official state management (Pinia). The learning curve is gentler than either React or Angular. Its market share is lower than both in the English-speaking enterprise world, but it is the dominant framework in parts of Asia and is widely used in smaller product teams. Worth knowing it exists; not the default choice for a .NET enterprise team starting fresh.</p>
+
+        <h2>Why this chronicle chose React</h2>
+        <ul>
+          <li><strong>Industry share.</strong> React is in roughly twice as many job listings as Angular and Vue combined. If the goal is transferable skill, React has the widest blast radius.</li>
+          <li><strong>The mental model generalises.</strong> The concepts you learn in React &mdash; component functions, props, one-way data flow, hooks, the data-down/events-up discipline &mdash; transfer almost verbatim to Angular (Signals) and Vue (Composition API). Learn the ideas in React; read them in Angular with the NG slide as a dictionary.</li>
+          <li><strong>Ecosystem velocity.</strong> TanStack Query, TanStack Router, Vite, and Vitest are fast-moving and widely adopted. The rebuild in S8&ndash;S10 uses this stack.</li>
+          <li><strong>Vibe of the POC.</strong> The original build used React. Studying a real codebase beats studying examples.</li>
+        </ul>
+
+        <div class="callout good"><span class="label">How to choose for your real project</span>
+        If the project is greenfield and the team already knows .NET deeply &mdash; Angular's DI, structured CLI, and opinionated conventions will feel immediately productive.
+        If the project is joining an existing React codebase &mdash; learn React well and treat the NG slide as reference.
+        If the team is small and wants the gentlest ramp &mdash; Vue's template syntax and official tooling reduce decision fatigue.
+        If you genuinely don't know yet &mdash; finish S3&ndash;S6 (React), read the NG slide (Angular), then decide. The concepts are the same; the syntax is a week of adjustment either way.</div>
+      </article>
+
+      <nav class="slide-nav">
+        <a href="architecture.html"><div class="dir">Previous</div><div class="ttl">Architecture &amp; data flow</div></a>
+        <a class="next" href="stack-choices.html"><div class="dir">Next</div><div class="ttl">Stack choices</div></a>
+      </nav>
+    </main>
+  </div>
+
+  <footer class="site-footer">Chronicle of <code>simple-scheduling-app</code></footer>
+</body>
+</html>

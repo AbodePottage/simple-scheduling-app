@@ -1,0 +1,220 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Stack choices &middot; Why these tools?</title>
+  <meta name="description" content="Express, Vite, tsx, REST vs tRPC — why each tool was chosen and what the alternatives are.">
+  <link rel="stylesheet" href="chronicle.css">
+  <script src="chronicle.js"></script>
+</head>
+<body>
+  <header class="topnav">
+    <div class="topnav-inner">
+      <a class="brand" href="index.html"><span class="mark">🗓️</span> Scheduling SPA Chronicle</a>
+      <div class="nav-controls">
+      <button class="zoom-out" type="button" aria-label="Decrease text size">A−</button>
+      <button class="zoom-in"  type="button" aria-label="Increase text size">A+</button>
+      <button class="theme-toggle" type="button" aria-label="Toggle theme"><span class="icon-moon">🌙</span><span class="icon-sun">☀️</span></button>
+    </div>
+    </div>
+  </header>
+
+  <div class="layout">
+    <aside class="sidebar">
+      <div class="sidebar-eyebrow">The deck</div>
+      <ol>
+        <li><a href="index.html"><span>Overview</span></a></li>
+        <li><a href="timeline.html"><span>The build timeline</span></a></li>
+        <li><a href="architecture.html"><span>Architecture &amp; data flow</span></a></li>
+        <li><a href="framework-landscape.html"><span>Framework landscape</span></a></li>
+        <li class="active"><a href="stack-choices.html"><span>Stack choices</span></a></li>
+        <li><a href="typescript.html"><span>TypeScript</span></a></li>
+        <li><a href="html-jsx.html"><span>HTML &amp; JSX</span></a></li>
+        <li><a href="css.html"><span>CSS &amp; design system</span></a></li>
+        <li><a href="react.html"><span>React state &amp; effects</span></a></li>
+        <li><a href="angular-comparison.html"><span>Angular: a direct translation</span></a></li>
+        <li><a href="lessons.html"><span>Redirects &amp; lessons</span></a></li>
+        <li><a href="rebuild.html"><span>Rebuild 1: brief &amp; plan</span></a></li>
+        <li><a href="clean-architecture.html"><span>Rebuild 2: the server</span></a></li>
+        <li><a href="frontend-conventions.html"><span>Rebuild 3: the client</span></a></li>
+      </ol>
+    </aside>
+
+    <main class="content">
+      <header class="mission-header">
+        <a class="crumb" href="index.html">&larr; Overview</a>
+        <div class="badge-large">🔧</div>
+        <div class="kicker">orientation</div>
+        <h1>Stack choices</h1>
+        <div class="meta-row"><span>Express</span><span>Vite</span><span>tsx</span><span>REST</span></div>
+      </header>
+
+      <article class="body">
+        <p>The FW slide asked which UI framework to use. This slide asks the quieter questions: why Express and not something faster? Why Vite? Why TypeScript on the server at all? And is there an alternative to duplicating types between client and server? Each tool was chosen for a reason &mdash; and each has a better alternative worth knowing before the rebuild starts.</p>
+
+        <h2>1. Express</h2>
+        <p>Express has been the default Node.js web framework since 2010. It is minimal (a router and a middleware chain &mdash; nothing else), unopinionated, and has the largest ecosystem of any Node framework. It is fine for this project. It is not what you would reach for in a new project today.</p>
+
+        <table>
+          <thead><tr><th>Framework</th><th>What it is</th><th>When to use it</th></tr></thead>
+          <tbody>
+            <tr>
+              <td><strong>Express</strong> <small>(current)</small></td>
+              <td>Minimal router + middleware. No opinions on anything.</td>
+              <td>Learning, legacy projects, anything that already uses it</td>
+            </tr>
+            <tr>
+              <td><strong>Fastify</strong></td>
+              <td>2&ndash;3&times; faster than Express, TypeScript-first, JSON-schema validation built in, plugin system.</td>
+              <td>New Node.js projects &mdash; the clear "Express but better" default</td>
+            </tr>
+            <tr>
+              <td><strong>NestJS</strong></td>
+              <td>Decorators, built-in DI, modules, guards, pipes &mdash; Angular for backends. Uses Express or Fastify underneath.</td>
+              <td>When you want your Node server to feel like ASP.NET Core. The most natural choice for a .NET developer going full Node.</td>
+            </tr>
+            <tr>
+              <td><strong>Hono</strong></td>
+              <td>Ultra-light, runs on edge runtimes (Cloudflare Workers, Deno Deploy, Bun) as well as Node.</td>
+              <td>APIs that need to run globally near users, not on a single VPS</td>
+            </tr>
+          </tbody>
+        </table>
+
+        <div class="callout good"><span class="label">The thing nobody says out loud</span>You do not have to use Node for the server at all. Your real project could use <strong>ASP.NET Core as the API</strong> and React (or Angular) as the client. They communicate over HTTP. The frontend has no idea what language the backend is written in &mdash; it only sees JSON. The Express server in this chronicle exists purely for convenience: one language, one repo, one <code>npm run dev</code> command. It is not a requirement. A .NET team building a frontend can keep their existing .NET backend and add a React client on top.</div>
+
+        <h2>2. Vite</h2>
+        <p>Vite is the tool that compiles and serves the React client. It has effectively won the "front-end build tool" category for new projects. You do not need to evaluate alternatives here, but you need to know the history to understand the ecosystem you are reading about.</p>
+
+        <table>
+          <thead><tr><th>Tool</th><th>Status</th><th>Notes</th></tr></thead>
+          <tbody>
+            <tr>
+              <td><strong>Vite</strong> <small>(current)</small></td>
+              <td>Industry standard for new projects</td>
+              <td>Dev server uses esbuild (fast, type-strips only). Production build uses Rollup. <strong>Does not type-check</strong> &mdash; that is why <code>npm run typecheck</code> exists as a separate step.</td>
+            </tr>
+            <tr>
+              <td><strong>Create React App</strong></td>
+              <td><strong>Deprecated (2023)</strong></td>
+              <td>Was the React default for years. Used webpack under the hood. Slow, hard to configure. Ignore it for new projects &mdash; but you will see it in old codebases.</td>
+            </tr>
+            <tr>
+              <td><strong>webpack</strong></td>
+              <td>Legacy; still running most of the web</td>
+              <td>Still in 60%+ of production apps because of inertia. Extremely configurable, extremely slow. Don't start new projects in it.</td>
+            </tr>
+            <tr>
+              <td><strong>Turbopack</strong></td>
+              <td>Emerging &mdash; used inside Next.js</td>
+              <td>Rust-based webpack successor from Vercel. Very fast, but not production-stable as a standalone tool yet.</td>
+            </tr>
+          </tbody>
+        </table>
+
+        <div class="callout warn"><span class="label">Vite does not type-check</span>This surprises .NET developers. <code>dotnet build</code> always type-checks. Vite does not &mdash; it uses esbuild, which strips TypeScript syntax as fast as possible without verifying it. A React build can succeed with type errors in it. The solution is <code>npm run typecheck</code> (which runs <code>tsc --noEmit</code> on both client and server). In a real CI pipeline, typecheck runs as a gate before the build step.</div>
+
+        <h2>3. <code>tsx</code> (the server runner)</h2>
+        <p>In development, the server is not compiled &mdash; it is run directly from TypeScript source using <code>tsx watch</code>. <code>tsx</code> uses esbuild to strip types and pass plain JavaScript to Node. It does not type-check; it just makes TypeScript files runnable instantly, like <code>dotnet run</code> but without the compile step.</p>
+
+        <table>
+          <thead><tr><th>Runner</th><th>How it works</th><th>When to use</th></tr></thead>
+          <tbody>
+            <tr>
+              <td><strong>tsx</strong> <small>(current)</small></td>
+              <td>esbuild strips types, Node runs the JS. Fast. No type-checking.</td>
+              <td>Dev servers where you want instant restarts</td>
+            </tr>
+            <tr>
+              <td><strong>ts-node</strong></td>
+              <td>The original TS runner. Uses <code>tsc</code> to transpile. Slower, but can be configured to type-check.</td>
+              <td>When you want the runner to catch type errors at startup</td>
+            </tr>
+            <tr>
+              <td><strong>Bun</strong></td>
+              <td>A whole new JS runtime (like Node but faster). Runs TypeScript natively with no loader at all.</td>
+              <td>New projects that can adopt Bun's ecosystem; drops in for <code>tsx watch</code> without code changes</td>
+            </tr>
+          </tbody>
+        </table>
+
+        <h2>4. REST &mdash; and why tRPC solves the type-duplication problem</h2>
+        <p>The app exposes a REST API. The client calls <code>GET /api/work-items</code> and receives JSON. The types on the server (<code>server/src/domain.ts</code>) and the types on the client (<code>client/src/types.ts</code>) are manually kept in sync &mdash; a known debt. This drift risk is one of the first things the rebuild fixes (via a <code>shared/</code> package).</p>
+
+        <p>There is an alternative pattern that eliminates the problem entirely: <strong>tRPC</strong>.</p>
+
+        <div class="two-col">
+          <div class="card">
+            <strong>REST (current approach)</strong>
+            <ul>
+              <li>Server defines routes: <code>GET /api/work-items</code></li>
+              <li>Returns JSON; client deserialises it</li>
+              <li>Types must be duplicated or shared via a package</li>
+              <li>Any mismatch is a runtime bug, not a compile error</li>
+              <li>Works with any client (mobile, other backends, curl)</li>
+            </ul>
+          </div>
+          <div class="card">
+            <strong>tRPC (the alternative)</strong>
+            <ul>
+              <li>Server defines typed procedures: <code>workItems.list(params)</code></li>
+              <li>Client calls them: <code>trpc.workItems.list.useQuery(params)</code></li>
+              <li>Types flow end-to-end automatically &mdash; no duplication</li>
+              <li>Mismatches are caught at compile time, in your editor</li>
+              <li>Works only when both client and server are TypeScript</li>
+            </ul>
+          </div>
+        </div>
+
+        <p>tRPC has first-class adapters for TanStack Query (the client-side data layer in the rebuild). The <code>domain.ts</code> vs <code>types.ts</code> problem literally does not exist in a tRPC project &mdash; the router type is the single source of truth for both sides.</p>
+
+        <div class="callout"><span class="label">When to use which</span>REST if the API must be consumed by non-TypeScript clients (mobile apps, other teams, third parties). tRPC if the only client is your own TypeScript frontend. Many products start with tRPC for the internal API and add REST endpoints only where external access is needed.</div>
+
+        <h2>5. What the code itself teaches</h2>
+        <p>Beyond the framework choices, several patterns in the POC code are worth examining closely because they illustrate concepts you will re-encounter everywhere:</p>
+
+        <h3>The <code>cancelled</code> flag in <code>useEffect</code></h3>
+        <pre><code>useEffect(() =&gt; {
+  let cancelled = false;
+  fetchWorkItems(params).then(r =&gt; {
+    if (!cancelled) setTasksPage(r);   // guard here
+  });
+  return () =&gt; { cancelled = true; }; // set when component unmounts
+}, [params, data]);</code></pre>
+        <p>This is the JavaScript equivalent of <code>CancellationToken</code> in async .NET methods. If the component unmounts before the fetch completes &mdash; because the user navigated away &mdash; the <code>return</code> function runs, sets <code>cancelled = true</code>, and the <code>.then</code> callback does nothing. Without this guard, you get a React warning about setting state on an unmounted component and potentially a race condition where stale data overwrites fresh data. React 18's <code>&lt;StrictMode&gt;</code> deliberately mounts and unmounts components twice in development specifically to surface this kind of bug.</p>
+
+        <h3>The Vite proxy in <code>vite.config.ts</code></h3>
+        <pre><code>server: {
+  proxy: { '/api': 'http://localhost:3001' }
+}</code></pre>
+        <p>In development, the React client runs on <code>localhost:5173</code> and the Express server runs on <code>localhost:3001</code>. Without the proxy, every <code>fetch('/api/...')</code> call would be a cross-origin request and fail the browser's CORS check. The proxy makes Vite's dev server transparently forward any <code>/api</code> request to Express &mdash; from the browser's perspective, both are on the same origin. In production there is no proxy because Express serves the compiled React static files directly and handles <code>/api</code> itself. This is a standard pattern you will see in essentially every Node + Vite project.</p>
+
+        <h3><code>buildQuery()</code> in <code>api.ts</code></h3>
+        <pre><code>function buildQuery(params: Record&lt;string, unknown&gt;) {
+  const q = new URLSearchParams();
+  for (const [k, v] of Object.entries(params)) {
+    if (v !== undefined &amp;&amp; v !== '' &amp;&amp; v !== 'all') {
+      q.set(k, String(v));
+    }
+  }
+  return q.toString();
+}</code></pre>
+        <p>This is input sanitisation at the API call boundary &mdash; the client-side equivalent of what Zod does at the server boundary in the rebuild. The sentinel value <code>'all'</code> (meaning "no filter") is stripped before the request is sent so the server does not receive it as a filter value. Small function, important concept: clean your data at every boundary, not just on one side.</p>
+
+        <h3>In-memory state and single-threadedness</h3>
+        <p>The entire app state is one JavaScript object in RAM. Every server restart loses all data. Every parallel request reads and writes the same object with no locking. A .NET developer's first instinct is to worry about race conditions &mdash; but Node.js runs your JavaScript on a single thread. Two requests cannot truly interleave the way they would in a multi-threaded ASP.NET Core process. The "restart loses data" problem is very real; the "concurrent mutation" problem is less dangerous than you'd expect. The rebuild fixes the first problem with SQLite and the Repository pattern.</p>
+
+        <div class="callout good"><span class="label">The rebuild addresses all of this</span>S8&ndash;S10 lay out the plan: SQLite replaces in-memory state, a <code>shared/</code> package eliminates type duplication, TanStack Query replaces manual <code>useEffect</code> fetches (and handles the cancellation problem automatically). The tools change; the concepts you learned here stay.</div>
+      </article>
+
+      <nav class="slide-nav">
+        <a href="framework-landscape.html"><div class="dir">Previous</div><div class="ttl">Framework landscape</div></a>
+        <a class="next" href="typescript.html"><div class="dir">Next</div><div class="ttl">TypeScript</div></a>
+      </nav>
+    </main>
+  </div>
+
+  <footer class="site-footer">Chronicle of <code>simple-scheduling-app</code></footer>
+</body>
+</html>
