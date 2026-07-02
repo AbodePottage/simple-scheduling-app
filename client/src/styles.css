@@ -625,6 +625,19 @@ label {
   margin: 16px;
 }
 
+.backlog-list.backlog-list-empty {
+  display: block;
+}
+
+.backlog-empty {
+  width: 100%;
+  justify-items: center;
+  align-content: center;
+  min-height: 132px;
+  padding: 32px 16px;
+  text-align: center;
+}
+
 .schedule-board .section-heading {
   margin-bottom: 6px;
 }

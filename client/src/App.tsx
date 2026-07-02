@@ -1503,7 +1503,13 @@ export function App() {
             </div>
           </label>
           <div
-            className={dropTarget?.kind === 'queue' ? 'backlog-list drop-target' : 'backlog-list'}
+            className={[
+              'backlog-list',
+              dropTarget?.kind === 'queue' ? 'drop-target' : '',
+              visibleBacklogItems.length === 0 ? 'backlog-list-empty' : '',
+            ]
+              .filter(Boolean)
+              .join(' ')}
             onDragOver={(event) => event.preventDefault()}
             onDragEnter={() => {
               if (draggingBookingId) {
@@ -1553,6 +1559,12 @@ export function App() {
                 </div>
               </button>
             ))}
+            {visibleBacklogItems.length === 0 ? (
+              <div className="empty-state empty-state-inline backlog-empty">
+                <strong>No work items to show</strong>
+                <p>Drag a booking here to unassign it.</p>
+              </div>
+            ) : null}
           </div>
           <span className="pagination-count backlog-count">
             Showing {visibleBacklogItems.length} out of {backlogItems.length} work items
