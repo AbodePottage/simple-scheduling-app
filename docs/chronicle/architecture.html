@@ -76,11 +76,11 @@ graph LR
 │   ├── vite.config.ts    # dev server + /api proxy to :3001
 │   └── src/
 │       ├── main.tsx      # entry: ReactDOM.createRoot(...).render(&lt;App/&gt;)
-│       ├── App.tsx       # 1,676 lines — the whole UI (see "the monolith")
+│       ├── App.tsx       # 1,803 lines — the whole UI (see "the monolith")
 │       ├── api.ts        # typed fetch helpers + Page&lt;T&gt; envelope
 │       ├── Pagination.tsx# the one extracted component
 │       ├── types.ts      # client-side mirror of the domain types
-│       └── styles.css    # 1,663 lines — the entire design system
+│       └── styles.css    # 1,708 lines — the entire design system
 └── server/
     └── src/
         ├── domain.ts     # the shared data model (Resource, WorkItem, Booking)
@@ -217,7 +217,7 @@ graph LR
         </ul>
         <div class="callout"><span class="label">Dev server &amp; hot reload</span>In development, <code>npm run dev</code> doesn't pre-build everything &mdash; Vite transpiles each module on demand and pushes changes into the running page via <strong>Hot Module Replacement (HMR)</strong>. You save a file and the UI updates in well under a second, keeping component state. It's the closest thing to "edit-and-continue" the front end has, and it's why the feedback loop feels so fast.</div>
 
-        <h2>The monolith: one 1,676-line component</h2>
+        <h2>The monolith: one 1,803-line component</h2>
         <p>The whole UI lives in a single <code>App.tsx</code>: routing, all four pages, every popup, every form, every handler. It grew organically &mdash; and it's the app's biggest structural debt.</p>
         <div class="two-col">
           <div class="card">

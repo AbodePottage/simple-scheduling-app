@@ -99,13 +99,13 @@ return { items: items.slice(start, start + pageSize), total, page: safePage, pag
         <table>
           <thead><tr><th>Debt</th><th>Risk</th><th>Paid off in S8 by</th></tr></thead>
           <tbody>
-            <tr><td>One 1,676-line <code>App.tsx</code></td><td>Un-reviewable diffs, tangled state, scary edits</td><td>Split into per-page / per-component files</td></tr>
+            <tr><td>One 1,803-line <code>App.tsx</code></td><td>Un-reviewable diffs, tangled state, scary edits</td><td>Split into per-page / per-component files</td></tr>
             <tr><td>Duplicated <code>domain.ts</code> &harr; <code>types.ts</code></td><td>Client and server types can silently drift</td><td>One shared types package, imported by both</td></tr>
             <tr><td>Naive "re-fetch bootstrap on every change"</td><td>Over-fetches the whole world per mutation</td><td>Targeted queries / optimistic updates</td></tr>
             <tr><td><code>x as T</code> on every <code>response.json()</code></td><td>Bad server data slips past the type system</td><td>Runtime validation (Zod) at the boundary</td></tr>
             <tr><td><code>vite build</code> doesn't type-check the client</td><td>Type errors can ship green</td><td><code>typecheck</code> wired into CI</td></tr>
             <tr><td>In-memory server state</td><td>Data vanishes on restart</td><td>Repository interface over SQLite</td></tr>
-            <tr><td>1,663-line single <code>styles.css</code></td><td>Cascade accidents across the app</td><td>Component-scoped CSS Modules</td></tr>
+            <tr><td>1,708-line single <code>styles.css</code></td><td>Cascade accidents across the app</td><td>Component-scoped CSS Modules</td></tr>
             <tr><td>Mobile / loading / error states partial</td><td>Feels unfinished on real devices</td><td>Explicit state matrix per view</td></tr>
           </tbody>
         </table>

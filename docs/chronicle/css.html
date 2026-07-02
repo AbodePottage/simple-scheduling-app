@@ -46,7 +46,7 @@
         <div class="badge-large">🎨</div>
         <div class="kicker">crash course</div>
         <h1>CSS &amp; the design system</h1>
-        <div class="meta-row"><span>1,663 lines, one file</span><span>tokens · flex · grid</span></div>
+        <div class="meta-row"><span>1,708 lines, one file</span><span>tokens · flex · grid</span></div>
       </header>
 
       <article class="body">
@@ -128,8 +128,15 @@ document.documentElement.dataset.theme = theme;   // 'light' | 'dark'</code></pr
         <p><code>:focus-visible</code> shows the ring for keyboard users but not mouse clicks &mdash; a small, thoughtful accessibility detail. <span class="pill warn">⚠ different</span> Backend code has no concept of "hover" or "focus"; the front end is full of these in-between states, and forgetting them is what makes a UI feel cheap.</p>
 
         <h2>How the cascade actually bit this build</h2>
-        <p>"CSS" = <em>Cascading</em> Style Sheets. When rules conflict, the winner is decided by <strong>specificity</strong> (how targeted the selector is) and source order. In a 1,663-line single file, that's a real hazard &mdash; a later, more-specific rule can silently override an earlier one. The colored-cards reversal (<code>e7f2843 → 47464b8</code>) was partly a cascade story: a broad rule colored too much, and the fix was to make the coloring rule <em>more specific</em> (board only).</p>
-        <div class="callout warn"><span class="label">The honest take</span>This CSS was written with limited fluency, fast. It works and it's tokenized well, but 1,663 lines in one file is hard to navigate and easy to break by accident. The rebuild scopes styles per component (CSS Modules) so a rule can only ever hit the component it belongs to &mdash; no accidental cascade across the app.</div>
+        <p>"CSS" = <em>Cascading</em> Style Sheets. When rules conflict, the winner is decided by <strong>specificity</strong> (how targeted the selector is) and source order. In a 1,708-line single file, that's a real hazard &mdash; a later, more-specific rule can silently override an earlier one. The colored-cards reversal (<code>e7f2843 → 47464b8</code>) was partly a cascade story: a broad rule colored too much, and the fix was to make the coloring rule <em>more specific</em> (board only).</p>
+        <div class="callout warn"><span class="label">The honest take</span>This CSS was written with limited fluency, fast. It works and it's tokenized well, but 1,708 lines in one file is hard to navigate and easy to break by accident. The rebuild scopes styles per component (CSS Modules) so a rule can only ever hit the component it belongs to &mdash; no accidental cascade across the app.</div>
+        <div class="callout warn"><span class="label">The cascade bit again, a year later</span>This isn't a one-time mistake &mdash; it's what an unscoped global file <em>does</em> at any size. A later round of pure UI polish on this same file (no new pages, no architecture change, just requested tweaks) produced three more cascade bugs, none caught by reading the CSS &mdash; all three were found by taking a screenshot, noticing something looked wrong, then inspecting computed styles to find the real cause:
+        <ul>
+          <li>A specific <code>.hero-home { padding-top: 56px }</code> rule was silently overridden by a later, equally-specific <code>.card { padding: 18px }</code> shorthand &mdash; same specificity, source order decided it, and source order in a 1,600+ line file is not something you can hold in your head.</li>
+          <li>A chip row inherited <code>margin-left: auto</code> from a base rule that a supposedly-overriding selector never cleared &mdash; it looked fine for weeks because nobody had tested it at a wide enough viewport to reveal the drift.</li>
+          <li>A shorter grid column inside a two-column layout visually <em>centered</em> instead of pinning to the top, because <code>align-content</code> was left at its implicit default and nothing said "start" &mdash; invisible until the two columns had different item counts.</li>
+        </ul>
+        Every one of these needed an agent to fire up a browser and inspect computed styles to diagnose &mdash; that is not a debugging tool you should need for CSS this simple. Scoped styles (CSS Modules) don't make you write better CSS; they make an entire category of these bugs <em>impossible</em>, because a rule can only ever reach the component it was written for.</div>
 
         <div class="callout good"><span class="label">The mental model</span>Style with <strong>tokens</strong> so values live in one place; remember <strong>every element is a box</strong>; use <strong>flex for a line, grid for a plane</strong>; and never forget the <strong>in-between states</strong> (hover/focus/empty/disabled). That's 90% of real-world CSS, and it's all visible in this app's history.</div>
 

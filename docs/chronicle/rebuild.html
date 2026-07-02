@@ -56,12 +56,12 @@
         <table>
           <thead><tr><th>Principle</th><th>Replaces</th></tr></thead>
           <tbody>
-            <tr><td><strong>One component, one file, one job.</strong></td><td>The 1,676-line <code>App.tsx</code></td></tr>
+            <tr><td><strong>One component, one file, one job.</strong></td><td>The 1,803-line <code>App.tsx</code></td></tr>
             <tr><td><strong>Share the contract.</strong> A <code>shared/</code> types package, imported by client and server.</td><td>Duplicated <code>domain.ts</code> / <code>types.ts</code></td></tr>
             <tr><td><strong>Validate at the boundary.</strong> Parse every request and response with a schema.</td><td><code>x as T</code> blind casts</td></tr>
             <tr><td><strong>The server owns the data truth.</strong> Query/filter/sort/paginate server-side, always.</td><td>Client-side faked pagination</td></tr>
             <tr><td><strong>Persist behind an interface.</strong> A <code>Repository</code> backed by SQLite.</td><td>In-memory global <code>state</code></td></tr>
-            <tr><td><strong>Scope styles.</strong> CSS Modules per component; keep the tokens file.</td><td>One 1,663-line <code>styles.css</code></td></tr>
+            <tr><td><strong>Scope styles.</strong> CSS Modules per component; keep the tokens file.</td><td>One 1,708-line <code>styles.css</code></td></tr>
             <tr><td><strong>Type-check + test in CI.</strong> Green build means green types.</td><td><code>vite build</code> skipping client types</td></tr>
           </tbody>
         </table>
@@ -88,6 +88,9 @@ flowchart LR
           </pre>
           <figcaption>The loop that turns a fast rebuild into a learning exercise: nothing advances until you understand it.</figcaption>
         </figure>
+
+        <div class="callout warn"><span class="label">Two different modes &mdash; do not confuse them</span>After this chronicle was first written, the POC kept living: a whole evening of pure UI polish landed on the same <code>App.tsx</code> and <code>styles.css</code> &mdash; multi-select filters, a home-page redesign, a nav bar that got rebuilt four different ways before settling. That session was fast, reactive, screenshot-driven, and produced <em>one commit at the very end</em>, only because it was asked for. That is the right mode for polishing a throwaway POC where you are steering every change live. <strong>It is the wrong mode for this rebuild.</strong> The rebuild's whole value is in the small-chunk, review-every-diff discipline above &mdash; skip it and you get a clean-looking app you don't understand, which defeats the point of redoing it at all.</div>
+        <div class="callout good"><span class="label">Not everything after was erratic</span>A later, smaller change &mdash; an empty-state hint on the drag-and-drop backlog &mdash; was built by noticing the app <em>already had</em> the exact pattern needed (the "Open slot" hint on an empty schedule lane) and reusing it verbatim instead of inventing a new one. Small and unglamorous, but it's the counter-example worth keeping in view: erratic isn't the only failure mode available to fast iteration, and recognizing an existing pattern is itself a skill worth noticing when it happens, not just when it's missing.</div>
 
         <h2>Target repo layout</h2>
         <pre><code class="nohighlight">scheduling/

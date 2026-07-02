@@ -149,8 +149,107 @@
     });
   }
 
+  // ── Progress: per-slide "mark complete" + sidebar dots ────────────────────
+  var PROGRESS_KEY = "chronicle.progress";
+
+  function loadProgress() {
+    try {
+      return JSON.parse(localStorage.getItem(PROGRESS_KEY)) || {};
+    } catch (e) {
+      return {};
+    }
+  }
+
+  function saveProgress(progress) {
+    localStorage.setItem(PROGRESS_KEY, JSON.stringify(progress));
+  }
+
+  function slideIdFromHref(href) {
+    var file = href.split("/").pop().split("?")[0].split("#")[0];
+    if (!file || file === "index.html") return "index";
+    return file.replace(/\.html$/, "");
+  }
+
+  function currentSlideId() {
+    var file = location.pathname.split("/").pop();
+    if (!file || file === "index.html") return "index";
+    return file.replace(/\.html$/, "");
+  }
+
+  function slideTitle(anchor) {
+    var span = anchor.querySelector("span");
+    return (span ? span.textContent : anchor.textContent).trim();
+  }
+
+  function updateDotState(dot, done, title) {
+    dot.classList.toggle("done", done);
+    dot.setAttribute("aria-pressed", done ? "true" : "false");
+    dot.setAttribute("aria-label", "Mark " + (title || "this slide") + " as " + (done ? "not complete" : "complete"));
+  }
+
+  function updateToggleState(btn, done) {
+    btn.classList.toggle("done", done);
+    btn.setAttribute("aria-pressed", done ? "true" : "false");
+    btn.textContent = done ? "Slide complete" : "Mark slide complete";
+  }
+
+  function toggleSlideProgress(id) {
+    var progress = loadProgress();
+    progress[id] = !progress[id];
+    saveProgress(progress);
+    var done = !!progress[id];
+
+    var dot = document.querySelector('.progress-dot[data-slide="' + id + '"]');
+    if (dot) {
+      var li = dot.closest("li");
+      var a = li ? li.querySelector("a[href]") : null;
+      updateDotState(dot, done, a ? slideTitle(a) : null);
+    }
+
+    if (currentSlideId() === id) {
+      var toggle = document.querySelector(".progress-toggle");
+      if (toggle) updateToggleState(toggle, done);
+    }
+  }
+
+  function initProgress() {
+    var progress = loadProgress();
+
+    // One dot per sidebar entry.
+    var items = Array.prototype.slice.call(document.querySelectorAll(".sidebar ol li"));
+    items.forEach(function (li) {
+      var a = li.querySelector("a[href]");
+      if (!a || li.querySelector(".progress-dot")) return;
+      var id = slideIdFromHref(a.getAttribute("href"));
+
+      var dot = document.createElement("button");
+      dot.type = "button";
+      dot.className = "progress-dot";
+      dot.dataset.slide = id;
+      updateDotState(dot, !!progress[id], slideTitle(a));
+      li.insertBefore(dot, a);
+    });
+
+    // One "mark complete" button per slide, in the middle of the prev/next nav row.
+    var slideNav = document.querySelector(".slide-nav");
+    var id = currentSlideId();
+    if (slideNav && !slideNav.querySelector(".progress-toggle")) {
+      var btn = document.createElement("button");
+      btn.type = "button";
+      btn.className = "progress-toggle";
+      btn.dataset.slide = id;
+      updateToggleState(btn, !!progress[id]);
+
+      if (slideNav.children.length > 1) {
+        slideNav.insertBefore(btn, slideNav.lastElementChild);
+      } else {
+        slideNav.appendChild(btn);
+      }
+    }
+  }
+
   // ── Boot ─────────────────────────────────────────────────────────────────
-  function init() { initDiagrams(); initHighlight(); initZoom(); }
+  function init() { initDiagrams(); initHighlight(); initZoom(); initProgress(); }
 
   if (document.readyState === "loading") {
     document.addEventListener("DOMContentLoaded", init);
@@ -158,14 +257,21 @@
     init();
   }
 
-  // ── Global click handler (theme toggle) ──────────────────────────────────
+  // ── Global click handler (theme toggle + progress) ────────────────────────
   document.addEventListener("click", function (event) {
-    var btn = event.target.closest(".theme-toggle");
-    if (!btn) return;
-    var next = currentTheme() === "dark" ? "light" : "dark";
-    document.documentElement.setAttribute("data-theme", next);
-    localStorage.setItem(THEME_KEY, next);
-    if (hlCss) hlCss.href = HL_BASE + (next === "dark" ? "github-dark.min.css" : "github.min.css");
-    renderDiagrams();
+    var themeBtn = event.target.closest(".theme-toggle");
+    if (themeBtn) {
+      var next = currentTheme() === "dark" ? "light" : "dark";
+      document.documentElement.setAttribute("data-theme", next);
+      localStorage.setItem(THEME_KEY, next);
+      if (hlCss) hlCss.href = HL_BASE + (next === "dark" ? "github-dark.min.css" : "github.min.css");
+      renderDiagrams();
+      return;
+    }
+
+    var progressEl = event.target.closest(".progress-dot, .progress-toggle");
+    if (progressEl && progressEl.dataset.slide) {
+      toggleSlideProgress(progressEl.dataset.slide);
+    }
   });
 })();
